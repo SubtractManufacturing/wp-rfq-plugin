@@ -17,16 +17,20 @@ This document explains *why* the architecture is designed the way it is. It is i
 5. [Server-side S3 key generation — never client-supplied keys](#5-server-side-s3-key-generation--never-client-supplied-keys)
 6. [HeadObject validation before writing the receipt](#6-headobject-validation-before-writing-the-receipt)
 7. [ERP is an async consumer, never in the submission critical path](#7-erp-is-an-async-consumer-never-in-the-submission-critical-path)
-8. [ERP polls for new submissions — no webhooks from WordPress](#8-erp-polls-for-new-submissions--no-webhooks-from-wordpress)
+8. [S3 poll + webhook notify — ERP owns import, no ERP↔WP DB coupling](#8-s3-poll--webhook-notify--erp-owns-import-no-erpwp-db-coupling)
 9. [Receipt written to both S3 and WordPress DB](#9-receipt-written-to-both-s3-and-wordpress-db)
 10. [Manifests without receipts are treated as incomplete by the ERP](#10-manifests-without-receipts-are-treated-as-incomplete-by-the-erp)
 11. [Airtable as a warm fallback, not a backup system](#11-airtable-as-a-warm-fallback-not-a-backup-system)
-12. [JWT stored in React memory, not localStorage](#12-jwt-stored-in-react-memory-not-localstorage)
-13. [Draft resumption via sessionStorage, not a full session replay API](#13-draft-resumption-via-sessionstorage-not-a-full-session-replay-api)
+12. [JWT stored in React memory, not browser storage](#12-jwt-stored-in-react-memory-not-browser-storage)
+13. [Page refresh abandons the session — no client-side draft resume](#13-page-refresh-abandons-the-session--no-client-side-draft-resume)
 14. [Rate limiting session creation, not uploads](#14-rate-limiting-session-creation-not-uploads)
-15. [No cross-device draft resumption in V1](#15-no-cross-device-draft-resumption-in-v1)
+15. [No draft resumption in V1](#15-no-draft-resumption-in-v1)
 16. [Autosave does not block the user](#16-autosave-does-not-block-the-user)
 17. [Re-submission of the same session is idempotent](#17-re-submission-of-the-same-session-is-idempotent)
+18. [Part-scoped file uploads in Step 2](#18-part-scoped-file-uploads-in-step-2)
+19. [Manifest is the file source of truth; upload-only S3 for customers](#19-manifest-is-the-file-source-of-truth-upload-only-s3-for-customers)
+20. [Plugin secrets encrypted at rest, write-only in admin](#20-plugin-secrets-encrypted-at-rest-write-only-in-admin)
+21. [Private S3 bucket — no public object access](#21-private-s3-bucket--no-public-object-access)
 
 ---
 
@@ -68,7 +72,7 @@ The secondary benefit: S3 object storage is extremely durable (11 nines) and doe
 
 **Why we chose this:** The goal is to minimize friction for new customers submitting their first RFQ. Requiring account creation would add a registration step that many potential customers would abandon. This is an outbound lead capture flow, not a customer portal.
 
-We still capture the customer's contact information (name, email, company) as the first required step — this is our warm lead. We don't need an account to have a durable record of who they are.
+We still capture the customer's contact information (name, email, and optional company/phone) as the first step — this is our warm lead. We don't need an account to have a durable record of who they are.
 
 The JWT is not a substitute for authentication. It is a tamper-proof, scoped token that ensures:
 - A customer can only upload to their own session's S3 prefix.
@@ -88,6 +92,8 @@ If we later add a customer portal with account login, that is additive and does 
 **Why we chose this:** CAD files (STEP, SolidWorks) are frequently 50–200 MB and can be larger. Routing large binary files through a WordPress PHP process is slow, expensive, and risky — PHP has memory limits and execution time limits that make it unsuitable as a file proxy for large uploads. The WordPress server would become a bottleneck and a single point of failure for uploads.
 
 Pre-signed URLs are the industry-standard pattern for browser-to-object-storage uploads. The S3 policy conditions on the URL enforce the key prefix, content-type, and size limits server-side without the WordPress server needing to touch the file bytes.
+
+The plugin issues **PUT-only** pre-signed URLs. Customers never receive delete or list access to the bucket — removing a file in the UI does not remove it from S3; the manifest and ERP import define which objects matter.
 
 The trade-off accepted here: we cannot do deep content validation (e.g., verify that the file is actually a valid STEP file, not a malicious payload disguised with a STEP extension) at upload time. We accept this because:
 - The files land in a staging prefix, not in production storage.
@@ -140,19 +146,15 @@ By making the ERP a consumer of intake packages rather than a participant in int
 
 ---
 
-## 8. ERP polls for new submissions — no webhooks from WordPress
+## 8. S3 poll + webhook notify — ERP owns import, no ERP↔WP DB coupling
 
-**Decision:** The ERP import worker runs on a cron schedule and queries for new receipts. WordPress does not push notifications to the ERP.
+**Decision:** After submit, WordPress stops at `status = 'submitted'`. The ERP discovers new work by scanning S3 for `receipt.json` on a ~5-minute schedule. WordPress also sends a best-effort webhook POST to the ERP for fast import when the ERP is online. The ERP never reads or writes the WordPress database. Import state (which receipts became quotes) lives in ERP Postgres only.
 
-**Why it seems wrong:** Webhooks are lower-latency. Polling adds up to 5 minutes of delay between receipt and ERP import. That feels slow.
+**Why it seems wrong:** Polling S3 is slower and costs LIST operations. A webhook without retry is unreliable. Updating a manifest or calling back into WordPress to mark `imported` would keep a single status trail.
 
-**Why we chose this:** Webhooks from WordPress to the ERP create a coupling in exactly the direction we're trying to avoid: WordPress (the slow-changing public layer) would need to know the ERP's endpoint URL, authenticate to it, and handle the case where the ERP is mid-deployment and not responding.
+**Why we chose this:** S3 is already the durable contract between systems (`receipt.json` + `manifest.json`). The ERP can import with only S3 and its own database — no WP DB credentials, no cross-system status sync, no mutating immutable receipts. The webhook is a optional accelerator, not a dependency: if it fails during an ERP deploy, the poll worker catches the receipt within minutes. WordPress does not implement retry queues in V1 — that would reimplement a message broker in PHP.
 
-If the ERP is down when a webhook fires, WordPress would need retry logic, dead-letter queuing, and backoff — essentially reimplementing a message queue in WordPress PHP. That's complexity without proportionate benefit.
-
-The 5-minute import lag is acceptable for the business. Quotes don't need to appear in the ERP within seconds of submission — engineers don't start reviewing them immediately. A 5-minute SLA on import is fast enough.
-
-Polling is simpler, more resilient, and easier to reason about: the import worker wakes up, queries for work, does work, goes back to sleep. If the ERP was down, it just processes the backlog on the next wake cycle.
+**Trade-off accepted:** WordPress cannot show "imported into ERP" without asking the ERP. WP ops see `submitted` only. Import backlog alerts live in the ERP. Webhook URL and secret are configured in WP admin (managed hosting, no env vars) and may be left blank for poll-only operation.
 
 ---
 
@@ -164,13 +166,13 @@ Polling is simpler, more resilient, and easier to reason about: the import worke
 
 **Why we chose this:** The two stores serve different purposes and the inconsistency case is handled explicitly.
 
-S3 is durable storage. `receipt.json` in S3 is the authoritative record. It never changes after it's written.
+S3 is durable storage. `receipt.json` in S3 is the authoritative record of submission. It never changes after it's written. The ERP import worker reads from S3 only.
 
-The WP DB row is a queryable index. It allows the ERP import worker to query `WHERE status = 'submitted'` rather than listing S3 objects (which is slower, costs money per LIST call, and is harder to paginate). It also allows operations staff to quickly look up a receipt by number.
+The WP DB row is a **WordPress-local index**: warm leads, receipt lookup for WP admin/ops, and submit idempotency. It is not the ERP import queue.
 
-The inconsistency case — S3 write succeeds, DB write fails — is handled by the ERP import worker's idempotency logic. If the worker finds a `receipt.json` in S3 with no corresponding WP DB row (which it discovers by querying WP), it creates the WP row and proceeds. The S3 record is always the recovery path.
+The inconsistency case — S3 write succeeds, DB write fails — means the customer may not see a receipt number in the response even though S3 has the receipt. The ERP can still import from S3; ops can reconcile via S3. The alert on manifest-without-receipt covers the inverse partial-write case.
 
-We write S3 first (not DB first) precisely because S3 is the durable store. If DB write succeeds and S3 write fails, we have a phantom receipt row pointing to files we can't confirm are there. If S3 write succeeds and DB write fails, we have real files and a real receipt that we just need to index.
+We write S3 first (not DB first) precisely because S3 is the durable store and the ERP's import contract. If DB write succeeds and S3 write fails, we have a phantom receipt row pointing to files we can't confirm are there. If S3 write succeeds and DB write fails, we have real files and a real receipt that the ERP can still process.
 
 ---
 
@@ -202,31 +204,31 @@ The key design principle: the fallback activates before the customer has entered
 
 ---
 
-## 12. JWT stored in React memory, not localStorage
+## 12. JWT stored in React memory, not browser storage
 
 **Decision:** The session JWT is stored as React state. It is never written to `localStorage` or `sessionStorage`.
 
-**Why it seems wrong:** `localStorage` would persist the JWT across page refreshes, making session resumption easier without any additional server round-trips.
+**Why it seems wrong:** Browser storage would persist the JWT across page refreshes, avoiding session loss on reload.
 
-**Why we chose this:** JWTs stored in `localStorage` are readable by any JavaScript running on the page, including injected scripts from compromised third-party dependencies (a common XSS vector on WordPress sites, which frequently run many third-party plugins and scripts). A stolen JWT lets an attacker upload files to the victim's session prefix or hijack their in-progress submission.
+**Why we chose this:** JWTs in browser storage are readable by any JavaScript on the page, including injected scripts from compromised third-party dependencies (a common XSS vector on WordPress sites). A stolen JWT lets an attacker upload files to the victim's session prefix or hijack their in-progress submission.
 
-In-memory storage means the JWT is only readable by React's own component tree. An XSS attack can still target the current page session, but cannot exfiltrate the JWT for use in a different session or browser.
+In-memory storage limits exposure to the active page lifetime. An XSS attack can still target the current session, but cannot exfiltrate the token for reuse after the tab closes.
 
-The trade-off accepted: if the user refreshes the page, the JWT is lost and a new session starts. We mitigate this with `sessionStorage`-based draft persistence (see Decision 13), which preserves the form data but not the JWT. A page refresh causes a new session to be created, and the draft is re-hydrated from `sessionStorage`. The old session's uploaded files remain in S3 under the old session prefix; those files are not automatically recovered to the new session. This is an accepted limitation for V1.
+**Trade-off accepted:** Page refresh drops the JWT and abandons the session (see Decision 13).
 
 ---
 
-## 13. Draft resumption via sessionStorage, not a full session replay API
+## 13. Page refresh abandons the session — no client-side draft resume
 
-**Decision:** Draft state (form metadata, not file blobs) is stored in `sessionStorage` to allow recovery from accidental page refreshes within the same browser tab. There is no server-side session replay endpoint that returns a full draft to a new browser context.
+**Decision:** A full page reload invalidates the intake session. The form creates a new session and the customer starts over. No form state is restored from `localStorage`, `sessionStorage`, or a server replay endpoint.
 
-**Why it seems wrong:** A proper "save and resume" feature would let customers close the tab, come back tomorrow, and pick up where they left off. `sessionStorage` only survives within the same tab.
+**Why it seems wrong:** Accidental refresh after 15 minutes of data entry feels punishing. Autosave already writes drafts to the server — why not rehydrate?
 
-**Why we chose this:** Full cross-device or cross-session resumption requires either a customer account (which we've decided against for V1) or a shareable session URL (which introduces security risks — anyone with the URL could access or complete someone else's draft). Neither is worth the complexity for V1.
+**Why we chose this:** Rehydrating after refresh requires either persisting the JWT (rejected in Decision 12) or a new server endpoint to re-bind an old session without the original token. Partial rehydration (metadata without files) creates a broken state: the form shows progress but submit fails because file keys belong to the abandoned session.
 
-The most common accidental loss scenario is a page refresh or a browser crash. `sessionStorage` handles both of these cases within the same browser. It is simple to implement and covers the majority of accidental data loss without introducing new security surface area.
+Starting fresh on refresh is honest UX: the customer knows they must re-enter data and re-upload files. The warm lead from Step 1 on the abandoned session is still captured in WP DB. Server-side autosave drafts remain for operations recovery, not customer resume.
 
-`sessionStorage` data is tab-scoped and cleared when the tab is closed, which is actually the behavior we want: the draft is transient, not a permanent record. The permanent record is the warm lead in the WP DB (written after Step 1) and the uploaded files in S3.
+Orphaned S3 objects under abandoned session prefixes are cleaned up by lifecycle rules.
 
 ---
 
@@ -244,17 +246,15 @@ We also add a per-session cap of 200 pre-signed URLs as a secondary control to p
 
 ---
 
-## 15. No cross-device draft resumption in V1
+## 15. No draft resumption in V1
 
-**Decision:** The system does not support resuming an in-progress RFQ from a different device or browser. V1 only supports in-tab recovery via `sessionStorage`.
+**Decision:** Customers cannot resume an in-progress RFQ after page refresh, tab close, or from a different device. The only recovery paths in V1 are: (a) keep the tab open and retry failed network calls, or (b) submit successfully and receive a receipt number.
 
-**Why it seems wrong:** B2B customers may start an RFQ on their work laptop and want to finish on a different machine, or hand it off to a colleague.
+**Why it seems wrong:** B2B customers may spend 20 minutes on an RFQ and lose work to a misclick.
 
-**Why we chose this:** Cross-device resumption requires one of: (a) customer accounts, (b) a shareable link tied to the session, or (c) email-based magic links. All three add meaningful complexity to the first version of the system.
+**Why we chose this:** Resume requires JWT re-bind, shareable links, or customer accounts — meaningful complexity for the first release. Files are tied to a session prefix in S3; resume without re-upload implies copying or re-authorizing objects across sessions.
 
-The upload step is the hard part of an RFQ. Files don't transfer between sessions: if a customer needs to resume on a different device, they'd have to re-upload all their CAD files anyway, since the files are in S3 under the original session prefix. The metadata (form fields) could theoretically be recovered, but without the files, the resume is only partial.
-
-This trade-off should be revisited after V1 if warm leads data shows significant abandonment patterns suggesting cross-device usage.
+Warm lead capture (Step 1) and server-side autosave still provide value for sales follow-up and operations recovery without exposing a partial-resume UX that fails at submit time.
 
 ---
 
@@ -285,3 +285,49 @@ If we treated a retry as a new submission, we'd create a duplicate quote in the 
 The idempotency check is simple: at the start of the submit handler, check whether the session's `rfq_sessions` row already has `status = 'submitted'`. If it does, return the existing `receipt_number`. The client gets the correct receipt number, the success screen renders, and no duplicate is created.
 
 This pattern (detect-and-return on retry rather than re-execute) is safe here because the receipt write is the final, atomic step. Once `status = 'submitted'` is in the DB and `receipt.json` is in S3, the submission is complete and re-running the sequence would be redundant and harmful.
+
+---
+
+## 18. Part-scoped file uploads in Step 2
+
+**Decision:** Files are uploaded within part rows in Step 2, not from a shared pool. Each row has a client-generated `part_id`. Drawings uploaded in a row belong to that part in the manifest. Step 3 collects metadata for the same rows; it does not reassign files.
+
+**Why it seems wrong:** A flat upload zone with assignment in Step 3 feels simpler — upload everything first, organize later.
+
+**Why we chose this:** The manifest nests `drawing_file_keys` under each part. Part-scoped upload keeps the UI, client state, and manifest aligned from the start. A flat pool requires an extra assignment step and creates orphan drawings if the customer skips it. Submit validation stays straightforward: each manifest part entry is self-contained.
+
+**Trade-off accepted:** Extra S3 objects may accumulate if the customer removes a part row or replaces a file after upload. Keys not referenced in the final manifest are ignored at submit. The ERP import worker copies only manifest-referenced objects to quote storage, then deletes the entire intake prefix — including orphans — after quote creation succeeds.
+
+---
+
+## 19. Manifest is the file source of truth; upload-only S3 for customers
+
+**Decision:** The final manifest lists exactly which S3 objects belong to the RFQ. The customer may leave extra objects in the session prefix (removed rows, replaced files). WordPress validates only manifest keys at submit. The ERP copies only manifest keys to canonical quote storage, then deletes the entire intake prefix after successful import. The plugin never gives customers pre-signed DELETE URLs.
+
+**Why it seems wrong:** Letting orphans accumulate feels messy. Letting customers "remove" files without deleting them is confusing. Cleaning at upload time would keep the bucket tidy.
+
+**Why we chose this:** Delete capability in the browser — even scoped pre-signed DELETE — expands the attack surface. Upload-only is simpler and safer: the customer can only add bytes, never remove evidence or disrupt another session's objects. Orphan cleanup at ERP quote creation is a trusted, server-side step with a clear trigger (quote record written). The manifest is already the contract between intake and ERP; extra keys are irrelevant noise until import deletes the whole prefix.
+
+**Trade-off accepted:** Intake prefixes may contain more objects than the manifest between submit and import. Storage cost during that window is acceptable.
+
+---
+
+## 20. Plugin secrets encrypted at rest, write-only in admin
+
+**Decision:** S3 secret key, ERP webhook secret, and JWT signing secret are encrypted before storage in `wp_options`. The admin UI uses password fields that never display the current value. Operators can rotate by entering a new value; they cannot retrieve the existing secret after save.
+
+**Why it seems wrong:** WordPress options are already behind the admin login. Encryption adds complexity. Plaintext would be simpler to debug.
+
+**Why we chose this:** A database backup, SQL injection, or compromised admin session should not yield usable third-party credentials in plaintext. Encoding (base64) is not encryption. Write-only UI prevents shoulder-surfing in admin and makes "copy existing key" impossible — which is correct; secrets should be sourced from the credential provider (Supabase, ERP) at rotation time, not read back from WordPress.
+
+**Trade-off accepted:** Plugin must ship an encryption key on activation. Loss of that key brick encrypted secrets (operators re-enter from source). Acceptable — same as any encrypted-at-rest system.
+
+---
+
+## 21. Private S3 bucket — no public object access
+
+**Decision:** The intake bucket is private. Anonymous users cannot list or read objects. Upload and download occur only via pre-signed URLs or server credentials.
+
+**Why it seems wrong:** Public buckets with unguessable UUID keys are a common pattern and seem simpler for debugging.
+
+**Why we chose this:** CAD files and customer contact metadata are sensitive. UUID keys leak through manifests, logs, and referrer headers. Bucket-level privacy is the baseline; pre-signed URLs add scoped, time-limited access for uploads.
