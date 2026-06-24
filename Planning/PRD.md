@@ -701,6 +701,14 @@ Typical pairing: WP plugin testing branch → staging S3 bucket (or shared dev b
 - Submitted receipts: retain WP DB rows indefinitely (they are lightweight index rows).
 - S3 intake prefixes: deleted by the ERP import worker after successful quote creation (step 3.5.2). Unreceipted session prefixes (no `receipt.json`): deleted by the 30-day cleanup cron. Retain indefinitely only when import repeatedly fails — alert and investigate.
 
+### 5.4 Quality Assurance
+
+Before V1 release, every **plugin-scoped** acceptance criterion in §7 (IDs `AC-WP-*`) must have at least one automated test in this repository.
+
+Criteria marked `AC-ERP-*` are verified in the ERP repository, not here.
+
+Detailed test layers, acceptance-criterion registry, progressive CI gates, and S3 validation requirements: [Planning/TESTING.md](TESTING.md).
+
 ---
 
 ## 6. Out of Scope (V1)
@@ -718,12 +726,14 @@ Typical pairing: WP plugin testing branch → staging S3 bucket (or shared dev b
 
 ## 7. Acceptance Criteria
 
-- A customer who completes the full RFQ form and receives a receipt number can have their submission located in the ERP within one import poll cycle (≤5 minutes).
-- A customer who submits and then re-submits the same session (due to a network error causing them to retry) receives the same receipt number and does not create a duplicate quote.
-- If the WordPress plugin is unreachable when a customer navigates to the RFQ page, the Airtable form renders within 3 seconds.
-- If S3 upload of any file fails, the customer sees a per-file error and can retry without re-entering any form data.
-- If the final submit endpoint fails after all files are uploaded, the customer can retry submission without re-uploading files.
-- No RFQ with a `receipt.json` in S3 and a corresponding WP DB receipt row is ever lost due to ERP downtime.
-- Session creation is rejected with HTTP 429 after 10 sessions from the same IP within one hour.
-- The customer-facing form is implemented in **TypeScript** (compiled to a JS bundle by Vite); there are no plain JavaScript source files in the form codebase.
-- All form UI styling uses **Tailwind CSS** utility classes; the shipped bundle includes a single compiled CSS file with no separate hand-written component stylesheets.
+_Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3._
+
+- **AC-ERP-001** — A customer who completes the full RFQ form and receives a receipt number can have their submission located in the ERP within one import poll cycle (≤5 minutes). _(Verified in ERP repo.)_
+- **AC-WP-001** — A customer who submits and then re-submits the same session (due to a network error causing them to retry) receives the same receipt number and does not create a duplicate quote.
+- **AC-WP-002** — If the WordPress plugin is unreachable when a customer navigates to the RFQ page, the Airtable form renders within 3 seconds.
+- **AC-WP-003** — If S3 upload of any file fails, the customer sees a per-file error and can retry without re-entering any form data.
+- **AC-WP-004** — If the final submit endpoint fails after all files are uploaded, the customer can retry submission without re-uploading files.
+- **AC-WP-005** — No RFQ with a `receipt.json` in S3 and a corresponding WP DB receipt row is ever lost due to ERP downtime.
+- **AC-WP-006** — Session creation is rejected with HTTP 429 after 10 sessions from the same IP within one hour.
+- **AC-WP-007** — The customer-facing form is implemented in **TypeScript** (compiled to a JS bundle by Vite); there are no plain JavaScript source files in the form codebase.
+- **AC-WP-008** — All form UI styling uses **Tailwind CSS** utility classes; the shipped bundle includes a single compiled CSS file with no separate hand-written component stylesheets.

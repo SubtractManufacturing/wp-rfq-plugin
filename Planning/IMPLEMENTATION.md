@@ -26,7 +26,7 @@ Build a WordPress plugin (`rfq-intake`) with a React multi-step RFQ form embedde
 
 | Assumption | Value |
 |------------|--------|
-| PHP | 8.1+ |
+| PHP | 8.3+ |
 | WordPress | 6.4+ |
 | Frontend toolchain | React 18, TypeScript, Vite, Tailwind CSS |
 | Form source language | TypeScript only (`.ts`/`.tsx`) — no plain `.js`/`.jsx` source |
@@ -37,7 +37,7 @@ Build a WordPress plugin (`rfq-intake`) with a React multi-step RFQ form embedde
 | REST namespace | `rfq/v1` |
 | ERP codebase | Separate Remix repo; implement §3.5 there using this manifest contract |
 | Local dev | Docker WordPress or existing staging site; Supabase dev bucket |
-| Tests | PHPUnit for PHP validators/services; manual E2E for uploads (no Playwright required in V1 unless team adds it) |
+| Tests | Production test stack per [Planning/TESTING.md](TESTING.md): PHPUnit 11, wp-env integration, Vitest, Playwright, progressive GitHub Actions gates, acceptance-criterion registry. Manual staging smoke supplements automation before prod deploy. |
 
 If Supabase S3 requires path-style endpoints, set `'use_path_style_endpoint' => true` on the S3 client.
 
@@ -65,9 +65,15 @@ wp-rfq-plugin/
 │   └── src/
 │       ├── index.css                # @tailwind directives only
 │       └── ...
-├── tests/php/                       # PHPUnit
+├── tests/                           # Planned — scaffold at M1; see TESTING.md §7
+│   ├── php/unit/
+│   ├── php/integration/
+│   ├── contract/schemas/
+│   └── e2e/
 └── Planning/
 ```
+
+**Test infrastructure:** Introduced at **M1** per [TESTING.md §4](TESTING.md). Phase 0 does not create `composer.json`, `.wp-env.json`, CI workflows, or test files.
 
 **Step 0.2** Bootstrap `rfq-intake/rfq-intake.php`:
 
@@ -522,9 +528,11 @@ HTTP 401
 | `frontend/src/steps/*.tsx` | Create — 5 steps + success |
 | `frontend/src/lib/uploadFile.ts` | Create |
 | `frontend/src/hooks/useAutosave.ts` | Create |
-| `tests/php/ManifestValidatorTest.php` | Create |
-| `tests/php/PostalCodeTest.php` | Create |
-| `composer.json` | Create — PHP deps + autoload PSR-4 `RFQ\\` |
+| `tests/php/ManifestValidatorTest.php` | Create at M3 — alongside ManifestValidator |
+| `tests/php/PostalCodeTest.php` | Create at M3 |
+| `composer.json` | Create at M1 — PHP deps + autoload PSR-4 `RFQ\\` |
+| `.wp-env.json`, `phpunit.xml.dist`, `playwright.config.ts`, `.github/workflows/test.yml`, `scripts/check-acceptance-coverage.php`, `tests/**` (beyond rows above) | Planned M1–M5 — see [TESTING.md §7](TESTING.md) |
+| `Planning/TESTING.md` | Create — testing spec (doc pass) |
 | `Planning/IMPLEMENTATION.md` | This file |
 | `README.md` | Update — dev setup commands |
 
@@ -562,88 +570,75 @@ HTTP 401
 
 ## 7. Acceptance Criteria
 
+Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §3. Before V1 release, every `AC-WP-*` ID must have ≥1 automated test. ERP checkboxes map to `AC-ERP-*` (verified in ERP repo).
+
 ### WordPress plugin
 
-- [ ] `[rfq_form]` renders React form on a WP page; scripts not loaded on other pages
-- [ ] Form UI is styled with Tailwind only (no stray CSS files in `frontend/src/`)
-- [ ] Frontend builds from TypeScript source with `npm run build` (no plain `.js`/`.jsx` in `frontend/src/`)
-- [ ] Admin can configure S3, emails, Airtable URL, optional ERP webhook without redeploy
-- [ ] Secrets are write-only in admin and encrypted in DB
-- [ ] `GET /health` returns 200 only when S3 credentials work
-- [ ] Full happy path: contact → upload part file → metadata → global → submit → receipt number
-- [ ] Success screen shows SVG, thank-you copy, muted `Ref: RFQ-...`
-- [ ] Submit retry after simulated network failure returns same receipt number (idempotent)
-- [ ] Page refresh starts new session; prior warm lead row remains in DB
-- [ ] Health failure within 3s shows Airtable embed
-- [ ] >20 parts blocked in UI and rejected on submit
-- [ ] Rate limit: 11th session from same IP in 1 hour → 429
-- [ ] Invalid manifest returns 422 with field errors
-- [ ] Missing S3 file at submit returns error identifying missing keys
-- [ ] Webhook POST fires on submit when URL configured; submit still succeeds when webhook target is down
+- [ ] **AC-WP-009** — `[rfq_form]` renders React form on a WP page; scripts not loaded on other pages
+- [ ] **AC-WP-008** — Form UI is styled with Tailwind only (no stray CSS files in `frontend/src/`)
+- [ ] **AC-WP-007** — Frontend builds from TypeScript source with `npm run build` (no plain `.js`/`.jsx` in `frontend/src/`)
+- [ ] **AC-WP-010** — Admin can configure S3, emails, Airtable URL, optional ERP webhook without redeploy
+- [ ] **AC-WP-011** — Secrets are write-only in admin and encrypted in DB
+- [ ] **AC-WP-012** — `GET /health` returns 200 only when S3 credentials work
+- [ ] **AC-WP-013** — Full happy path: contact → upload part file → metadata → global → submit → receipt number
+- [ ] **AC-WP-014** — Success screen shows SVG, thank-you copy, muted `Ref: RFQ-...`
+- [ ] **AC-WP-001** — Submit retry after simulated network failure returns same receipt number (idempotent)
+- [ ] **AC-WP-015** — Page refresh starts new session; prior warm lead row remains in DB
+- [ ] **AC-WP-002** — Health failure within 3s shows Airtable embed
+- [ ] **AC-WP-016** — >20 parts blocked in UI and rejected on submit
+- [ ] **AC-WP-006** — Rate limit: 11th session from same IP in 1 hour → 429
+- [ ] **AC-WP-017** — Invalid manifest returns 422 with field errors
+- [ ] **AC-WP-018** — Missing S3 file at submit returns error identifying missing keys
+- [ ] **AC-WP-019** — Webhook POST fires on submit when URL configured; submit still succeeds when webhook target is down
 
 ### ERP (separate repo)
 
-- [ ] Webhook verifies HMAC signature
-- [ ] Poll worker imports receipt within 5 minutes when webhook skipped
-- [ ] Duplicate import attempts create one quote only
-- [ ] Import copies only manifest-referenced keys to quote storage
-- [ ] Import deletes `intake/{session_id}/` prefix after success
-- [ ] Import skips sessions with manifest but no receipt
+- [ ] **AC-ERP-002** — Webhook verifies HMAC signature
+- [ ] **AC-ERP-003** — Poll worker imports receipt within 5 minutes when webhook skipped
+- [ ] **AC-ERP-004** — Duplicate import attempts create one quote only
+- [ ] **AC-ERP-005** — Import copies only manifest-referenced keys to quote storage
+- [ ] **AC-ERP-006** — Import deletes `intake/{session_id}/` prefix after success
+- [ ] **AC-ERP-007** — Import skips sessions with manifest but no receipt
 
 ---
 
 ## 8. Testing Plan
 
-### PHPUnit (`tests/php/`)
+V1 uses a layered automated test pyramid with **progressive CI gates** tied to milestones M1–M5. Gates accumulate as features ship; the full PR-equivalent suite runs at pre-release.
 
-| Test class | Cases |
-|------------|-------|
-| `ManifestValidatorTest` | valid manifest passes; missing email fails; custom tolerance without detail fails; qty 0 fails; 21 parts fails; past delivery date fails; invalid postal code fails |
-| `PostalCodeTest` | US 5/9 digit; CA format; rejects garbage |
-| `PhoneValidatorTest` | 10 digits pass; 9 digits fail; phone set requires country code 1 |
-| `ReceiptNumberTest` | sequential format `RFQ-YYYYMMDD-000001`; daily rollover |
+**Canonical spec:** [Planning/TESTING.md](TESTING.md) — acceptance-criterion registry (§3), progressive CI (§4), S3/Supabase validation (§5), tooling (§8), manual staging (§11).
 
-Run: `composer test` (configure phpunit.xml).
+### PHPUnit (once M1 scaffold exists)
 
-### Manual — plugin staging
+| Test class | Cases | AC IDs |
+|------------|-------|--------|
+| `ManifestValidatorTest` | valid manifest; missing email; custom tolerance without detail; qty 0; 21 parts; past delivery date; invalid postal code | AC-WP-016, AC-WP-017 |
+| `PostalCodeTest` | US 5/9 digit; CA format; rejects garbage | AC-WP-017 |
+| `PhoneValidatorTest` | 10 digits pass; 9 fail; phone requires country code 1 | AC-WP-017 |
+| `ReceiptNumberTest` | format `RFQ-YYYYMMDD-000001`; daily rollover | AC-WP-022 |
+| `JwtServiceTest` | sign/verify; expiry; session isolation | AC-WP-006 |
+| `S3KeyBuilderTest` | sanitization; prefix; rejects client keys | AC-WP-024 |
+| `RateLimiterTest` | session/IP limits; upload-url per session | AC-WP-006 |
+| `SecretsTest` | encrypt; blank save preserves; no REST leak | AC-WP-020 |
+| `ReceiptConcurrencyTest` | parallel submits → unique numbers | AC-WP-022 |
+| `ActivatorTest` | double activation idempotent | AC-WP-023 |
 
-1. Configure admin settings with staging S3 bucket + blank webhook URL.
-2. Place `[rfq_form]` on a test page.
-3. Complete RFQ with one part + one drawing PDF.
-4. Verify objects in S3 under `intake/{session_id}/`.
-5. Submit; verify `meta/manifest.json`, `meta/receipt.json`, DB row `status=submitted`.
-6. Refresh page — form resets; DB shows two session rows (first abandoned/submitted).
-7. Break S3 secret in admin → health fails → Airtable iframe appears.
-8. Submit with network throttling; kill request; retry → same receipt number.
-9. Check NDA checkbox → sales email notice visible; manifest has `nda_required: true`.
+Run (after M1): `composer test`, `composer test:integration`, `npm run test:acceptance-coverage`.
 
-### Manual — ERP staging
-
-1. Configure webhook URL + shared secret on WP and ERP.
-2. Submit RFQ → quote appears in ERP within seconds.
-3. Disable webhook URL → submit → quote appears within 5-minute poll.
-4. Confirm intake prefix deleted after import.
-5. Re-run import job on same receipt → no duplicate quote.
-
-### Integration checklist before production
-
-- [ ] Production S3 bucket is private (anonymous GET returns 403)
-- [ ] Production WP admin settings filled (S3, emails, ERP webhook)
-- [ ] Airtable fallback URL tested
-- [ ] JWT + encryption keys rotated from dev defaults
-- [ ] ERP backlog alert configured (PRD §5.1)
+Manual staging checklists and pre-production smoke tests: [TESTING.md §11](TESTING.md).
 
 ---
 
 ## Suggested milestones / PR slicing
 
-| Milestone | Scope | Demo |
-|-----------|--------|------|
-| M1 | Phase 0–2 + health + sessions | REST client can create session |
-| M2 | Phase 3 + lead + upload-urls | curl uploads file to S3 via presigned URL |
-| M3 | Phase 4 submit | curl submit returns receipt; S3 has receipt.json |
-| M4 | Phase 5–6 React Steps 1–2 | Upload UI works E2E |
-| M5 | Phase 6 Steps 3–5 + success | Full form E2E |
-| M6 | Phase 7 ERP import | Quote in ERP from receipt |
+| Milestone | Scope | Demo | CI gates (cumulative) | Key AC IDs |
+|-----------|--------|------|----------------------|------------|
+| M1 | Phase 0–2 + health + sessions | REST client can create session | lint, php-unit, php-integration, contract, acceptance-coverage | AC-WP-006, 012, 023 |
+| M2 | Phase 3 + lead + upload-urls | curl uploads file to S3 via presigned URL | M1 + upload-url integration, S3 unit/mock, S3 spike | AC-WP-010, 011, 020, 021, 024 |
+| M3 | Phase 4 submit | curl submit returns receipt; S3 has receipt.json | M2 + submit integration, durability, idempotency | AC-WP-001, 005, 016–019, 022, 025, 026 |
+| M4 | Phase 5–6 React Steps 1–2 | Upload UI works E2E | M3 + frontend-unit (steps 1–2) | AC-WP-007, 008, 003 (partial) |
+| M5 | Phase 6 Steps 3–5 + success | Full form E2E | M4 + e2e-mocked, a11y smoke | AC-WP-002–004, 009, 013–015, 027 |
+| M6 | Phase 7 ERP import | Quote in ERP from receipt | ERP repo | AC-ERP-* |
+| Pre-release | — | Staging sign-off | Full suite + Supabase/LocalStack E2E | All AC-WP-* |
 
-Ship M3 to staging before investing in React polish — proves durability story early.
+Ship M3 to staging before investing in React polish — proves durability story early. See [TESTING.md §4](TESTING.md) for gate details.

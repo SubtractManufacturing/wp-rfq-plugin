@@ -32,6 +32,7 @@ This document explains *why* the architecture is designed the way it is. It is i
 20. [Plugin secrets encrypted at rest, write-only in admin](#20-plugin-secrets-encrypted-at-rest-write-only-in-admin)
 21. [Private S3 bucket — no public object access](#21-private-s3-bucket--no-public-object-access)
 22. [TypeScript and Tailwind for the React form](#22-typescript-and-tailwind-for-the-react-form)
+23. [Production automated testing before release](#23-production-automated-testing-before-release)
 
 ---
 
@@ -346,3 +347,17 @@ This pattern (detect-and-return on retry rather than re-execute) is safe here be
 **Why we chose Tailwind:** The form must look polished and consistent regardless of the active WordPress theme. Utility-first CSS keeps styling co-located with components, ships as one compiled CSS file with the bundle, and avoids theme CSS leaking into or fighting with custom stylesheets. Operators do not edit form styles in WP admin — the bundle is the source of truth.
 
 **Trade-off accepted:** Developers must run `npm run build` (or CI) before deploying the plugin. Styling changes require a rebuild, not a quick edit in the WP theme customizer.
+
+---
+
+## 23. Production automated testing before release
+
+**Decision:** V1 ships with layered automated tests and **progressive CI** tied to [IMPLEMENTATION](IMPLEMENTATION.md) milestones M1–M5. S3 access uses an injectable `S3ClientInterface`. PR CI uses a mock S3 adapter; an **M2 validation spike** and pre-release/main E2E runs prove Supabase-compatible presigned PUT, CORS, and Content-Type behavior — not assumed from POST-policy documentation. Runtime baseline: PHP 8.3+ (matches production host), PHPUnit 11.
+
+**Why it seems wrong:** WordPress plugins often rely on manual QA before release. A validation spike plus Supabase or LocalStack E2E adds Docker, wp-env, and Node tooling before the product exists.
+
+**Why we chose this:** [PRD §7](PRD.md) failure-mode guarantees (receipt durability, idempotent submit, health-check fallback) regress silently without automation. Pre-signed PUT URLs do not support POST-style policy documents (see [TESTING.md §5](TESTING.md)); Supabase behavior must be validated empirically during M2, not inferred from PRD policy wording. The architecture already separates testable units (ADD §5 server-side keys, §6 HeadObject before receipt, §12 JWT in memory). Mock S3 keeps PR feedback fast; real endpoint smoke on main/nightly catches provider-specific quirks.
+
+**Trade-offs accepted:** Contributors need Docker (wp-env), Composer, and Node. ERP import tests live in the ERP repo (ADD §7, §8). Manual staging smoke supplements automation before production deploy but is not a merge gate.
+
+See [Planning/TESTING.md](TESTING.md) §3–§5 for the acceptance-criterion registry, progressive gates, and S3 validation requirements.

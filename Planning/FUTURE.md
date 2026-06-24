@@ -73,3 +73,23 @@ Batch upload with server-side extraction into individual part files.
 ## AI-assisted metadata extraction
 
 Extract material, tolerance, or quantity hints from uploaded drawings.
+
+## Mutation testing
+
+Post-V1 quality hardening — measure test effectiveness beyond line coverage.
+
+## Visual regression testing
+
+Automated screenshot diffing if marketing polish becomes a release gate.
+
+## Load / performance testing
+
+Session-creation abuse and upload throughput beyond rate-limit unit coverage.
+
+## Required Codecov diff coverage on PRs
+
+Enforce no coverage decrease on touched files (optional PR comments until then).
+
+## WP/PHP compatibility matrix as required PR gate
+
+Run PHP 8.3 + multiple WordPress versions on every PR after nightly matrix is stable (nightly report-only first).
