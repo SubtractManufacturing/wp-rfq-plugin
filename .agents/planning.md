@@ -27,3 +27,12 @@ Apply when editing files under `Planning/` or creating product/architecture spec
 
 - **`Planning/ADD.md`** explains *why* for decisions already reflected in the PRD.
 - For new hard-to-reverse trade-offs, add a section to ADD (current scope only) or a numbered ADR under `docs/adr/` if the repo adopts that pattern.
+
+## Frontend stack (PRD / IMPLEMENTATION)
+
+When editing product or implementation docs, keep these consistent:
+
+- **Language:** TypeScript (`.ts`/`.tsx`) for the React form — not plain JavaScript source files.
+- **Styling:** Tailwind CSS for all form UI — not CSS modules, styled-components, or hand-written per-component stylesheets.
+- **Build:** Vite outputs a JS + CSS bundle into the plugin `build/` directory for WordPress to enqueue.
+- Say **TypeScript** (or "TS/React") in prose; **JavaScript** refers only to the compiled browser bundle or third-party scripts (e.g. XSS), not the authoring language.

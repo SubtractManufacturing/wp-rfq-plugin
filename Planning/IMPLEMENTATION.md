@@ -15,7 +15,7 @@ Build a WordPress plugin (`rfq-intake`) with a React multi-step RFQ form embedde
 | # | Deliverable | Owner |
 |---|-------------|--------|
 | A | WordPress plugin (PHP): REST API, admin settings, S3, receipts | This repo |
-| B | React form bundle built into plugin `build/` | This repo |
+| B | TypeScript + React + Tailwind form bundle built into plugin `build/` | This repo |
 | C | ERP import worker + webhook endpoint | ERP repo (spec in PRD §3.5) |
 
 **Recommended build order:** A1 → A2 → A3 → B1 → B2 → A4 → B3 → C1. Do not start the React UI until `POST /sessions` and `GET /health` work.
@@ -28,7 +28,9 @@ Build a WordPress plugin (`rfq-intake`) with a React multi-step RFQ form embedde
 |------------|--------|
 | PHP | 8.1+ |
 | WordPress | 6.4+ |
-| Frontend toolchain | React 18, TypeScript, Vite |
+| Frontend toolchain | React 18, TypeScript, Vite, Tailwind CSS |
+| Form source language | TypeScript only (`.ts`/`.tsx`) — no plain `.js`/`.jsx` source |
+| Form styling | Tailwind CSS utility classes only — no CSS modules or per-component stylesheets |
 | JWT library | `firebase/php-jwt` |
 | S3 client | `aws/aws-sdk-php` (Supabase S3-compatible endpoint) |
 | Plugin slug | `rfq-intake` |
@@ -55,10 +57,14 @@ wp-rfq-plugin/
 │   ├── admin/
 │   ├── assets/materials/default.json
 │   └── build/                       # Vite output (gitignored until CI builds)
-├── frontend/                        # React source
+├── frontend/                        # TypeScript + React source
 │   ├── package.json
 │   ├── vite.config.ts
+│   ├── tailwind.config.ts
+│   ├── postcss.config.js
 │   └── src/
+│       ├── index.css                # @tailwind directives only
+│       └── ...
 ├── tests/php/                       # PHPUnit
 └── Planning/
 ```
@@ -76,7 +82,17 @@ wp-rfq-plugin/
 - `base: './'`
 - `build.outDir: '../rfq-intake/build'`
 - `build.rollupOptions.input: src/main.tsx`
-- Output single JS + CSS bundle
+- Output single JS + CSS bundle (`rfq-form.js`, `rfq-form.css`)
+
+**Step 0.4** Configure Tailwind CSS:
+
+- Install `tailwindcss`, `postcss`, `autoprefixer`
+- `tailwind.config.ts`: set `content: ['./src/**/*.{ts,tsx}']`; optional `prefix: 'rfq-'` or scope under `#rfq-form-root` if theme bleed is a problem in staging
+- `postcss.config.js`: `tailwindcss`, `autoprefixer`
+- `src/index.css`: `@tailwind base; @tailwind components; @tailwind utilities;` plus any minimal scoped reset on `#rfq-form-root`
+- Import `index.css` from `main.tsx`
+
+All step components use Tailwind utility classes for layout and styling — no separate `.css` files per component.
 
 ---
 
@@ -301,7 +317,7 @@ Do **not** pass secrets or JWT in localized config.
 
 ---
 
-### Phase 6 — React form
+### Phase 6 — React form (TypeScript + Tailwind)
 
 **Step 6.1** `frontend/src/api/client.ts`:
 
@@ -330,7 +346,9 @@ Do **not** pass secrets or JWT in localized config.
 | StepPartMeta | `steps/StepPartMeta.tsx` | Material dropdown + typeahead; tolerance |
 | StepGlobal | `steps/StepGlobal.tsx` | Delivery date, lead time, postal code, NDA checkbox + notice |
 | StepReview | `steps/StepReview.tsx` | Summary + submit |
-| SuccessView | `SuccessView.tsx` | SVG + copy + `Ref: {receipt}` |
+| SuccessView | `SuccessView.tsx` | SVG + copy + `Ref: {receipt}`; muted ref line via Tailwind (e.g. `text-sm text-gray-500`) |
+
+Style every step component with Tailwind classes only. Do not add CSS modules, styled-components, or hand-written stylesheets.
 
 **Step 6.5** Upload helper `frontend/src/lib/uploadFile.ts`:
 
@@ -491,9 +509,13 @@ HTTP 401
 | `rfq-intake/admin/class-rfq-admin-settings.php` | Create |
 | `rfq-intake/admin/views/settings-page.php` | Create |
 | `rfq-intake/assets/materials/default.json` | Create |
-| `frontend/package.json` | Create |
+| `frontend/package.json` | Create — React, TypeScript, Vite, Tailwind |
 | `frontend/vite.config.ts` | Create |
-| `frontend/src/main.tsx` | Create — mount React |
+| `frontend/tailwind.config.ts` | Create |
+| `frontend/postcss.config.js` | Create |
+| `frontend/src/index.css` | Create — Tailwind entry |
+| `frontend/tsconfig.json` | Create — strict TypeScript |
+| `frontend/src/main.tsx` | Create — mount React, import `index.css` |
 | `frontend/src/App.tsx` | Create |
 | `frontend/src/api/client.ts` | Create |
 | `frontend/src/state/FormContext.tsx` | Create |
@@ -534,6 +556,8 @@ HTTP 401
 
 12. **UTC dates:** Server-side delivery date validation uses UTC date, not WP timezone.
 
+13. **Tailwind vs WordPress theme:** Theme CSS may affect the mount node. Scope Tailwind under `#rfq-form-root` or use a prefix in `tailwind.config.ts` if staging shows bleed; do not add non-Tailwind stylesheets as a workaround.
+
 ---
 
 ## 7. Acceptance Criteria
@@ -541,6 +565,8 @@ HTTP 401
 ### WordPress plugin
 
 - [ ] `[rfq_form]` renders React form on a WP page; scripts not loaded on other pages
+- [ ] Form UI is styled with Tailwind only (no stray CSS files in `frontend/src/`)
+- [ ] Frontend builds from TypeScript source with `npm run build` (no plain `.js`/`.jsx` in `frontend/src/`)
 - [ ] Admin can configure S3, emails, Airtable URL, optional ERP webhook without redeploy
 - [ ] Secrets are write-only in admin and encrypted in DB
 - [ ] `GET /health` returns 200 only when S3 credentials work

@@ -1,6 +1,8 @@
 # wp-rfq-plugin
 Plugin to handle RFQ ingest for WP sites with Subtract Custom Software.
 
+**Stack:** WordPress plugin (PHP) + customer-facing form (**TypeScript**, React, Vite, **Tailwind CSS**). See `Planning/IMPLEMENTATION.md` for build setup.
+
 ## Documentation
 
 | File | Purpose |

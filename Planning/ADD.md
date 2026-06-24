@@ -31,6 +31,7 @@ This document explains *why* the architecture is designed the way it is. It is i
 19. [Manifest is the file source of truth; upload-only S3 for customers](#19-manifest-is-the-file-source-of-truth-upload-only-s3-for-customers)
 20. [Plugin secrets encrypted at rest, write-only in admin](#20-plugin-secrets-encrypted-at-rest-write-only-in-admin)
 21. [Private S3 bucket — no public object access](#21-private-s3-bucket--no-public-object-access)
+22. [TypeScript and Tailwind for the React form](#22-typescript-and-tailwind-for-the-react-form)
 
 ---
 
@@ -331,3 +332,17 @@ This pattern (detect-and-return on retry rather than re-execute) is safe here be
 **Why it seems wrong:** Public buckets with unguessable UUID keys are a common pattern and seem simpler for debugging.
 
 **Why we chose this:** CAD files and customer contact metadata are sensitive. UUID keys leak through manifests, logs, and referrer headers. Bucket-level privacy is the baseline; pre-signed URLs add scoped, time-limited access for uploads.
+
+---
+
+## 22. TypeScript and Tailwind for the React form
+
+**Decision:** The customer-facing RFQ form is implemented in **TypeScript** (React, `.tsx` files) and styled exclusively with **Tailwind CSS**. Vite compiles source to a JS + CSS bundle enqueued by WordPress. No plain JavaScript source files and no ad-hoc CSS stylesheets for form UI.
+
+**Why it seems wrong:** WordPress plugins are traditionally PHP with a small jQuery script. TypeScript and Tailwind add a Node build step and a frontend toolchain separate from the PHP plugin.
+
+**Why we chose TypeScript:** The manifest and REST contracts are strict and nested (contact, per-part metadata, global fields, file keys). Type errors at build time are cheaper than failed submits or malformed payloads. Multi-step form state is easier to refactor safely with shared types (e.g. `RfqManifest`, API error shapes).
+
+**Why we chose Tailwind:** The form must look polished and consistent regardless of the active WordPress theme. Utility-first CSS keeps styling co-located with components, ships as one compiled CSS file with the bundle, and avoids theme CSS leaking into or fighting with custom stylesheets. Operators do not edit form styles in WP admin — the bundle is the source of truth.
+
+**Trade-off accepted:** Developers must run `npm run build` (or CI) before deploying the plugin. Styling changes require a rebuild, not a quick edit in the WP theme customizer.

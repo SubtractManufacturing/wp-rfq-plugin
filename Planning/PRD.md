@@ -53,8 +53,8 @@ The internal ERP (a Remix application backed by Supabase Postgres and Supabase S
 │                  WP REST API calls                      │
 │                          │                              │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │            React RFQ Form (JS bundle)             │  │
-│  │  Served by WP plugin, runs in browser             │  │
+│  │     React RFQ Form (TypeScript → bundled JS/CSS)  │  │
+│  │  Tailwind-styled UI; served by WP plugin          │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
                            │
@@ -256,9 +256,25 @@ Do not fetch materials from the ERP in V1.
 
 ### 3.2 React RFQ Form
 
-The form is a JavaScript bundle built with React, served by the WordPress plugin as an enqueued script.
+The form is a **TypeScript** React application (`.tsx` source), built with Vite into a single JS + CSS bundle and served by the WordPress plugin as enqueued scripts. There are no plain JavaScript source files in the form codebase.
 
-**Embedding:** Register shortcode **`[rfq_form]`**. Output a single mount point (e.g. `<div id="rfq-form-root"></div>`). Enqueue the React bundle only on pages where the shortcode is present.
+**Frontend stack:**
+
+| Layer | Choice | Notes |
+|-------|--------|-------|
+| Language | TypeScript | Strict typing for manifest, API responses, and multi-step form state |
+| UI | React 18 | Multi-step form, in-memory session state |
+| Build | Vite | Output to plugin `build/` (e.g. `rfq-form.js`, `rfq-form.css`) |
+| Styling | **Tailwind CSS** | All form UI styling — layout, typography, spacing, colors, responsive behavior |
+
+**Styling rules:**
+
+- Use **Tailwind utility classes** for all customer-facing form UI (steps, inputs, buttons, errors, progress, success screen).
+- Do **not** add separate CSS modules, styled-components, Sass/Less files, or hand-written component stylesheets.
+- A single entry stylesheet (e.g. `index.css` with `@tailwind` directives) is allowed for Tailwind base/components/utilities and minimal WordPress theme isolation (e.g. scoped reset on `#rfq-form-root`).
+- Inline SVG icons (e.g. success checkmark) may live in TSX; their size and color use Tailwind classes on the SVG or wrapper.
+
+**Embedding:** Register shortcode **`[rfq_form]`**. Output a single mount point (e.g. `<div id="rfq-form-root"></div>`). Enqueue the built bundle only on pages where the shortcode is present.
 
 #### 3.2.1 Startup and Fallback Logic
 
@@ -436,7 +452,7 @@ Shown only after submit returns a `receipt_number`. Replace the form with a simp
 1. **Success icon** — custom inline SVG, centered, visually prominent (e.g. checkmark, document, or brand-appropriate illustration). Bundled with the plugin.
 2. **Primary heading** — e.g. *Thank you for submitting your quote request.*
 3. **Supporting copy** — e.g. *Our team is reviewing your files. We'll send your quote to the email address you provided.* Keep tone professional and plain; do not promise a specific turnaround time.
-4. **Reference line (footer of the view)** — `Ref: {receipt_number}` in **low visual hierarchy** (smaller type, muted color, normal/light weight). Copyable is a plus but not required.
+4. **Reference line (footer of the view)** — `Ref: {receipt_number}` in **low visual hierarchy** (e.g. Tailwind `text-sm text-gray-500 font-normal`). Copyable is a plus but not required.
 
 **V1 exclusions:** No manifest summary, no PDF, no "confirmation email sent" claim (customer email on receipt is not implemented in V1). No call-to-action button.
 
@@ -709,3 +725,5 @@ Typical pairing: WP plugin testing branch → staging S3 bucket (or shared dev b
 - If the final submit endpoint fails after all files are uploaded, the customer can retry submission without re-uploading files.
 - No RFQ with a `receipt.json` in S3 and a corresponding WP DB receipt row is ever lost due to ERP downtime.
 - Session creation is rejected with HTTP 429 after 10 sessions from the same IP within one hour.
+- The customer-facing form is implemented in **TypeScript** (compiled to a JS bundle by Vite); there are no plain JavaScript source files in the form codebase.
+- All form UI styling uses **Tailwind CSS** utility classes; the shipped bundle includes a single compiled CSS file with no separate hand-written component stylesheets.
