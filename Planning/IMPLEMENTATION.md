@@ -111,7 +111,7 @@ All step components use Tailwind utility classes for layout and styling — no s
 -- rfq_receipt_sequences (date CHAR(8) PK, seq INT UNSIGNED)
 ```
 
-Use `dbDelta()`. Set `s3_prefix = 'intake/{session_id}/'` on session create, not in schema default.
+Use `dbDelta()`. Include nullable admin-summary columns from PRD §3.1.3 (`shipping_postal_code`, `submitted_part_count`). Set `s3_prefix = 'intake/{session_id}/'` on session create, not in schema default.
 
 **Step 1.2** `includes/class-rfq-secrets.php`:
 
@@ -149,6 +149,25 @@ Register settings group `rfq_intake_settings` with fields from PRD §5.2:
 
 Ship `default.json` with at least: 1018 Steel, 6061 Aluminum, 7075 Aluminum, 304 Stainless — include `aliases` and `show_in_dropdown` flags per PRD §3.1.7.
 
+**Step 1.5** `admin/class-rfq-admin-intake-list.php` + `admin/views/intake-list-page.php`:
+
+- Add a WordPress admin submenu for the RFQ intake ledger.
+- Use the same standard administrator permission model as the plugin settings page; do not introduce custom capabilities/RBAC in V1.
+- Query `rfq_sessions` rows ordered by `created_at DESC`; do not use `updated_at` for default ordering.
+- Include every `rfq_sessions` row; do not hide incomplete, empty, or suspected bot/session-spam rows in V1.
+- Add pagination with a default page size of 25 rows and selectable page sizes of 50 or 75 rows.
+- Do not add status/search filtering in V1.
+- Render a read-only table with name (`first_name` + `last_name` as one column), company name, email, phone number, shipping postal code / ZIP code, created date, raw DB status, and submitted part count for completed RFQs.
+- Format stored V1 phone values for display as `+1 (555) 555-0100`; keep DB/API storage normalized as `phone = 10 digits` and `phone_country_code = "1"`.
+- Display name/company/email values from the DB without admin-list-only casing transforms.
+- Display email exactly as stored in the database; do not apply admin-list-only casing or normalization.
+- Display created date and time in the configured WordPress site timezone.
+- Render missing values as empty cells, not placeholder text.
+- Render submitted part count as an empty cell unless `status = submitted`.
+- Display `rfq_sessions.status` directly (`draft`, `submitted`, or future `abandoned`); do not derive separate admin labels for completed-contact attempts or session starts in V1.
+- Do not show ERP import status.
+- Do not add CSV export in V1.
+
 ---
 
 ### Phase 2 — REST API foundation
@@ -160,7 +179,7 @@ Ship `default.json` with at least: 1018 Steel, 6061 Aluminum, 7075 Aluminum, 304
 | GET | `/rfq/v1/health` | `health_check` |
 | POST | `/rfq/v1/sessions` | `create_session` |
 | POST | `/rfq/v1/sessions/(?P<session_id>[a-f0-9-]+)/refresh` | `refresh_session` |
-| PATCH | `/rfq/v1/sessions/(?P<session_id>...)/lead` | `patch_lead` |
+| PATCH | `/rfq/v1/sessions/(?P<session_id>...)/contact` | `patch_contact` |
 | POST | `/rfq/v1/sessions/(?P<session_id>...)/upload-urls` | `upload_urls` |
 | PUT | `/rfq/v1/sessions/(?P<session_id>...)/draft` | `put_draft` |
 | POST | `/rfq/v1/sessions/(?P<session_id>...)/submit` | `submit` |
@@ -185,6 +204,8 @@ Permission callback for JWT routes: read `Authorization: Bearer`, validate, atta
 2. **`POST /sessions/{id}/refresh`** — reject if `status=submitted`; return `{ token }`
 3. **`GET /health`** — verify S3 settings present; `HeadBucket` or lightweight S3 call; `{ status: "ok" }` or 503
 
+Do not implement automatic `abandoned` transitions in V1. The schema reserves the status for a future explicit abandonment action; tab close, refresh, and inactivity remain `draft` until retention cleanup.
+
 ---
 
 ### Phase 3 — S3 integration
@@ -196,7 +217,13 @@ Permission callback for JWT routes: read `Authorization: Bearer`, validate, atta
 - `put_json( string $key, array $data ): void`
 - `create_presigned_put( string $key, string $content_type, int $max_bytes, int $expires_seconds = 1800 ): string`
 
-Pre-signed policy must bind **exact key** (not just prefix), `Content-Type`, and `content-length-range` per PRD §3.3.2:
+Pre-signed PUT behavior must follow PRD §3.3.2:
+
+- Bind the URL to the **exact server-generated key**.
+- Sign the expected `Content-Type` header where the provider supports header enforcement.
+- Do not assume POST-policy features such as `content-length-range` are available for PUT URLs.
+- Store or retrieve enough object metadata during submit validation to enforce size and declared file category with `HeadObject` or equivalent.
+- Confirm Supabase-compatible behavior during the M2 S3 validation spike before treating provider-specific enforcement as guaranteed.
 
 - Part: max 524288000 bytes, content-type `application/octet-stream`
 - Drawing: max 52428800 bytes, content-type one of pdf/png/jpeg
@@ -223,9 +250,9 @@ Server generates `file_id` (UUID v4), sanitizes filename, returns:
 
 Increment per-session URL counter; reject at 200.
 
-**Step 3.3** `PATCH /lead` — validate contact fields per PRD §3.1.5; update `rfq_sessions` lead columns.
+**Step 3.3** `PATCH /contact` — trim leading/trailing whitespace from contact fields, convert blank optional `company` and `job_title` values to `null`, convert blank phone to `phone = null` and `phone_country_code = null`, validate per PRD §3.1.5, and update `rfq_sessions` contact columns. Do not title-case names or lowercase email before storage.
 
-**Step 3.4** `PUT /draft` — accept metadata JSON (no file blobs); write to WP option column or `draft_json` TEXT column on session row **and** S3 `meta/draft.json`.
+**Step 3.4** `PUT /draft` — accept metadata JSON (no file blobs); write to WP option column or `draft_json` TEXT column on session row **and** S3 `meta/draft.json`. If `global.shipping_destination.postal_code` is present and valid, also update `rfq_sessions.shipping_postal_code` for the admin intake list. Do not block warm-lead capture on ZIP/postal code; it is required only for final RFQ submit.
 
 > **Schema note:** Add `draft_json LONGTEXT NULL` to `rfq_sessions` in activator if storing draft in DB; PRD implies draft persistence — pick DB column or separate table.
 
@@ -269,7 +296,7 @@ Implement submit sequence PRD §3.4 steps 1–10:
 ```
 
 6. Put receipt.json
-7. Update session row `status=submitted`, `receipt_number`, `submitted_at`
+7. Update session row `status=submitted`, `receipt_number`, `submitted_at`, `shipping_postal_code`, and `submitted_part_count = count($manifest['parts'])`
 8. Fire webhook async (see Step 4.3)
 9. Return `{ receipt_number }`
 
@@ -347,7 +374,7 @@ Do **not** pass secrets or JWT in localized config.
 
 | Component | File | Key behavior |
 |-----------|------|--------------|
-| StepContact | `steps/StepContact.tsx` | Masked phone; PATCH lead on blur/advance |
+| StepContact | `steps/StepContact.tsx` | Masked phone; PATCH contact on blur/advance |
 | StepUploads | `steps/StepUploads.tsx` | Part rows, UUID part_id, direct S3 PUT with progress |
 | StepPartMeta | `steps/StepPartMeta.tsx` | Material dropdown + typeahead; tolerance |
 | StepGlobal | `steps/StepGlobal.tsx` | Delivery date, lead time, postal code, NDA checkbox + notice |
@@ -513,7 +540,9 @@ HTTP 401
 | `rfq-intake/includes/class-rfq-material-catalog.php` | Create |
 | `rfq-intake/includes/class-rfq-shortcode.php` | Create |
 | `rfq-intake/admin/class-rfq-admin-settings.php` | Create |
+| `rfq-intake/admin/class-rfq-admin-intake-list.php` | Create — read-only intake ledger |
 | `rfq-intake/admin/views/settings-page.php` | Create |
+| `rfq-intake/admin/views/intake-list-page.php` | Create — rows from `rfq_sessions` with raw DB status |
 | `rfq-intake/assets/materials/default.json` | Create |
 | `frontend/package.json` | Create — React, TypeScript, Vite, Tailwind |
 | `frontend/vite.config.ts` | Create |
@@ -560,7 +589,7 @@ HTTP 401
 
 10. **ERP is separate deploy:** Ship plugin before ERP import worker; receipts accumulate in S3 safely until ERP goes live.
 
-11. **Content-Type on S3 PUT:** Browser must send the same `Content-Type` used when generating the presigned URL.
+11. **Content-Type on S3 PUT:** Browser must send the same `Content-Type` used when generating the presigned URL. Provider enforcement is validated in the M2 S3 spike; submit validation still checks available object metadata.
 
 12. **UTC dates:** Server-side delivery date validation uses UTC date, not WP timezone.
 
@@ -579,11 +608,12 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-007** — Frontend builds from TypeScript source with `npm run build` (no plain `.js`/`.jsx` in `frontend/src/`)
 - [ ] **AC-WP-010** — Admin can configure S3, emails, Airtable URL, optional ERP webhook without redeploy
 - [ ] **AC-WP-011** — Secrets are write-only in admin and encrypted in DB
+- [ ] **AC-WP-028** — Admin can view a read-only intake list showing every session row with combined name, company, email, phone, ZIP/postal code, created date, raw DB status, and submitted part count for completed RFQs
 - [ ] **AC-WP-012** — `GET /health` returns 200 only when S3 credentials work
 - [ ] **AC-WP-013** — Full happy path: contact → upload part file → metadata → global → submit → receipt number
 - [ ] **AC-WP-014** — Success screen shows SVG, thank-you copy, muted `Ref: RFQ-...`
 - [ ] **AC-WP-001** — Submit retry after simulated network failure returns same receipt number (idempotent)
-- [ ] **AC-WP-015** — Page refresh starts new session; prior warm lead row remains in DB
+- [ ] **AC-WP-015** — Page refresh starts new session; prior Step 1 contact row remains in DB
 - [ ] **AC-WP-002** — Health failure within 3s shows Airtable embed
 - [ ] **AC-WP-016** — >20 parts blocked in UI and rejected on submit
 - [ ] **AC-WP-006** — Rate limit: 11th session from same IP in 1 hour → 429

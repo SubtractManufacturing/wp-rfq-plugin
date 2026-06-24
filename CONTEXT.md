@@ -8,12 +8,20 @@ Public-facing Request for Quote submission on the company WordPress site. Custom
 An anonymous, in-browser working period for one RFQ attempt, identified by a `session_id` and scoped JWT. It exists from form load until the customer submits, abandons, or refreshes the page.
 _Avoid_: Draft, visit, form session
 
+**Autosave Draft**:
+Operations recovery metadata for an Intake Session, persisted while the customer is filling out the RFQ. It is not a customer-facing resume mechanism and does not survive page refresh as restored UI state.
+_Avoid_: Saved cart, resumable draft, partial submission
+
+**Abandoned Intake Session**:
+An Intake Session known to no longer be active and not expected to produce a Receipt. In V1, most unfinished sessions remain drafts operationally; explicit abandonment is a future lifecycle action.
+_Avoid_: Failed submission, deleted RFQ, expired receipt
+
 **Warm Lead**:
-Contact information captured when the customer completes Step 1, persisted in WordPress even if they never submit the RFQ. Required: first name, last name, email. Optional: company, phone (10-digit US/CA national number with country code metadata). Same field set as manifest `contact`.
-_Avoid_: Partial submission, lead record
+Business shorthand for contact information captured when the customer completes Step 1 but does not submit the RFQ. This is not a CRM object or workflow state; it is simply evidence that someone entered contact information while starting a quote attempt. Required: first name, last name, email. Optional: company, phone (10-digit US/CA national number with country code metadata). Same field set as manifest `contact`.
+_Avoid_: CRM lead, sales pipeline stage, lead status
 
 **Contact**:
-The customer's identity fields for an RFQ (`first_name`, `last_name`, `email`, `company`, `phone`, `job_title`). Mirrored on the warm lead row, autosave draft, and submit manifest. Only the first five are collected in V1 UI; `job_title` is schema-only.
+The customer's identity fields for an RFQ (`first_name`, `last_name`, `email`, `company`, `phone`, `job_title`). Mirrored on the Step 1 contact row, autosave draft, and submit manifest. Only the first five are collected in V1 UI; `job_title` is schema-only.
 _Avoid_: Lead, customer profile
 
 **Receipt**:

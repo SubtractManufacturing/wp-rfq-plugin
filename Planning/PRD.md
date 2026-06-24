@@ -19,7 +19,7 @@ The internal ERP (a Remix application backed by Supabase Postgres and Supabase S
 - Deliver a polished, fully custom RFQ submission experience on the public WordPress site.
 - Guarantee that no submitted RFQ is ever silently lost.
 - Guarantee that no customer who completes submission ever sees a success state unless a durable receipt has been written.
-- Capture partial/warm leads when customers begin but do not complete an RFQ.
+- Preserve contact records for customers who begin but do not complete an RFQ.
 - Decouple the public intake layer from ERP deployment cycles.
 - Maintain the existing Airtable form as a hot fallback.
 
@@ -44,7 +44,7 @@ The internal ERP (a Remix application backed by Supabase Postgres and Supabase S
 │  │  - Serves React RFQ form via WP REST              │  │
 │  │  - Issues session tokens (JWT)                    │  │
 │  │  - Generates pre-signed S3 upload URLs            │  │
-│  │  - Persists warm leads and drafts (WP DB)         │  │
+│  │  - Persists contact records and drafts (WP DB)    │  │
 │  │  - Validates manifests and writes receipts        │  │
 │  │  - Writes receipt index row (WP DB, status=submitted)│  │
 │  │  - Notifies ERP via webhook (best-effort)           │  │
@@ -111,7 +111,7 @@ All endpoints are namespaced under `/wp-json/rfq/v1/`.
 | `GET` | `/health` | None | Health check. Returns `200 OK` with `{ "status": "ok" }` if the plugin is operational and can reach S3 using configured credentials (see 5.2). Returns non-200 if S3 settings are missing or connectivity fails. Used by the React form to decide whether to render the custom form or the Airtable fallback. |
 | `POST` | `/sessions` | None | Creates a new intake session. Returns a signed JWT and a `session_id`. |
 | `POST` | `/sessions/{session_id}/refresh` | JWT | Issues a new JWT for the same session. Requires a valid (non-expired) current JWT as Bearer token. See [Session token design](#312-session-token-design). |
-| `PATCH` | `/sessions/{session_id}/lead` | JWT | Upserts the warm lead contact record. Must succeed (with required fields) before file uploads are permitted. See [Contact fields](#315-contact-fields). |
+| `PATCH` | `/sessions/{session_id}/contact` | JWT | Upserts the Step 1 contact record. Must succeed (with required fields) before file uploads are permitted. See [Contact fields](#315-contact-fields). |
 | `POST` | `/sessions/{session_id}/upload-urls` | JWT | Requests one or more pre-signed S3 PUT URLs for a specific part. Requires `part_id`, `file_type`, `filename`, and `content_type`. Returns server-generated file keys alongside each URL. Client must use the returned keys verbatim. |
 | `PUT` | `/sessions/{session_id}/draft` | JWT | Autosaves the current metadata state. Writes to WP DB; also writes `meta/draft.json` to S3. |
 | `POST` | `/sessions/{session_id}/submit` | JWT | Accepts the final manifest. Runs full validation, confirms S3 objects exist, writes `manifest.json` and `receipt.json` to S3, writes the receipt index row to WP DB, notifies ERP via webhook (best-effort), and returns the receipt number. |
@@ -144,14 +144,16 @@ All endpoints are namespaced under `/wp-json/rfq/v1/`.
 |--------|------|-------|
 | `id` | `BIGINT UNSIGNED AUTO_INCREMENT` | PK |
 | `session_id` | `CHAR(36)` | UUID, unique index |
-| `status` | `ENUM('draft','submitted','abandoned')` | Final customer-facing state is `submitted`. ERP import does not change WP rows. |
-| `lead_first_name` | `VARCHAR(255)` | Nullable until lead step; required for Step 1 completion |
-| `lead_last_name` | `VARCHAR(255)` | Nullable until lead step; required for Step 1 completion |
-| `lead_email` | `VARCHAR(255)` | Nullable until lead step; required for Step 1 completion |
-| `lead_company` | `VARCHAR(255)` | Optional |
-| `lead_phone` | `CHAR(10)` | Optional; 10-digit US/CA national number, digits only |
-| `lead_phone_country_code` | `VARCHAR(4)` | Optional; defaults to `1` when `lead_phone` is set |
-| `lead_job_title` | `VARCHAR(255)` | Optional; not collected in V1 UI (schema only) |
+| `status` | `ENUM('draft','submitted','abandoned')` | V1 writes `draft` and `submitted`. `abandoned` is reserved for a future explicit abandonment action; do not infer it from tab close or inactivity. Final customer-facing state is `submitted`. ERP import does not change WP rows. |
+| `contact_first_name` | `VARCHAR(255)` | Nullable until contact step; required for Step 1 completion |
+| `contact_last_name` | `VARCHAR(255)` | Nullable until contact step; required for Step 1 completion |
+| `contact_email` | `VARCHAR(255)` | Nullable until contact step; required for Step 1 completion |
+| `contact_company` | `VARCHAR(255)` | Optional |
+| `contact_phone` | `CHAR(10)` | Optional; 10-digit US/CA national number, digits only |
+| `contact_phone_country_code` | `VARCHAR(4)` | Optional; defaults to `1` when `contact_phone` is set |
+| `contact_job_title` | `VARCHAR(255)` | Optional; not collected in V1 UI (schema only) |
+| `shipping_postal_code` | `VARCHAR(16)` | Nullable before submit; optional admin-list summary from valid autosave data, required and persisted from final manifest at submit |
+| `submitted_part_count` | `INT UNSIGNED` | Nullable until submitted; number of manifest parts at successful submit |
 | `receipt_number` | `VARCHAR(64)` | Nullable until submitted |
 | `s3_prefix` | `VARCHAR(512)` | `intake/{session_id}/` |
 | `created_at` | `DATETIME` | |
@@ -167,7 +169,7 @@ Sequence is a daily auto-increment stored in a separate `rfq_receipt_sequences` 
 
 #### 3.1.5 Contact Fields
 
-Contact fields are **mirrored** across the warm lead (`PATCH /lead`, `rfq_sessions` columns), autosave draft, and final manifest `contact` object. Capture everything the customer provides; downstream systems can filter later.
+Contact fields are **mirrored** across the Step 1 contact record (`PATCH /contact`, `rfq_sessions` columns), autosave draft, and final manifest `contact` object. Capture everything the customer provides; downstream systems can filter later.
 
 | Field | Required | Collected in V1 UI | Notes |
 |-------|----------|-------------------|-------|
@@ -186,7 +188,7 @@ Contact fields are **mirrored** across the warm lead (`PATCH /lead`, `rfq_sessio
 - **Validation:** If `phone` is provided, it must match `^[0-9]{10}$`. If `phone_country_code` is provided, it must be numeric (1–4 digits). Reject on client and server.
 - **International:** V1 UI does not collect non-US/CA numbers. `phone_country_code` exists so future international support can ship without a manifest migration. See `Planning/FUTURE.md`.
 
-**`PATCH /sessions/{session_id}/lead` body:**
+**`PATCH /sessions/{session_id}/contact` body:**
 
 ```json
 {
@@ -200,9 +202,9 @@ Contact fields are **mirrored** across the warm lead (`PATCH /lead`, `rfq_sessio
 }
 ```
 
-Server validation: reject with field-level errors if `first_name`, `last_name`, or `email` is missing or invalid. `email` must pass standard format validation (single `@`, valid domain with TLD, no whitespace — use PHP `filter_var(FILTER_VALIDATE_EMAIL)` or equivalent). No MX lookup or disposable-domain blocking in V1. `company` and `job_title` are optional; omit or send `null`. If `phone` is provided, validate 10-digit format and set `phone_country_code` to `"1"` if omitted. If `phone` is null/omitted, `phone_country_code` must be null.
+Server validation: trim leading/trailing whitespace from `first_name`, `last_name`, `email`, `company`, `phone`, and `job_title` before validation/storage. Do not title-case names or lowercase email. After trimming, blank optional `company` and `job_title` values are stored as `null`. Blank phone is stored as `phone = null` and `phone_country_code = null`. Reject with field-level errors if `first_name`, `last_name`, or `email` is missing or invalid. `email` must pass standard format validation (single `@`, valid domain with TLD, no whitespace — use PHP `filter_var(FILTER_VALIDATE_EMAIL)` or equivalent). No MX lookup or disposable-domain blocking in V1. `company` and `job_title` are optional; omit or send `null`. If `phone` is provided, validate 10-digit format and set `phone_country_code` to `"1"` if omitted. If `phone` is null/omitted, `phone_country_code` must be null.
 
-**Manifest `contact` object** uses the same shape and values as the warm lead at submit time.
+**Manifest `contact` object** uses the same shape and values as the Step 1 contact record at submit time.
 
 #### 3.1.6 ERP Import Webhook (WordPress → ERP)
 
@@ -252,6 +254,45 @@ Do not fetch materials from the ERP in V1.
 
 **Example default entries (illustrative):** 1018 Steel, 6061 Aluminum, 7075 Aluminum, 304 Stainless — exact list lives in shipped JSON.
 
+#### 3.1.8 WordPress Intake Admin List
+
+The plugin must provide a simple read-only WordPress admin page showing intake database rows for contact visibility and submission logging. This is the only V1 UI for contact records from quote attempts that do not become submitted RFQs; there is no ERP or CRM lead sync in V1, and this list is not a CRM workflow.
+
+Every `rfq_sessions` row must appear in the list. Do not hide incomplete, empty, or suspected bot/session-spam rows in V1.
+
+The list should include these columns:
+
+- Name (`first_name` + `last_name` displayed as one column).
+- Company name.
+- Email.
+- Phone number, displayed as `+1 (555) 555-0100` when a V1 US/CA phone is present.
+- Shipping postal code / ZIP code when captured.
+- Created date (`created_at`).
+- Status, displayed as the raw `rfq_sessions.status` database value (`draft`, `submitted`, or future `abandoned`).
+- Number of parts submitted, shown only for completed RFQs; blank otherwise.
+
+Data source rules:
+
+- Contact columns come from the Step 1 contact fields on `rfq_sessions`.
+- Name combines stored first and last name for display; contact values otherwise display as stored.
+- Email is displayed exactly as stored in the database. Any trimming or normalization happens before persistence, not in the admin list renderer.
+- Created date displays date and time in the configured WordPress site timezone.
+- Missing values render as empty cells, not placeholder text.
+- Postal code is not part of Step 1 contact capture. It is stored on `rfq_sessions.shipping_postal_code` only when a valid value is available from autosave, and it is required/persisted from the final manifest at submit.
+- Part count is stored on `rfq_sessions.submitted_part_count` during successful submit from the manifest `parts` array length.
+- Status is displayed directly from `rfq_sessions.status`; do not derive separate admin labels for completed-contact attempts or session starts in V1.
+- Do not show uploaded file keys or direct S3 object links.
+
+V1 admin list behavior:
+
+- Read-only; operators cannot edit intake rows from this screen.
+- Access uses standard WordPress administrator permissions in V1; do not add custom RBAC or custom capabilities.
+- Sort by `created_at DESC` so back-to-back intake starts remain in creation order. Do not use `updated_at` for default ordering.
+- Paginate the list using WordPress admin conventions. Default page size is 25 rows; operators may choose 50 or 75 rows per page.
+- No filtering in V1.
+- Do not show ERP import status; WordPress final customer-facing state remains `submitted`.
+- Do not implement CSV export in V1. See `Planning/FUTURE.md`.
+
 ---
 
 ### 3.2 React RFQ Form
@@ -298,10 +339,10 @@ The form is divided into the following steps. Customers cannot proceed past Step
 - Fields: First name (required), Last name (required), Email (required, `type="email"` with standard format validation), Company name (optional), Phone (optional, US/Canada — masked `(555) 555-5555` with `+1` prefix shown in UI).
 - Phone UI uses an input mask so users enter digits only; formatting is applied automatically. On submit to API, send normalized `phone` (10 digits) and `phone_country_code` (`"1"`).
 - Do not render a job title field in V1. The API and DB accept `job_title`; always send `null` from the client.
-- On blur from the email field (or on step advance), call `PATCH /sessions/{session_id}/lead` with all current contact values.
-- Step 1 is complete when required fields (`first_name`, `last_name`, `email`) are present and the lead write succeeds. Optional fields are included when provided.
+- On blur from the email field (or on step advance), call `PATCH /sessions/{session_id}/contact` with all current contact values.
+- Step 1 is complete when required fields (`first_name`, `last_name`, `email`) are present and the contact write succeeds. Optional fields are included when provided.
 - This write must succeed before the user can advance to Step 2. Show an inline error and a retry button if it fails; do not silently drop the data.
-- A successful lead write means the customer is captured as a warm lead even if they abandon later.
+- A successful contact write preserves a record that the customer entered contact information while starting a quote attempt. If they later submit successfully, the manifest/receipt and eventual ERP Quote supersede this incomplete-attempt record.
 
 **Step 2 — File Uploads (part-scoped)**
 
@@ -325,10 +366,10 @@ Uploads are organized **per part row**, not in a shared pool. Each part row owns
 - Customers may **remove a part row** or **replace files** in the UI at any time before submit. This updates client state only — it does **not** delete objects from S3.
 - The **manifest** is the authoritative list of files for the RFQ. Extra objects in the session's S3 prefix (from removed rows, replaced files, or duplicate uploads) are ignored at submit.
 - Replacing a part file or adding/removing drawing files in a row issues new upload-url requests as needed; keys stay scoped to that row's `part_id` in client state until submit.
-- File size limits (enforced via S3 policy conditions, not just client-side):
+- File size limits (validated by the client before upload and by WordPress at submit using S3 object metadata where available):
   - Part files: 500 MB max.
   - Drawing/supporting files: 50 MB max.
-- Accepted MIME types (enforced via S3 policy condition):
+- Accepted MIME types (validated by the client before upload, signed into the presigned PUT request where supported, and checked again at submit using available object metadata):
   - Part files: `application/octet-stream` (CAD files have no standard MIME type; accept any).
   - Drawings: `application/pdf`, `image/png`, `image/jpeg`.
 
@@ -441,7 +482,7 @@ Server validation: `global.lead_time_preference` must be one of the values above
 - A full page reload **invalidates the current intake session**. On load, the form creates a new session (`POST /sessions`) and the customer starts from Step 1 with empty state.
 - Do not persist form state, `session_id`, or JWT in `localStorage` or `sessionStorage`.
 - Uploaded files under the previous session's S3 prefix are not recoverable in the new session. Orphan prefixes are cleaned up per lifecycle rules (see 3.3.3).
-- If the customer completed Step 1 before refreshing, their contact info remains captured as a **warm lead** on the abandoned session row in WP DB.
+- If the customer completed Step 1 before refreshing, their contact info remains captured on the old `draft` session row in WP DB.
 
 #### 3.2.6 Success Screen
 
@@ -493,20 +534,14 @@ intake/
 
 #### 3.3.2 Pre-Signed URL Constraints
 
-Pre-signed PUT URLs must include the following S3 policy conditions:
-
-```json
-{
-  "conditions": [
-    ["content-length-range", 1, 524288000],
-    ["starts-with", "$key", "intake/{session_id}/"]
-  ]
-}
-```
+The browser uploads with **pre-signed PUT URLs**, not browser POST policies. Size and content-type enforcement is layered because PUT URL support varies across S3-compatible providers.
 
 - URL expiry: **30 minutes** from issuance.
-- Each URL authorizes a **PUT** to one specific key only. The plugin never issues pre-signed DELETE, GET, or LIST URLs to the browser.
-- Content-type conditions are set per file type (part vs. drawing), enforced at the policy level, not just client validation.
+- Each URL authorizes a **PUT** to one specific server-generated key only. The plugin never issues pre-signed DELETE, GET, or LIST URLs to the browser.
+- The signed request must bind the exact key and expected `Content-Type` header for the requested file category where the provider supports signed header enforcement.
+- The client validates file category and size before requesting an upload URL and before uploading.
+- On final submit, WordPress validates every manifest key with S3 metadata (`HeadObject` or equivalent): object exists, size is within the file-category limit, and available content-type metadata matches the declared file category.
+- The M2 S3 validation spike in `Planning/TESTING.md` determines the exact Supabase-compatible behavior for PUT header enforcement, size visibility, CORS, and path-style endpoint requirements before those assumptions become implementation facts.
 
 #### 3.3.3 Lifecycle Rules
 
@@ -527,8 +562,8 @@ When `POST /sessions/{session_id}/submit` is called, the WordPress plugin must e
 
 1. **Validate JWT.** Verify signature, expiry, and that `session_id` in the JWT matches the URL parameter.
 2. **Validate session state.** Check the WP DB `rfq_sessions` row. If `status` is already `submitted`, return the existing `receipt_number` (idempotent re-submission is safe).
-3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /lead`. If `contact.phone` is set, it must match `^[0-9]{10}$` and `contact.phone_country_code` must be present (V1: `"1"`). If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `no_rush`, `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required, ISO date format, and must not be before today (UTC).
-4. **Confirm S3 objects exist.** For every `part_file_key` and `drawing_file_key` declared in the manifest, call S3 `HeadObject`. If any declared key is missing or returns an error, abort and return an error identifying which files are missing. Objects in the session prefix that are **not** listed in the manifest are not validated and are not an error — they are ignored until ERP import cleanup.
+3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, it must match `^[0-9]{10}$` and `contact.phone_country_code` must be present (V1: `"1"`). If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `no_rush`, `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required, ISO date format, and must not be before today (UTC).
+4. **Confirm S3 objects exist and match declared constraints.** For every `part_file_key` and `drawing_file_key` declared in the manifest, call S3 `HeadObject` or equivalent metadata lookup. If any declared key is missing, returns an error, exceeds the file-category size limit, or has available content-type metadata that conflicts with the declared file category, abort and return an error identifying which files failed validation. Objects in the session prefix that are **not** listed in the manifest are not validated and are not an error — they are ignored until ERP import cleanup.
 5. **Write `manifest.json` to S3** at `intake/{session_id}/meta/manifest.json`.
 6. **Generate receipt number** using the daily sequence.
 7. **Write `receipt.json` to S3** at `intake/{session_id}/meta/receipt.json`:
@@ -590,7 +625,7 @@ Before creating a quote record, check whether a quote with `source_receipt_numbe
 |------------------|-------------------|
 | WordPress down when user visits the RFQ page | Health check fails; Airtable iframe renders automatically |
 | WordPress goes down mid-session | Files already uploaded to S3 are safe. In-memory form state is preserved while the tab stays open. User sees a submit error with retry guidance. Submit succeeds once WP recovers. |
-| Customer refreshes the page mid-session | Current session is abandoned. New session starts from Step 1. Prior uploads are not carried over. Warm lead from Step 1 on the old session is retained in WP DB. |
+| Customer refreshes the page mid-session | Current in-browser session is lost. New session starts from Step 1. Prior uploads are not carried over. Step 1 contact information on the old `draft` session is retained in WP DB. |
 | S3 unavailable for a file upload | Per-file upload error with inline retry button. User cannot proceed to submit until all required files are confirmed uploaded. |
 | S3 unavailable at submit time | `HeadObject` check fails; WP returns an error; user sees "submission failed, your work is saved, try again." Files are already in S3 and will not need re-uploading. |
 | ERP is down at submit time | No user impact. Receipt is written by WordPress. Webhook may fail silently. ERP S3 poll worker imports on the next cycle once ERP recovers. |
@@ -604,7 +639,7 @@ Before creating a quote record, check whether a quote with `source_receipt_numbe
 
 ### 4.1 Session Isolation
 
-- Pre-signed upload URLs are scoped to `intake/{session_id}/` via S3 policy conditions. A user with a valid JWT for session A cannot upload to session B's prefix.
+- Pre-signed upload URLs are bound to exact server-generated keys under `intake/{session_id}/`. A user with a valid JWT for session A cannot upload to session B's prefix.
 - WordPress validates the JWT on every authenticated endpoint call and confirms the `session_id` in the JWT matches the URL parameter.
 
 ### 4.2 Rate Limiting
@@ -625,7 +660,7 @@ Before creating a quote record, check whether a quote with `source_receipt_numbe
 
 ### 4.5 Content-Type Enforcement
 
-- S3 policy conditions enforce content-type per file category. Client-side validation is a UX convenience only.
+- Content type is validated in layers: client-side checks for immediate feedback, signed `Content-Type` headers where the S3-compatible provider enforces them for PUT URLs, and submit-time object metadata checks before WordPress writes a receipt. Client-side validation is a UX convenience only and is not the security boundary.
 
 ### 4.6 ERP Webhook Authentication
 
@@ -697,7 +732,7 @@ Typical pairing: WP plugin testing branch → staging S3 bucket (or shared dev b
 
 ### 5.3 Data Retention
 
-- Warm leads (sessions with `status = 'draft'`): retain WP DB rows for 90 days, then archive or delete.
+- Unfinished sessions and Step 1 contact records (`status = 'draft'`, plus future explicit `abandoned` rows): retain WP DB rows for 90 days, then archive or delete. Submitted sessions are handled through the manifest/receipt and ERP Quote after import, not as CRM leads in WordPress.
 - Submitted receipts: retain WP DB rows indefinitely (they are lightweight index rows).
 - S3 intake prefixes: deleted by the ERP import worker after successful quote creation (step 3.5.2). Unreceipted session prefixes (no `receipt.json`): deleted by the 30-day cleanup cron. Retain indefinitely only when import repeatedly fails — alert and investigate.
 

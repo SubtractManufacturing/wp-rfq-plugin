@@ -22,7 +22,7 @@ This document explains *why* the architecture is designed the way it is. It is i
 10. [Manifests without receipts are treated as incomplete by the ERP](#10-manifests-without-receipts-are-treated-as-incomplete-by-the-erp)
 11. [Airtable as a warm fallback, not a backup system](#11-airtable-as-a-warm-fallback-not-a-backup-system)
 12. [JWT stored in React memory, not browser storage](#12-jwt-stored-in-react-memory-not-browser-storage)
-13. [Page refresh abandons the session — no client-side draft resume](#13-page-refresh-abandons-the-session--no-client-side-draft-resume)
+13. [Page refresh leaves the session unfinished — no client-side draft resume](#13-page-refresh-leaves-the-session-unfinished--no-client-side-draft-resume)
 14. [Rate limiting session creation, not uploads](#14-rate-limiting-session-creation-not-uploads)
 15. [No draft resumption in V1](#15-no-draft-resumption-in-v1)
 16. [Autosave does not block the user](#16-autosave-does-not-block-the-user)
@@ -74,7 +74,7 @@ The secondary benefit: S3 object storage is extremely durable (11 nines) and doe
 
 **Why we chose this:** The goal is to minimize friction for new customers submitting their first RFQ. Requiring account creation would add a registration step that many potential customers would abandon. This is an outbound lead capture flow, not a customer portal.
 
-We still capture the customer's contact information (name, email, and optional company/phone) as the first step — this is our warm lead. We don't need an account to have a durable record of who they are.
+We still capture the customer's contact information (name, email, and optional company/phone) as the first step. If they do not complete submission, WordPress retains a record that they started a quote attempt and entered contact information; if they do submit, the manifest/receipt and ERP Quote become the operational record. This is not a CRM workflow. We don't need an account to have a durable record of who they are.
 
 The JWT is not a substitute for authentication. It is a tamper-proof, scoped token that ensures:
 - A customer can only upload to their own session's S3 prefix.
@@ -93,7 +93,7 @@ If we later add a customer portal with account login, that is additive and does 
 
 **Why we chose this:** CAD files (STEP, SolidWorks) are frequently 50–200 MB and can be larger. Routing large binary files through a WordPress PHP process is slow, expensive, and risky — PHP has memory limits and execution time limits that make it unsuitable as a file proxy for large uploads. The WordPress server would become a bottleneck and a single point of failure for uploads.
 
-Pre-signed URLs are the industry-standard pattern for browser-to-object-storage uploads. The S3 policy conditions on the URL enforce the key prefix, content-type, and size limits server-side without the WordPress server needing to touch the file bytes.
+Pre-signed URLs are the industry-standard pattern for browser-to-object-storage uploads. In V1 these are **pre-signed PUT URLs**, so the server binds each URL to one exact key and expected content type where the provider supports signed header enforcement. File size and content-type guarantees are layered: client-side checks before upload, provider behavior validated during the M2 S3 spike, and WordPress submit-time metadata checks before a receipt is written.
 
 The plugin issues **PUT-only** pre-signed URLs. Customers never receive delete or list access to the bucket — removing a file in the UI does not remove it from S3; the manifest and ERP import define which objects matter.
 
@@ -127,7 +127,7 @@ S3 path traversal via `../` is typically neutralized by S3 itself, but the broad
 - Experience a network failure mid-upload that resulted in a partial or zero-byte object, while the client-side code incorrectly reported success.
 - Construct a manifest with file keys from a different session.
 
-The `HeadObject` check is the server's ground truth. It is the only moment in the flow where we can confirm, with certainty, that the promised files are actually in S3 before we commit to the customer that their submission is complete.
+The `HeadObject` check is the server's ground truth. It is the only moment in the flow where we can confirm that the promised files are actually in S3, and verify size/content-type metadata where the provider exposes it, before we commit to the customer that their submission is complete.
 
 The latency cost is acceptable: `HeadObject` is a cheap S3 metadata-only operation (no data transfer). A typical RFQ with 5 files would add approximately 250–500ms of latency to the submit path. This is acceptable on a form that has taken the customer 10–20 minutes to complete.
 
@@ -170,7 +170,7 @@ By making the ERP a consumer of intake packages rather than a participant in int
 
 S3 is durable storage. `receipt.json` in S3 is the authoritative record of submission. It never changes after it's written. The ERP import worker reads from S3 only.
 
-The WP DB row is a **WordPress-local index**: warm leads, receipt lookup for WP admin/ops, and submit idempotency. It is not the ERP import queue.
+The WP DB row is a **WordPress-local index**: Step 1 contact records, receipt lookup for WP admin/ops, and submit idempotency. It is not the ERP import queue.
 
 The inconsistency case — S3 write succeeds, DB write fails — means the customer may not see a receipt number in the response even though S3 has the receipt. The ERP can still import from S3; ops can reconcile via S3. The alert on manifest-without-receipt covers the inverse partial-write case.
 
@@ -216,21 +216,21 @@ The key design principle: the fallback activates before the customer has entered
 
 In-memory storage limits exposure to the active page lifetime. An XSS attack can still target the current session, but cannot exfiltrate the token for reuse after the tab closes.
 
-**Trade-off accepted:** Page refresh drops the JWT and abandons the session (see Decision 13).
+**Trade-off accepted:** Page refresh drops the JWT and leaves the old intake session unfinished (see Decision 13).
 
 ---
 
-## 13. Page refresh abandons the session — no client-side draft resume
+## 13. Page refresh leaves the session unfinished — no client-side draft resume
 
 **Decision:** A full page reload invalidates the intake session. The form creates a new session and the customer starts over. No form state is restored from `localStorage`, `sessionStorage`, or a server replay endpoint.
 
 **Why it seems wrong:** Accidental refresh after 15 minutes of data entry feels punishing. Autosave already writes drafts to the server — why not rehydrate?
 
-**Why we chose this:** Rehydrating after refresh requires either persisting the JWT (rejected in Decision 12) or a new server endpoint to re-bind an old session without the original token. Partial rehydration (metadata without files) creates a broken state: the form shows progress but submit fails because file keys belong to the abandoned session.
+**Why we chose this:** Rehydrating after refresh requires either persisting the JWT (rejected in Decision 12) or a new server endpoint to re-bind an old session without the original token. Partial rehydration (metadata without files) creates a broken state: the form shows progress but submit fails because file keys belong to the old unfinished session.
 
-Starting fresh on refresh is honest UX: the customer knows they must re-enter data and re-upload files. The warm lead from Step 1 on the abandoned session is still captured in WP DB. Server-side autosave drafts remain for operations recovery, not customer resume.
+Starting fresh on refresh is honest UX: the customer knows they must re-enter data and re-upload files. Step 1 contact information on the old `draft` session is still captured in WP DB. Server-side autosave drafts remain for operations recovery, not customer resume.
 
-Orphaned S3 objects under abandoned session prefixes are cleaned up by lifecycle rules.
+Orphaned S3 objects under unfinished session prefixes are cleaned up by lifecycle rules.
 
 ---
 
@@ -268,7 +268,7 @@ Warm lead capture (Step 1) and server-side autosave still provide value for sale
 
 **Why we chose this:** Autosave is a background convenience, not a submission. The submission flow has its own explicit durability guarantee (the receipt). Blocking the user on an autosave failure creates the second-worst outcome we're trying to avoid: the user is interrupted and frustrated by an infrastructure problem that doesn't actually prevent them from submitting.
 
-The correct moment to surface infrastructure failures is at submit time, not during form entry. If the user can't autosave, the session state is still alive in the browser. If they submit successfully, nothing is lost. If they then close the tab before submitting, they lose the metadata they entered after the last successful autosave — but the warm lead record (contact info) is already written, and the uploaded files are already in S3.
+The correct moment to surface infrastructure failures is at submit time, not during form entry. If the user can't autosave, the session state is still alive in the browser. If they submit successfully, nothing is lost. If they then close the tab before submitting, they lose the metadata they entered after the last successful autosave — but the Step 1 contact record is already written, and the uploaded files are already in S3.
 
 The "Draft not saved" indicator is present so that a technically aware user can see there's a problem and either wait, retry, or copy their metadata somewhere safe. It does not require interaction.
 

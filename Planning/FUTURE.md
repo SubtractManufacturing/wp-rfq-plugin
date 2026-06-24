@@ -8,7 +8,7 @@ See `.agents/planning.md` for documentation conventions.
 
 ## Phone number required on Step 1
 
-Make phone a required contact field on the warm lead and manifest.
+Make phone a required contact field on the Step 1 contact record and manifest.
 
 ## Job title form field
 
@@ -61,6 +61,10 @@ Resume an in-progress RFQ from a different device or browser. Requires accounts,
 ## Customer email on receipt
 
 Send the customer an email with their receipt number when submission succeeds.
+
+## CSV export from WordPress intake list
+
+Export the WordPress intake admin list to CSV for lead follow-up or external reporting.
 
 ## Customer RFQ status portal
 

@@ -89,7 +89,7 @@ A planned build artifact `scripts/check-acceptance-coverage.php` (introduced at 
 | AC-WP-012 | `GET /health` 200 only when S3 reachable | Plugin | M1 | Integration | — |
 | AC-WP-013 | Full happy path through receipt | Plugin | M5 | E2E | — |
 | AC-WP-014 | Success screen SVG, copy, muted receipt ref | Plugin | M5 | E2E / Vitest | — |
-| AC-WP-015 | Page refresh → new session; prior warm lead retained | Plugin | M5 | E2E + integration | — |
+| AC-WP-015 | Page refresh → new session; prior Step 1 contact record retained | Plugin | M5 | E2E + integration | — |
 | AC-WP-016 | >20 parts blocked in UI and on submit | Plugin | M3–M5 | Unit + Vitest + E2E | — |
 | AC-WP-017 | Invalid manifest → 422 field errors | Plugin | M3 | PHP unit + integration | — |
 | AC-WP-018 | Missing manifest file keys at submit → explicit error | Plugin | M3 | PHP integration | — |
@@ -107,6 +107,7 @@ A planned build artifact `scripts/check-acceptance-coverage.php` (introduced at 
 | AC-WP-025 | Orphaned manifest alert: manifest without receipt >15 min detected | Plugin | M3–M4 | Unit + cron/integration | — |
 | AC-WP-026 | 30-day unreceipted intake prefix cleanup candidate detection | Plugin | M3 | Unit / cron logic | — |
 | AC-WP-027 | Accessibility smoke: labels, errors, retry buttons, keyboard nav across steps | Plugin | M5 | Playwright + axe | — |
+| AC-WP-028 | WordPress admin read-only intake list shows every session row with combined name, company, email, phone, ZIP/postal code, created date, raw DB status (`draft`, `submitted`, future `abandoned`), submitted part count for completed RFQs, and pagination defaulting to 25 rows with 50/75 row options | Plugin | M2–M3 | Integration | — |
 
 ### ERP IMPLEMENTATION §7 checkboxes
 
@@ -128,7 +129,7 @@ CI workflows are **build artifacts** (first `.github/workflows/test.yml` at **M1
 | Milestone | CI jobs that must pass | Acceptance IDs that must be mapped |
 |-----------|------------------------|-------------------------------------|
 | **M1** | `lint` (PHPCS, PHPStan; ESLint/tsc when frontend scaffold exists), `php-unit`, `php-integration` (POST /sessions, GET /health, plugin activate/schema), `contract` (session + health schemas), `acceptance-coverage` (M1 scope only) | AC-WP-006, AC-WP-012, AC-WP-023 |
-| **M2** | M1 + upload-url integration, S3 key/presign unit tests, S3 mock adapter tests, **S3 validation spike** (§5) | + AC-WP-010, AC-WP-011, AC-WP-020, AC-WP-021, AC-WP-024 (spike) |
+| **M2** | M1 + upload-url integration, S3 key/presign unit tests, S3 mock adapter tests, **S3 validation spike** (§5) | + AC-WP-010, AC-WP-011, AC-WP-020, AC-WP-021, AC-WP-024 (spike), AC-WP-028 |
 | **M3** | M2 + submit integration, receipt durability, idempotency, missing-file failures, webhook non-blocking, receipt concurrency | + AC-WP-001, AC-WP-005, AC-WP-016–019, AC-WP-022, AC-WP-025, AC-WP-026 |
 | **M4–M5** | M3 + `frontend-unit`, `e2e-mocked`, a11y smoke job | + AC-WP-002–004, AC-WP-007–009, AC-WP-013–015, AC-WP-027 |
 | **Pre-release** | Full PR-equivalent suite; Supabase-compatible or LocalStack E2E smoke; **all `AC-WP-*` IDs mapped** | All AC-WP-* |
@@ -153,7 +154,7 @@ Enforced when the corresponding job exists; ramp with milestones.
 
 ### Known uncertainty
 
-PRD §3.3.2 describes policy-style conditions (`content-length-range`, content-type). AWS **pre-signed PUT** URLs do not support POST-style policy documents. Enforceability of size and content-type on PUT varies by S3-compatible provider (including Supabase). **Do not assume POST policy semantics apply to presigned PUT without validation.**
+AWS **pre-signed PUT** URLs do not support POST-style policy documents such as `content-length-range`. Enforceability of size and content-type on PUT varies by S3-compatible provider (including Supabase). **Do not assume POST policy semantics apply to presigned PUT without validation.** PRD §3.3.2 intentionally describes layered enforcement rather than relying on PUT policy conditions.
 
 ### Required coverage
 
@@ -308,11 +309,12 @@ Once M1 scaffold exists, target these classes under `tests/php/`:
 3. Complete RFQ with one part + one drawing PDF.
 4. Verify objects in S3 under `intake/{session_id}/`.
 5. Submit; verify `meta/manifest.json`, `meta/receipt.json`, DB row `status=submitted`.
-6. Refresh page — form resets; DB shows abandoned/submitted session rows as expected.
-7. Break S3 secret in admin → health fails → Airtable iframe appears.
-8. Submit with network throttling; kill request; retry → same receipt number.
-9. Check NDA checkbox → sales email notice visible; manifest has `nda_required: true`.
-10. Run S3 PUT validation spot-check against staging Supabase bucket (§5.1 matrix).
+6. Verify WordPress intake admin list shows all session rows with contact fields, ZIP/postal code, created date, status, and part count for the submitted RFQ.
+7. Refresh page — form resets; DB shows old `draft` and submitted session rows as expected.
+8. Break S3 secret in admin → health fails → Airtable iframe appears.
+9. Submit with network throttling; kill request; retry → same receipt number.
+10. Check NDA checkbox → sales email notice visible; manifest has `nda_required: true`.
+11. Run S3 PUT validation spot-check against staging Supabase bucket (§5.1 matrix).
 
 ### ERP staging (ERP repo)
 
