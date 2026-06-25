@@ -47,10 +47,40 @@ If you find blocking issues (wrong behaviour, missing AC coverage, security prob
 1. Fix them directly on this branch
 2. Run applicable tests
 3. Commit with message prefix `sandcastle: review:` describing fixes
-4. Comment on the PR summarizing what you changed
 
-If the code is correct and clean, approve by doing nothing to the code.
+If the code is correct and clean, make no code changes.
 
-Once complete:
+## Post PR comment (required — every run)
+
+Before signaling completion, **always** leave one PR comment so the author can see the review ran. Find the PR number:
+
+!`gh pr list --head {{BRANCH}} --json number --jq '.[0].number' 2>/dev/null || echo "none"`
+
+If there is no PR, skip this step.
+
+Otherwise post exactly one comment with `gh pr comment <PR#> --body-file review-comment.md`. Write `review-comment.md` using this structure:
+
+```markdown
+## Sandcastle review
+
+**Status:** ✅ Approved | 🔧 Fixed | ⚠️ Needs attention
+
+**Summary:** One short paragraph.
+
+**Findings:**
+- Bullet each issue checked (scope, security, tests, conventions), or "No blocking issues."
+
+**Changes made:** List review commits (`sandcastle: review: …`) or "None — code approved as-is."
+
+**Checks run:** Commands you actually ran, or "None applicable for this phase."
+```
+
+- **✅ Approved** — no blocking issues; no review commits
+- **🔧 Fixed** — you committed `sandcastle: review:` fixes on this branch
+- **⚠️ Needs attention** — blocking issues remain that you could not fix (say what the human must do)
+
+Do not skip the comment when the review passes. Silence on the PR is not acceptable.
+
+Once the comment is posted (or there is no PR):
 
 <promise>COMPLETE</promise>
