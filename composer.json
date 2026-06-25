@@ -1,0 +1,30 @@
+{
+  "name": "sandcastle/wp-rfq-plugin",
+  "description": "RFQ Intake WordPress plugin",
+  "type": "project",
+  "require": {
+    "php": "^8.3",
+    "aws/aws-sdk-php": "^3.321",
+    "firebase/php-jwt": "^6.11"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.2"
+  },
+  "autoload": {
+    "files": [
+      "rfq-intake/includes/class-rfq-activator.php",
+      "rfq-intake/includes/class-rfq-plugin.php",
+      "rfq-intake/includes/class-rfq-rate-limiter.php",
+      "rfq-intake/includes/class-rfq-rest-controller.php",
+      "rfq-intake/includes/class-rfq-s3-client.php",
+      "rfq-intake/includes/class-rfq-secrets.php",
+      "rfq-intake/includes/class-rfq-jwt.php"
+    ]
+  },
+  "scripts": {
+    "test": "phpunit --testsuite unit",
+    "test:integration": "phpunit --testsuite integration",
+    "test:acceptance-coverage": "php scripts/check-acceptance-coverage.php"
+  }
+}
+

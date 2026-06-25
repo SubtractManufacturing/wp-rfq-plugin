@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "required": ["session_id", "token"],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "token": {
+      "type": "string"
+    }
+  }
+}
+

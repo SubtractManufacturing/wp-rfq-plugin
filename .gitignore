@@ -1,0 +1,6 @@
+vendor/
+node_modules/
+rfq-intake/build/
+.wp-env/
+.phpunit.result.cache
+

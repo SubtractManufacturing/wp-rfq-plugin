@@ -1,0 +1,39 @@
+<?php
+/**
+ * Plugin Name: RFQ Intake
+ * Description: RFQ intake API and frontend bootstrap.
+ * Version: 0.1.0
+ * Requires at least: 6.4
+ * Requires PHP: 8.3
+ * Author: Sandcastle
+ * Text Domain: rfq-intake
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+define('RFQ_INTAKE_VERSION', '0.1.0');
+define('RFQ_MAX_PARTS', 20);
+define('RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200);
+define('RFQ_SESSION_RATE_LIMIT', 10);
+define('RFQ_INTAKE_PLUGIN_FILE', __FILE__);
+define('RFQ_INTAKE_PLUGIN_DIR', plugin_dir_path(__FILE__));
+
+$rfq_autoload = dirname(__DIR__) . '/vendor/autoload.php';
+
+if (file_exists($rfq_autoload)) {
+    require_once $rfq_autoload;
+}
+
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rate-limiter.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-client.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-secrets.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-jwt.php';
+
+register_activation_hook(__FILE__, ['RFQ_Activator', 'activate']);
+add_action('plugins_loaded', ['RFQ_Plugin', 'init']);
+
