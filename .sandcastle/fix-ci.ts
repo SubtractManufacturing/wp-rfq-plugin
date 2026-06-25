@@ -12,15 +12,26 @@ import {
   resolveImplementKind,
 } from "./agents.js";
 import { resolveSandboxMode, sandboxProvider } from "./sandbox.js";
-import { ensureWindowsSh, printCodexWindowsHelp } from "./win32-sh.js";
+import {
+  ensureWindowsSh,
+  ensureWindowsCursorAgent,
+  printCodexWindowsHelp,
+  printCursorAgentHelp,
+} from "./win32-sh.js";
 
 const prArg = process.argv[2] ?? "current";
 const implementKind = resolveImplementKind();
 const sandboxMode = resolveSandboxMode();
 
-if (sandboxMode === "host" && !ensureWindowsSh()) {
-  printCodexWindowsHelp();
-  process.exit(1);
+if (sandboxMode === "host") {
+  if (!ensureWindowsSh()) {
+    printCodexWindowsHelp();
+    process.exit(1);
+  }
+  if (implementKind === "cursor" && !ensureWindowsCursorAgent()) {
+    printCursorAgentHelp();
+    process.exit(1);
+  }
 }
 
 const promptArgs: Record<string, string> = {

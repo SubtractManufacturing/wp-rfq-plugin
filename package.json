@@ -4,7 +4,7 @@
   "description": "Plugin to handle RFQ ingest for WP sites with Subtract Custom Software.",
   "main": "index.js",
   "scripts": {
-    "presandcastle": "node scripts/patch-sandcastle-docker-security.mjs",
+    "presandcastle": "node scripts/patch-sandcastle-docker-security.mjs && node scripts/patch-cursor-agent-win32.mjs",
     "sandcastle": "tsx .sandcastle/main.ts",
     "sandcastle:docker": "set SANDCASTLE_SANDBOX=docker&& tsx .sandcastle/main.ts",
     "sandcastle:legacy": "set SANDCASTLE_IMPLEMENT=codex&& set SANDCASTLE_REVIEW=cursor&& set SANDCASTLE_REVIEW_MODEL=composer-2.5-fast&& tsx .sandcastle/main.ts",

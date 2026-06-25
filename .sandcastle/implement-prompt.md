@@ -2,9 +2,9 @@
 
 ## Open issues
 
-!`gh issue list --state open --label Sandcastle --limit 100 --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`
+Open `Sandcastle`-labeled issues are written to **`open-sandcastle-issues.json`** in the repo root. Read that file with your file tools — it is the sole source of truth for available work. Do not query for unlabeled issues. If the file contains `[]`, output the completion signal.
 
-The list above is the sole source of truth for available work. Do not query for unlabeled issues. If the list is empty, output the completion signal.
+!`gh issue list --state open --label Sandcastle --limit 100 --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]' > open-sandcastle-issues.json && wc -c open-sandcastle-issues.json`
 
 **The issue body is the scope contract for this run.** Implement only what the chosen issue describes. Do not pull in later phases from planning docs because they exist in the repo.
 
@@ -41,7 +41,7 @@ Pick the highest-priority open `Sandcastle`-labeled issue. If an issue is too la
 ## Workflow
 
 1. **Explore** — read the issue body only, then the cited IMPLEMENTATION.md section and files the issue mentions.
-2. **Plan** — stay within issue acceptance criteria; one commit's worth of change.
+2. **Plan** — stay within issue acceptance criteria; one commit worth of change.
 3. **Execute** — use RGR where tests exist: failing test → implementation → refactor. For greenfield steps without tests yet, follow IMPLEMENTATION.md exactly.
 4. **Verify** — run applicable checks before committing:
    - Root: `npm run typecheck` (once configured), `npm run test` (once configured)

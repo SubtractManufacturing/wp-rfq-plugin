@@ -5,7 +5,9 @@ node_modules/
 .sandcastle/.env
 .sandcastle/logs/
 .sandcastle/worktrees/
+.sandcastle/bin/
 review-diff.patch
+open-sandcastle-issues.json
 
 # Build outputs (added as code lands)
 rfq-intake/build/

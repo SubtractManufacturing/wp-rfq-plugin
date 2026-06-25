@@ -69,6 +69,8 @@ Or from PowerShell: `npm run sandcastle:wsl`.
 |---------|-----|
 | Codex `app-server` EPERM in Docker | Use host sandbox (default), not Docker, for Codex |
 | `spawn sh ENOENT` on host | Install Git for Windows, or use `sandcastle:docker` |
+| `agent: command not found` (host) | Re-run `npm run sandcastle` — prepends `.sandcastle/bin/agent` shim for Git Bash. If still failing, install CLI: `irm 'https://cursor.com/install?win32=true' \| iex` |
+| `No version directories found` | Known Cursor CLI Windows bug — `npm run presandcastle` patches launcher regex; or reinstall CLI |
 | Cursor auth fails | Set `CURSOR_API_KEY` |
 | Codex review fails | Run `codex login` on the same OS as Sandcastle |
 | `gpt-5.5` model not found | Test in PowerShell: `codex exec -m gpt-5.5 "say ok"` (prompt is the argument, not `-c`). If it fails, set `SANDCASTLE_REVIEW_MODEL` to a model your Codex CLI supports (e.g. `gpt-5.4`). |

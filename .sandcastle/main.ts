@@ -19,7 +19,12 @@ import {
   resolveReviewKind,
 } from "./agents.js";
 import { resolveSandboxMode, sandboxProvider } from "./sandbox.js";
-import { ensureWindowsSh, printCodexWindowsHelp } from "./win32-sh.js";
+import {
+  ensureWindowsSh,
+  ensureWindowsCursorAgent,
+  printCodexWindowsHelp,
+  printCursorAgentHelp,
+} from "./win32-sh.js";
 
 const MAX_ITERATIONS = 10;
 
@@ -27,9 +32,16 @@ const implementKind = resolveImplementKind();
 const reviewKind = resolveReviewKind();
 const sandboxMode = resolveSandboxMode();
 
-if (sandboxMode === "host" && !ensureWindowsSh()) {
-  printCodexWindowsHelp();
-  process.exit(1);
+if (sandboxMode === "host") {
+  const needsCursor = implementKind === "cursor" || reviewKind === "cursor";
+  if (!ensureWindowsSh()) {
+    printCodexWindowsHelp();
+    process.exit(1);
+  }
+  if (needsCursor && !ensureWindowsCursorAgent()) {
+    printCursorAgentHelp();
+    process.exit(1);
+  }
 }
 const IMPLEMENT_AGENT = createImplementAgent(implementKind);
 const REVIEW_AGENT = createReviewAgent(reviewKind);
