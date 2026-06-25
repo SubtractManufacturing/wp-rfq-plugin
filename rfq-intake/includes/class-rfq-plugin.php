@@ -8,6 +8,8 @@ class RFQ_Plugin
 {
     public static function init(): void
     {
+        RFQ_REST_Controller::init();
+
         if (is_admin()) {
             require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-settings.php';
             require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-intake-list.php';

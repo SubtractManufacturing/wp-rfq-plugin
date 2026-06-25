@@ -30,6 +30,10 @@ if (file_exists($rfq_autoload)) {
 
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-secrets.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-material-catalog.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-jwt.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rate-limiter.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-client.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';
 
