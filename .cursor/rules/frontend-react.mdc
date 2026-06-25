@@ -1,0 +1,15 @@
+---
+description: TypeScript React form conventions for frontend/
+globs: frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend Rules
+
+- TypeScript only — no `.js`/`.jsx` source files
+- Tailwind CSS utility classes only — no CSS modules or per-component stylesheets
+- Vite builds to `rfq-intake/build/` as `rfq-form.js` + `rfq-form.css`
+- Mount under `#rfq-form-root`
+- Use MSW in Vitest for API mocking (M4+)
+
+Do not start frontend work until REST `POST /sessions` and `GET /health` exist (IMPLEMENTATION.md).

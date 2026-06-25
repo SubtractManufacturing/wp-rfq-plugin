@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Sandcastle
+.sandcastle/.env
+.sandcastle/logs/
+.sandcastle/worktrees/
+review-diff.patch
+
+# Build outputs (added as code lands)
+rfq-intake/build/
+frontend/dist/
+vendor/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PHP / WP (M1+)
+.phpunit.cache/
+wp-env/
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/

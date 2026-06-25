@@ -1,0 +1,37 @@
+---
+description: Core agent rules for RFQ Intake — always apply in Cursor and Sandcastle
+alwaysApply: true
+---
+
+# RFQ Intake Agent Rules
+
+## Source of truth
+
+| Doc | Purpose |
+|-----|---------|
+| `Planning/IMPLEMENTATION.md` | What to build, in what order |
+| `Planning/PRD.md` | Product requirements |
+| `Planning/ADD.md` | Architecture decisions |
+| `Planning/TESTING.md` | `AC-WP-*` registry and CI gates |
+| `CONTEXT.md` | Domain glossary |
+| `Planning/FUTURE.md` | **Out of scope** — do not implement |
+
+## Build order
+
+Follow IMPLEMENTATION.md phases. **Do not start React UI until `POST /sessions` and `GET /health` work.**
+
+Milestones: M1 (Phase 0–2) → M2 (Phase 3) → M3 (Phase 4) → M4–M5 (Phase 5–6) → M6 is ERP repo only.
+
+## Stack
+
+- Plugin slug: `rfq-intake`, REST: `rfq/v1`
+- PHP 8.3+, WordPress 6.4+
+- Frontend: TypeScript + React 18 + Vite + Tailwind only
+- JWT: `firebase/php-jwt`; S3: `aws/aws-sdk-php`
+
+## Agent workflow
+
+- One GitHub issue per PR when using Sandcastle
+- Commit prefix: `sandcastle:`
+- Label agent-ready work with `Sandcastle` on GitHub
+- Run tests applicable to the current milestone before committing

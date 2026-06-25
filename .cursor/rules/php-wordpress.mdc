@@ -1,0 +1,16 @@
+---
+description: PHP WordPress plugin conventions for rfq-intake
+globs: rfq-intake/**/*.php,tests/php/**/*.php
+alwaysApply: false
+---
+
+# PHP / WordPress Rules
+
+- Namespace `RFQ\`; PSR-4 autoload from `includes/`
+- Use `$wpdb->prepare()` for all dynamic SQL; `dbDelta()` for schema
+- REST routes under `rfq/v1`; return `WP_REST_Response` or `WP_Error`
+- Encrypt secrets with `RFQ_Secrets` (AES-256-GCM); never log credentials
+- Rate limit: 10 sessions/hour/IP (`RFQ_SESSION_RATE_LIMIT`)
+- On session create, set `s3_prefix = 'intake/{session_id}/'`
+
+Tests: PHPUnit 11; tag with `@covers AC-WP-xxx` per `Planning/TESTING.md`.

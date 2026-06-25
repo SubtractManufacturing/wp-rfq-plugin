@@ -1,0 +1,62 @@
+name: Agent Task
+description: Work item for Sandcastle / Cursor autonomous agents
+title: "[M1] "
+labels:
+  - Sandcastle
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Agent-ready task for Sandcastle. Label **Sandcastle** is pre-applied.
+        See `Planning/IMPLEMENTATION.md` and `AGENTS.md`.
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Which IMPLEMENTATION.md phase/step does this cover?
+      placeholder: |
+        Phase 0 Step 0.1 ONLY — create directory layout per IMPLEMENTATION.md §Phase 0 Step 0.1.
+        Do NOT implement later steps, REST, or tests unless listed below.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkboxes agents must satisfy (include AC-WP-* IDs when applicable)
+      value: |
+        - [ ] Implements the referenced IMPLEMENTATION.md section
+        - [ ] Tests pass for current milestone (see Planning/TESTING.md)
+        - [ ] No scope from Planning/FUTURE.md
+    validations:
+      required: true
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone
+      options:
+        - M1
+        - M2
+        - M3
+        - M4
+        - M5
+    validations:
+      required: true
+  - type: textarea
+    id: read_first
+    attributes:
+      label: Read first
+      value: |
+        - Planning/IMPLEMENTATION.md — [section]
+        - Planning/PRD.md — [section]
+        - Planning/TESTING.md — AC-WP-* IDs
+        - CONTEXT.md
+  - type: checkboxes
+    id: out_of_scope
+    attributes:
+      label: Confirm out of scope
+      options:
+        - label: ERP Phase 7 / M6 (separate repo)
+          required: true
+        - label: Items in Planning/FUTURE.md
+          required: true

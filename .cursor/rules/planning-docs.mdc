@@ -1,0 +1,14 @@
+---
+description: Planning doc editing conventions
+globs: Planning/**/*.md,CONTEXT.md,.agents/**/*
+alwaysApply: false
+---
+
+# Planning Doc Rules
+
+Read `.agents/planning.md` before editing planning files.
+
+- PRD and ADD = current scope only; no V2/roadmap language
+- Deferred features → `Planning/FUTURE.md`, not PRD
+- IMPLEMENTATION = developer execution guide; update when PRD changes
+- TESTING = verification strategy; keep AC-WP-* IDs in sync with PRD §7

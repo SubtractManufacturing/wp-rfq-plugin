@@ -1,0 +1,78 @@
+# Sandcastle AFK Setup
+
+Autonomous **implement → review → fix CI** using [Sandcastle](https://github.com/mattpocock/sandcastle).
+
+**Default:** Cursor **Composer 2.5** implements (execution from scoped issues), Codex **gpt-5.5** reviews (quality gate). Both run on **host** sandbox.
+
+Architecture and code snippets belong in GitHub issues / PRD — agents execute and audit, not redesign.
+
+## Host mode on Windows
+
+Requirements: **Git for Windows** (Sandcastle runs `sh` for prompt expansion). Sandcastle prepends `Git\usr\bin` to PATH automatically.
+
+- Cursor implement + Codex review on host: **supported** (default)
+- Codex **inside Docker** fails (app-server EPERM) — use host for Codex subscription
+
+| Command | Use when |
+|---------|----------|
+| `npm run sandcastle` | Composer implement + Codex review (default, host) |
+| `npm run sandcastle:docker` | Same agents, Docker sandbox |
+| `npm run sandcastle:legacy` | Old stack: Codex implement + Cursor review |
+| `npm run sandcastle:wsl` | Run from WSL (separate `codex login` in WSL) |
+
+## Prerequisites
+
+- Docker Desktop (only for `sandcastle:docker`)
+- `gh auth login`, Node.js 22+
+- **Cursor API key** — implementer + CI fixer (`CURSOR_API_KEY`)
+- **Codex CLI + ChatGPT login** — reviewer (`~/.codex/auth.json` on same OS as Sandcastle)
+- Cursor `agent` CLI on PATH (implementer)
+- `.sandcastle/.env`: `CURSOR_API_KEY`, `GH_TOKEN` — omit `OPENAI_KEY` for Codex subscription
+
+## Setup
+
+```powershell
+Copy-Item .sandcastle\.env.example .sandcastle\.env
+npm install
+npm run sandcastle:build-image   # only if using sandcastle:docker
+npm run labels:create
+```
+
+`npm run sandcastle` runs `presandcastle` automatically (patches Sandcastle Docker image when using Docker).
+
+## Env overrides
+
+| Variable | Values | Default |
+|----------|--------|---------|
+| `SANDCASTLE_IMPLEMENT` | `cursor`, `codex` | `cursor` |
+| `SANDCASTLE_IMPLEMENT_MODEL` | e.g. `composer-2.5` | `composer-2.5` |
+| `SANDCASTLE_REVIEW` | `codex`, `cursor` | `codex` |
+| `SANDCASTLE_REVIEW_MODEL` | e.g. `gpt-5.5` | `gpt-5.5` |
+| `SANDCASTLE_SANDBOX` | `host`, `docker` | `host` |
+
+## WSL setup
+
+```bash
+cd ~/projects/wp-rfq-plugin
+codex login
+gh auth login
+npm install
+cp .sandcastle/.env.example .sandcastle/.env
+npm run sandcastle
+```
+
+Or from PowerShell: `npm run sandcastle:wsl`.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Codex `app-server` EPERM in Docker | Use host sandbox (default), not Docker, for Codex |
+| `spawn sh ENOENT` on host | Install Git for Windows, or use `sandcastle:docker` |
+| Cursor auth fails | Set `CURSOR_API_KEY` |
+| Codex review fails | Run `codex login` on the same OS as Sandcastle |
+| `gpt-5.5` model not found | Test in PowerShell: `codex exec -m gpt-5.5 "say ok"` (prompt is the argument, not `-c`). If it fails, set `SANDCASTLE_REVIEW_MODEL` to a model your Codex CLI supports (e.g. `gpt-5.4`). |
+| No commits | No open `Sandcastle`-labeled issues |
+| Stuck CI | `npm run sandcastle:fix-ci -- <PR#>` (Composer 2.5); escalate manually if needed |
+
+Logs: `.sandcastle/logs/`
