@@ -10,7 +10,8 @@ review-diff.patch
 open-sandcastle-issues.json
 
 # Build outputs (added as code lands)
-rfq-intake/build/
+rfq-intake/build/*
+!rfq-intake/build/.gitkeep
 frontend/dist/
 vendor/
 
