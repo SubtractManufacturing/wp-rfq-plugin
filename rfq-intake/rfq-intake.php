@@ -28,6 +28,7 @@ if (file_exists($rfq_autoload)) {
     require_once $rfq_autoload;
 }
 
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-secrets.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';
 

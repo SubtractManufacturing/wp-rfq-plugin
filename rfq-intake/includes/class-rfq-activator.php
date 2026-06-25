@@ -9,6 +9,16 @@ class RFQ_Activator
     public static function activate(): void
     {
         self::create_tables();
+        self::bootstrap_secrets();
+    }
+
+    public static function bootstrap_secrets(): void
+    {
+        RFQ_Secrets::ensure_encryption_key();
+
+        if (RFQ_Secrets::get_secret('rfq_jwt_secret') === null) {
+            RFQ_Secrets::set_secret('rfq_jwt_secret', bin2hex(random_bytes(32)));
+        }
     }
 
     public static function create_tables(): void
