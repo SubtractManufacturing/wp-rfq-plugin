@@ -1,8 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "./index.css";
 
 function App() {
-  return null;
+  return (
+    <div className="p-4 text-center text-sm text-slate-600">
+      RFQ Intake
+    </div>
+  );
 }
 
 const mount = document.getElementById("rfq-form-root");

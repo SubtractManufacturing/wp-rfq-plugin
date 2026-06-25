@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#rfq-form-root {
+  box-sizing: border-box;
+}
+
+#rfq-form-root *,
+#rfq-form-root *::before,
+#rfq-form-root *::after {
+  box-sizing: inherit;
+}
