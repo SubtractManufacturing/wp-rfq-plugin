@@ -22,6 +22,10 @@ if (! defined('RFQ_MAX_PARTS')) {
     define('RFQ_MAX_PARTS', 20);
 }
 
+if (! defined('RFQ_DRAFT_SESSION_RETENTION_DAYS')) {
+    define('RFQ_DRAFT_SESSION_RETENTION_DAYS', 90);
+}
+
 if (! isset($GLOBALS['rfq_test_options'])) {
     $GLOBALS['rfq_test_options'] = [];
 }

@@ -127,7 +127,7 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
 
             return true;
         } catch (AwsException $exception) {
-            if ($exception->getStatusCode() === 404) {
+            if (self::is_object_not_found($exception)) {
                 return false;
             }
 
@@ -171,13 +171,13 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
         }
 
         try {
+            // Do not attach Metadata here: signed metadata headers must be sent on
+            // browser PUT and Supabase/S3 return 403 SignatureDoesNotMatch without them.
+            // Size limits are enforced client-side and at submit via headObject.
             $command = $this->aws_client->getCommand('PutObject', [
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'ContentType' => $content_type,
-                'Metadata' => [
-                    'rfq-max-bytes' => (string) $max_bytes,
-                ],
             ]);
 
             $request = $this->aws_client->createPresignedRequest(
@@ -213,6 +213,17 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
                 'secret' => $secret,
             ],
         ]);
+    }
+
+    private static function is_object_not_found(AwsException $exception): bool
+    {
+        if ($exception->getStatusCode() === 404) {
+            return true;
+        }
+
+        $error_code = $exception->getAwsErrorCode();
+
+        return in_array($error_code, ['NoSuchKey', 'NotFound', '404'], true);
     }
 
     private static function map_exception(Throwable $exception): WP_Error
