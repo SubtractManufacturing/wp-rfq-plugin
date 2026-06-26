@@ -58,6 +58,11 @@ class ManifestValidatorTest extends TestCase
             ],
         ];
 
+        if (array_key_exists('parts', $overrides)) {
+            $manifest['parts'] = $overrides['parts'];
+            unset($overrides['parts']);
+        }
+
         return array_replace_recursive($manifest, $overrides);
     }
 
