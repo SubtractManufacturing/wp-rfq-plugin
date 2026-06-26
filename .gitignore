@@ -18,6 +18,7 @@ vendor/
 # Environment
 .env
 .env.local
+config/dev.env.local
 
 # IDE
 .idea/

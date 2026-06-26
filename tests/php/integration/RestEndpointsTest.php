@@ -598,4 +598,193 @@ class RestEndpointsTest extends TestCase
 
         return rest_do_request($request);
     }
+
+    public function test_upload_urls_returns_presigned_put_for_part_file(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+        $part_id = '22222222-2222-4222-8222-222222222222';
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => $part_id,
+            'file_type' => 'part',
+            'filename' => 'bracket.step',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+
+        $data = $response->get_data();
+        $this->assertStringStartsWith('https://mock-s3.test/', $data['upload_url']);
+        $this->assertMatchesRegularExpression(
+            '#^intake/' . preg_quote($session_id, '#') . '/parts/[0-9a-f-]{36}_bracket\.step$#',
+            $data['file_key']
+        );
+        $this->assertSame($data['file_key'], $mock->presigned_puts[0]['key']);
+        $this->assertSame('application/octet-stream', $mock->presigned_puts[0]['content_type']);
+        $this->assertSame(RFQ_S3_Key_Builder::PART_MAX_BYTES, $mock->presigned_puts[0]['max_bytes']);
+    }
+
+    public function test_upload_urls_returns_presigned_put_for_drawing_file(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+        $part_id = '33333333-3333-4333-8333-333333333333';
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => $part_id,
+            'file_type' => 'drawing',
+            'filename' => 'drawing.pdf',
+            'content_type' => 'application/pdf',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+
+        $data = $response->get_data();
+        $this->assertStringContainsString('/drawings/', $data['file_key']);
+        $this->assertSame(RFQ_S3_Key_Builder::DRAWING_MAX_BYTES, $mock->presigned_puts[0]['max_bytes']);
+    }
+
+    public function test_upload_urls_sanitizes_filename_in_generated_key(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => '44444444-4444-4444-8444-444444444444',
+            'file_type' => 'part',
+            'filename' => 'my bracket (rev 2).step',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+        $this->assertStringEndsWith('_my_bracket__rev_2_.step', $response->get_data()['file_key']);
+    }
+
+    public function test_upload_urls_rejects_invalid_jwt(): void
+    {
+        $create = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
+        $session_id = $create->get_data()['session_id'];
+
+        $response = $this->request_upload_url($session_id, 'invalid-token', [
+            'part_id' => '55555555-5555-4555-8555-555555555555',
+            'file_type' => 'part',
+            'filename' => 'bracket.step',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(401, $response->get_status());
+    }
+
+    public function test_upload_urls_rejects_unsupported_file_type(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => '66666666-6666-4666-8666-666666666666',
+            'file_type' => 'blueprint',
+            'filename' => 'drawing.pdf',
+            'content_type' => 'application/pdf',
+        ]);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('file_type', $response->get_data()['data']['params']);
+    }
+
+    public function test_upload_urls_rejects_unsupported_content_type_for_drawing(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => '77777777-7777-4777-8777-777777777777',
+            'file_type' => 'drawing',
+            'filename' => 'drawing.gif',
+            'content_type' => 'image/gif',
+        ]);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('content_type', $response->get_data()['data']['params']);
+    }
+
+    public function test_upload_urls_rejects_submitted_session(): void
+    {
+        global $wpdb;
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            ['status' => 'submitted'],
+            ['session_id' => $session_id],
+            ['%s'],
+            ['%s']
+        );
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => '88888888-8888-4888-8888-888888888888',
+            'file_type' => 'part',
+            'filename' => 'bracket.step',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(403, $response->get_status());
+    }
+
+    public function test_upload_urls_rate_limits_after_two_hundred_requests(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        for ($index = 0; $index < RFQ_MAX_UPLOAD_URLS_PER_SESSION; $index++) {
+            $response = $this->request_upload_url($session_id, $token, [
+                'part_id' => '99999999-9999-4999-8999-999999999999',
+                'file_type' => 'part',
+                'filename' => 'bracket-' . $index . '.step',
+                'content_type' => 'application/octet-stream',
+            ]);
+
+            $this->assertSame(200, $response->get_status(), 'Request ' . ($index + 1));
+        }
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            'file_type' => 'part',
+            'filename' => 'overflow.step',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(429, $response->get_status());
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function create_authenticated_session(): array
+    {
+        $create = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
+        $data = $create->get_data();
+
+        return [$data['session_id'], $data['token']];
+    }
+
+    /**
+     * @param array<string, string> $body
+     */
+    private function request_upload_url(string $session_id, string $token, array $body): WP_REST_Response
+    {
+        $request = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/upload-urls');
+        $request->set_header('Authorization', 'Bearer ' . $token);
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(wp_json_encode($body));
+
+        return rest_do_request($request);
+    }
 }
