@@ -118,6 +118,15 @@ $invalid = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/ref
 $invalid->set_header('Authorization', 'Bearer invalid-token');
 $assert_status('reject invalid token', rest_do_request($invalid), 401);
 
+$request_contact_patch = static function (string $session_id, string $token, array $body): WP_REST_Response {
+    $request = new WP_REST_Request('PATCH', '/rfq/v1/sessions/' . $session_id . '/contact');
+    $request->set_header('Authorization', 'Bearer ' . $token);
+    $request->set_header('Content-Type', 'application/json');
+    $request->set_body(wp_json_encode($body));
+
+    return rest_do_request($request);
+};
+
 $request_upload_url = static function (string $session_id, string $token, array $body): WP_REST_Response {
     $request = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/upload-urls');
     $request->set_header('Authorization', 'Bearer ' . $token);
@@ -127,9 +136,36 @@ $request_upload_url = static function (string $session_id, string $token, array 
     return rest_do_request($request);
 };
 
-echo "5. POST /sessions/{id}/upload-urls (mock S3)\n";
+echo "5. POST /sessions/{id}/upload-urls (contact gate + mock S3)\n";
 $mock = new RFQ_S3_Client_Mock('rfq-smoke-bucket');
 add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+$assert_status(
+    'upload-urls rejects session without contact',
+    $request_upload_url($session_id, $new_token, [
+        'part_id' => '11111111-1111-4111-8111-111111111111',
+        'file_type' => 'part',
+        'filename' => 'bracket.step',
+        'content_type' => 'application/octet-stream',
+    ]),
+    403
+);
+
+$contact = $request_contact_patch($session_id, $new_token, [
+    'first_name' => 'Jane',
+    'last_name' => 'Smith',
+    'email' => 'jane@example.com',
+]);
+$assert_status('patch contact', $contact, 200);
+
+$contact_data = $contact->get_data();
+if (is_array($contact_data) && ($contact_data['email'] ?? '') === 'jane@example.com') {
+    echo "  ok  patch contact returns normalized email\n";
+    $pass++;
+} else {
+    fwrite(STDERR, "  FAIL  patch contact response missing normalized email\n");
+    $fail++;
+}
 
 $upload = $request_upload_url($session_id, $new_token, [
     'part_id' => '22222222-2222-4222-8222-222222222222',
