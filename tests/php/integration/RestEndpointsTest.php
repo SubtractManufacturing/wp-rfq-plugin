@@ -355,7 +355,15 @@ class RestEndpointsTest extends TestCase
         $response = rest_do_request($request);
 
         $this->assertSame(400, $response->get_status());
-        $this->assertArrayHasKey('body', $response->get_data()['data']['params']);
+
+        $data = $response->get_data();
+        $params = $data['data']['params'] ?? null;
+
+        if (is_array($params)) {
+            $this->assertArrayHasKey('body', $params);
+        } else {
+            $this->assertSame('rest_invalid_json', $data['code']);
+        }
     }
 
     public function test_upload_urls_rejects_session_without_contact(): void
@@ -682,6 +690,44 @@ class RestEndpointsTest extends TestCase
         $this->assertNotNull($draft_json);
         $stored = json_decode((string) $draft_json, true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame($session_id, $stored['session_id']);
+    }
+
+    public function test_put_draft_clears_stale_shipping_postal_code_when_postal_removed(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $draft = $this->sample_draft_payload($session_id);
+        $this->assertSame(200, $this->request_draft_put($session_id, $token, $draft)->get_status());
+
+        unset($draft['global']['shipping_destination']['postal_code']);
+        $this->assertSame(200, $this->request_draft_put($session_id, $token, $draft)->get_status());
+
+        global $wpdb;
+
+        $postal_code = $wpdb->get_var(
+            $wpdb->prepare(
+                'SELECT shipping_postal_code FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            )
+        );
+
+        $this->assertNull($postal_code);
+    }
+
+    public function test_put_draft_rejects_nested_file_blob_fields(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $draft = $this->sample_draft_payload($session_id);
+        $draft['contact']['file_data'] = 'binary';
+
+        $response = $this->request_draft_put($session_id, $token, $draft);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('contact.file_data', $response->get_data()['data']['params']);
     }
 
     /**

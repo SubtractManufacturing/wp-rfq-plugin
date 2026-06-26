@@ -10,6 +10,19 @@ class RFQ_Activator
     {
         self::create_tables();
         self::bootstrap_secrets();
+        update_option('rfq_intake_db_version', RFQ_INTAKE_VERSION);
+    }
+
+    public static function maybe_upgrade(): void
+    {
+        $installed = get_option('rfq_intake_db_version', '');
+
+        if ($installed === RFQ_INTAKE_VERSION) {
+            return;
+        }
+
+        self::create_tables();
+        update_option('rfq_intake_db_version', RFQ_INTAKE_VERSION);
     }
 
     public static function bootstrap_secrets(): void

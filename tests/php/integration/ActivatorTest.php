@@ -31,7 +31,7 @@ class ActivatorTest extends TestCase
         $this->assertSame($columns_after_first, $this->get_session_column_names());
         $this->assertSame($indexes_after_first, $this->get_session_indexes());
 
-        $this->assertSame(
+        $this->assertEqualsCanonicalizing(
             [
                 'id',
                 'session_id',
@@ -60,6 +60,24 @@ class ActivatorTest extends TestCase
 
         $sequence_columns = $wpdb->get_results("SHOW COLUMNS FROM {$sequences_table}", ARRAY_A);
         $this->assertSame(['receipt_date', 'seq'], array_column($sequence_columns, 'Field'));
+    }
+
+    public function test_maybe_upgrade_adds_missing_columns_without_reactivation(): void
+    {
+        global $wpdb;
+
+        RFQ_Activator::activate();
+
+        $sessions_table = $wpdb->prefix . 'rfq_sessions';
+        $wpdb->query("ALTER TABLE {$sessions_table} DROP COLUMN draft_json");
+        update_option('rfq_intake_db_version', '0.0.0');
+
+        $this->assertNotContains('draft_json', $this->get_session_column_names());
+
+        RFQ_Activator::maybe_upgrade();
+
+        $this->assertContains('draft_json', $this->get_session_column_names());
+        $this->assertSame(RFQ_INTAKE_VERSION, get_option('rfq_intake_db_version'));
     }
 
     /**

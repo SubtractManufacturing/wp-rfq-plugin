@@ -1,13 +1,32 @@
 <?php
 
 /**
- * REST smoke checks via WordPress REST dispatch (wp-env cli).
- * Run: npx wp-env run cli wp eval-file wp-content/rfq-plugin-root/scripts/smoke-rest.php
+ * REST smoke checks via WordPress REST dispatch (wp-env tests-cli).
+ * Run: npx wp-env run tests-cli --env-cwd=wp-content/rfq-plugin-root wp eval-file scripts/smoke-rest.php
+ *
+ * Clears S3 options in the current WordPress DB for deterministic health checks.
+ * Must run on tests-cli only — never on the dev site (cli / localhost:8888).
  */
 
 if (! function_exists('rest_do_request')) {
-    fwrite(STDERR, "WordPress REST API is unavailable. Run via wp-env cli.\n");
+    fwrite(STDERR, "WordPress REST API is unavailable. Run via wp-env tests-cli.\n");
     exit(1);
+}
+
+if (! class_exists('RFQ_S3_Client')) {
+    $plugin_file = WP_CONTENT_DIR . '/plugins/rfq-intake/rfq-intake.php';
+
+    if (is_readable($plugin_file)) {
+        require_once $plugin_file;
+    }
+}
+
+if (class_exists('RFQ_REST_Controller')) {
+    $routes = rest_get_server()->get_routes();
+
+    if (! isset($routes['/rfq/v1/health'])) {
+        RFQ_REST_Controller::register_routes();
+    }
 }
 
 $pass = 0;
@@ -99,12 +118,105 @@ $invalid = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/ref
 $invalid->set_header('Authorization', 'Bearer invalid-token');
 $assert_status('reject invalid token', rest_do_request($invalid), 401);
 
-echo "5. POST /sessions/{id}/upload-urls (later phase stub)\n";
-$stub = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/upload-urls');
-$stub->set_header('Authorization', 'Bearer ' . $new_token);
-$assert_status('upload-urls not implemented', rest_do_request($stub), 501);
+$request_upload_url = static function (string $session_id, string $token, array $body): WP_REST_Response {
+    $request = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/upload-urls');
+    $request->set_header('Authorization', 'Bearer ' . $token);
+    $request->set_header('Content-Type', 'application/json');
+    $request->set_body(wp_json_encode($body));
 
-echo "6. Rate limit (11 creates from test IP)\n";
+    return rest_do_request($request);
+};
+
+$request_contact_patch = static function (string $session_id, string $token, array $body): WP_REST_Response {
+    $request = new WP_REST_Request('PATCH', '/rfq/v1/sessions/' . $session_id . '/contact');
+    $request->set_header('Authorization', 'Bearer ' . $token);
+    $request->set_header('Content-Type', 'application/json');
+    $request->set_body(wp_json_encode($body));
+
+    return rest_do_request($request);
+};
+
+echo "5. PATCH /sessions/{id}/contact\n";
+$contact = $request_contact_patch($session_id, $new_token, [
+    'first_name' => 'Jane',
+    'last_name' => 'Smith',
+    'email' => 'jane@example.com',
+]);
+$assert_status('patch contact', $contact, 200);
+
+echo "6. POST /sessions/{id}/upload-urls (mock S3)\n";
+$mock = new RFQ_S3_Client_Mock('rfq-smoke-bucket');
+add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+$upload = $request_upload_url($session_id, $new_token, [
+    'part_id' => '22222222-2222-4222-8222-222222222222',
+    'file_type' => 'part',
+    'filename' => 'bracket.step',
+    'content_type' => 'application/octet-stream',
+]);
+$assert_status('upload-urls part file', $upload, 200);
+
+$upload_data = $upload->get_data();
+if (
+    is_array($upload_data)
+    && is_string($upload_data['file_key'] ?? null)
+    && str_contains($upload_data['file_key'], '/parts/')
+    && str_ends_with($upload_data['file_key'], '_bracket.step')
+) {
+    echo "  ok  upload-urls returns scoped part file_key\n";
+    $pass++;
+} else {
+    fwrite(STDERR, "  FAIL  upload-urls file_key missing or malformed\n");
+    $fail++;
+}
+
+$sanitize = $request_upload_url($session_id, $new_token, [
+    'part_id' => '44444444-4444-4444-8444-444444444444',
+    'file_type' => 'part',
+    'filename' => 'my bracket (rev 2).step',
+    'content_type' => 'application/octet-stream',
+]);
+$assert_status('upload-urls sanitized filename', $sanitize, 200);
+
+if (is_array($sanitize->get_data()) && str_ends_with((string) $sanitize->get_data()['file_key'], '_my_bracket__rev_2_.step')) {
+    echo "  ok  upload-urls sanitizes filename in key\n";
+    $pass++;
+} else {
+    fwrite(STDERR, "  FAIL  upload-urls filename sanitization key mismatch\n");
+    $fail++;
+}
+
+$invalid_type = $request_upload_url($session_id, $new_token, [
+    'part_id' => '66666666-6666-4666-8666-666666666666',
+    'file_type' => 'blueprint',
+    'filename' => 'drawing.pdf',
+    'content_type' => 'application/pdf',
+]);
+$assert_status('upload-urls rejects invalid file_type', $invalid_type, 400);
+
+echo "7. PUT /draft persists metadata; POST /submit still returns 501\n";
+$draft = new WP_REST_Request('PUT', '/rfq/v1/sessions/' . $session_id . '/draft');
+$draft->set_header('Authorization', 'Bearer ' . $new_token);
+$draft->set_header('Content-Type', 'application/json');
+$draft->set_body(wp_json_encode([
+    'contact' => [
+        'first_name' => 'Jane',
+        'last_name' => 'Smith',
+        'email' => 'jane@example.com',
+    ],
+    'global' => [
+        'shipping_destination' => [
+            'postal_code' => '90210',
+        ],
+    ],
+]));
+$assert_status('put draft', rest_do_request($draft), 200);
+
+$submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
+$submit->set_header('Authorization', 'Bearer ' . $new_token);
+$assert_status('submit not implemented', rest_do_request($submit), 501);
+
+echo "8. Rate limit (11 creates from test IP)\n";
 $_SERVER['REMOTE_ADDR'] = '198.51.100.201';
 $wpdb->query(
     $wpdb->prepare(

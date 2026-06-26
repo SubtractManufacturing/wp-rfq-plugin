@@ -34,3 +34,5 @@ fi
 
 echo
 echo "Pre-merge checks passed."
+
+bash "$ROOT/scripts/restore-dev-s3-from-env.sh"
