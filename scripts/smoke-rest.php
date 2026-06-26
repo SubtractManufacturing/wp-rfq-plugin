@@ -1,13 +1,32 @@
 <?php
 
 /**
- * REST smoke checks via WordPress REST dispatch (wp-env cli).
- * Run: npx wp-env run cli wp eval-file wp-content/rfq-plugin-root/scripts/smoke-rest.php
+ * REST smoke checks via WordPress REST dispatch (wp-env tests-cli).
+ * Run: npx wp-env run tests-cli --env-cwd=wp-content/rfq-plugin-root wp eval-file scripts/smoke-rest.php
+ *
+ * Clears S3 options in the current WordPress DB for deterministic health checks.
+ * Must run on tests-cli only — never on the dev site (cli / localhost:8888).
  */
 
 if (! function_exists('rest_do_request')) {
-    fwrite(STDERR, "WordPress REST API is unavailable. Run via wp-env cli.\n");
+    fwrite(STDERR, "WordPress REST API is unavailable. Run via wp-env tests-cli.\n");
     exit(1);
+}
+
+if (! class_exists('RFQ_S3_Client')) {
+    $plugin_file = WP_CONTENT_DIR . '/plugins/rfq-intake/rfq-intake.php';
+
+    if (is_readable($plugin_file)) {
+        require_once $plugin_file;
+    }
+}
+
+if (class_exists('RFQ_REST_Controller')) {
+    $routes = rest_get_server()->get_routes();
+
+    if (! isset($routes['/rfq/v1/health'])) {
+        RFQ_REST_Controller::register_routes();
+    }
 }
 
 $pass = 0;
