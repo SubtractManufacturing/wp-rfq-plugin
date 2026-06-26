@@ -13,6 +13,7 @@ alwaysApply: true
 | `Planning/PRD.md` | Product requirements |
 | `Planning/ADD.md` | Architecture decisions |
 | `Planning/TESTING.md` | `AC-WP-*` registry and CI gates |
+| `.cursor/skills/jm-sandcastle-pr-fixes/qa-reference.md` | Runnable QA scripts index — update when adding/changing test scripts |
 | `CONTEXT.md` | Domain glossary |
 | `Planning/FUTURE.md` | **Out of scope** — do not implement |
 
@@ -35,6 +36,7 @@ Milestones: M1 (Phase 0–2) → M2 (Phase 3) → M3 (Phase 4) → M4–M5 (Phas
 - Commit prefix: `sandcastle:`
 - Label agent-ready work with `Sandcastle` on GitHub
 - Run tests applicable to the current milestone before committing
+- New or changed QA scripts → add a row to `qa-reference.md` in the same PR
 
 ## Sandcastle autonomous runs (`npm run sandcastle`)
 

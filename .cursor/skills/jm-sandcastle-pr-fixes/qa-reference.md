@@ -1,6 +1,8 @@
 # QA Reference — wp-rfq-plugin
 
-Living index of runnable QA. **When adding a new test script or CI job, add a row here** so JM-Sandcastle-PR-Fixes picks it up.
+Living index of runnable QA. **When adding a new test script or CI job, add a row here** in the same PR.
+
+Documented for agents in: `AGENTS.md` § Testing & QA, `Planning/TESTING.md` §7, `.cursor/rules/agent-core.mdc`.
 
 Canonical strategy: `Planning/TESTING.md`  
 Milestone gates: `Planning/TESTING.md` §4  

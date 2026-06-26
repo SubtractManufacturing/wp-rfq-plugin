@@ -71,5 +71,5 @@ qa_s3_object_action() {
   local key="$2"
   npx wp-env run cli --env-cwd=wp-content/rfq-plugin-root \
     env RFQ_QA_S3_ACTION="$action" RFQ_QA_S3_KEY="$key" \
-    wp eval-file scripts/qa-s3-object.php
+    wp eval-file scripts/qa-s3-object.php 2>/dev/null | tr -d '\r'
 }

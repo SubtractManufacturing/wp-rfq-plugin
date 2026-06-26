@@ -56,11 +56,11 @@ if ($action === 'head') {
 
     if ($result === false) {
         echo "missing\n";
-        exit(1);
+        exit(0);
     }
 
     fwrite(STDERR, $result->get_error_message() . "\n");
-    exit(2);
+    exit(1);
 }
 
 $secret = RFQ_Secrets::get_secret('rfq_s3_secret_key');
@@ -96,5 +96,5 @@ try {
     exit(0);
 } catch (Throwable $exception) {
     fwrite(STDERR, 'S3 delete failed: ' . $exception->getMessage() . "\n");
-    exit(2);
+    exit(1);
 }

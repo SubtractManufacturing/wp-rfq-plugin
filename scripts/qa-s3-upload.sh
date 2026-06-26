@@ -106,7 +106,7 @@ else
 fi
 
 echo "4. Verify object exists (server HeadObject)"
-if qa_s3_object_action head "$FILE_KEY" >/dev/null; then
+if [[ "$(qa_s3_object_action head "$FILE_KEY")" == "exists" ]]; then
   echo "  ok  HeadObject confirms upload at ${FILE_KEY}"
   QA_PASS=$((QA_PASS + 1))
 else
@@ -137,7 +137,7 @@ else
   QA_FAIL=$((QA_FAIL + 1))
 fi
 
-if qa_s3_object_action head "$FILE_KEY" >/dev/null; then
+if [[ "$(qa_s3_object_action head "$FILE_KEY")" == "exists" ]]; then
   echo "  ok  object still present after rejected delete attempts"
   QA_PASS=$((QA_PASS + 1))
 else
@@ -146,7 +146,7 @@ else
 fi
 
 echo "6. Server-side cleanup (QA harness only)"
-if qa_s3_object_action delete "$FILE_KEY" >/dev/null; then
+if [[ "$(qa_s3_object_action delete "$FILE_KEY")" == "deleted" ]]; then
   echo "  ok  server deleteObject removed test artifact"
   QA_PASS=$((QA_PASS + 1))
 else
@@ -154,12 +154,12 @@ else
   QA_FAIL=$((QA_FAIL + 1))
 fi
 
-if qa_s3_object_action head "$FILE_KEY" >/dev/null; then
-  echo "  FAIL  object still exists after server cleanup" >&2
-  QA_FAIL=$((QA_FAIL + 1))
-else
+if [[ "$(qa_s3_object_action head "$FILE_KEY")" == "missing" ]]; then
   echo "  ok  HeadObject confirms cleanup"
   QA_PASS=$((QA_PASS + 1))
+else
+  echo "  FAIL  object still exists after server cleanup" >&2
+  QA_FAIL=$((QA_FAIL + 1))
 fi
 
 echo
