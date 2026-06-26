@@ -177,10 +177,25 @@ $invalid_type = $request_upload_url($session_id, $new_token, [
 ]);
 $assert_status('upload-urls rejects invalid file_type', $invalid_type, 400);
 
-echo "6. PUT /draft and POST /submit still return 501\n";
+echo "6. PUT /draft persists metadata; POST /submit still returns 501\n";
 $draft = new WP_REST_Request('PUT', '/rfq/v1/sessions/' . $session_id . '/draft');
 $draft->set_header('Authorization', 'Bearer ' . $new_token);
-$assert_status('draft not implemented', rest_do_request($draft), 501);
+$draft->set_header('Content-Type', 'application/json');
+$draft->set_body(wp_json_encode([
+    'contact' => [
+        'first_name' => 'Jane',
+        'last_name' => 'Smith',
+        'email' => 'jane@example.com',
+    ],
+    'parts' => [],
+    'global' => [
+        'required_delivery_date' => gmdate('Y-m-d'),
+        'lead_time_preference' => 'standard',
+        'shipping_destination' => ['postal_code' => '90210'],
+        'nda_required' => false,
+    ],
+]));
+$assert_status('put draft', rest_do_request($draft), 200);
 
 $submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
 $submit->set_header('Authorization', 'Bearer ' . $new_token);

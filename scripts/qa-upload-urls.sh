@@ -182,8 +182,11 @@ assert_status "submitted session rejected" "403" "$(api_post "/sessions/${SID}/u
 echo "8. Regression — refresh + unimplemented routes"
 refresh="$(api_post "/sessions/${OTHER_SID}/refresh" -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 assert_status "refresh still works" "200" "$refresh"
-assert_status "draft still 501" "501" "$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
-  -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)" -w "\n__HTTP__:%{http_code}")"
+assert_status "draft autosave" "200" "$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
+  -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)" \
+  -H "Content-Type: application/json" \
+  -d '{"contact":{"first_name":"Jane","last_name":"Smith","email":"jane@example.com"},"parts":[],"global":{"required_delivery_date":"2026-12-01","lead_time_preference":"standard","shipping_destination":{"postal_code":"90210"},"nda_required":false}}' \
+  -w "\n__HTTP__:%{http_code}")"
 assert_status "submit still 501" "501" "$(api_post "/sessions/${OTHER_SID}/submit" \
   -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 
