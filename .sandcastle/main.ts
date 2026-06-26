@@ -19,6 +19,8 @@ import {
   resolveReviewKind,
 } from "./agents.js";
 import { resolveSandboxMode, sandboxProvider } from "./sandbox.js";
+import { closeSandboxClean } from "./cleanup.js";
+import { countOpenSandcastleIssues } from "./queue.js";
 import {
   ensureWindowsSh,
   ensureWindowsCursorAgent,
@@ -27,6 +29,7 @@ import {
 } from "./win32-sh.js";
 
 const MAX_ITERATIONS = 10;
+const MAX_CONSECUTIVE_IMPLEMENT_FAILURES = 3;
 
 const implementKind = resolveImplementKind();
 const reviewKind = resolveReviewKind();
@@ -56,8 +59,15 @@ const hooks = {
   },
 };
 
+let consecutiveImplementFailures = 0;
+
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
+
+  if (countOpenSandcastleIssues() === 0) {
+    console.log("No open Sandcastle-labeled issues. Nothing to do.");
+    break;
+  }
 
   const branch = `sandcastle/sequential-reviewer/${Date.now()}`;
 
@@ -76,9 +86,29 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     });
 
     if (!implement.commits.length) {
-      console.log("Implementation agent made no commits. Stopping.");
-      break;
+      if (implement.completionSignal && countOpenSandcastleIssues() === 0) {
+        console.log(
+          "Implementer finished with no new commits and the queue is empty.",
+        );
+        break;
+      }
+
+      consecutiveImplementFailures++;
+      console.log(
+        `Implementation agent made no commits (${consecutiveImplementFailures}/${MAX_CONSECUTIVE_IMPLEMENT_FAILURES}).`,
+      );
+      console.log(
+        `Check .sandcastle/logs/*-implementer.log — if the agent asked what to do, it misread the prompt.`,
+      );
+      if (consecutiveImplementFailures >= MAX_CONSECUTIVE_IMPLEMENT_FAILURES) {
+        console.log("Stopping after repeated implement failures.");
+        break;
+      }
+      console.log("Retrying next iteration…");
+      continue;
     }
+
+    consecutiveImplementFailures = 0;
 
     console.log(`\nImplementation complete on branch: ${branch}`);
     console.log(`Commits: ${implement.commits.length}`);
@@ -95,7 +125,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 
     console.log("\nReview complete.");
   } finally {
-    await agentSandbox.close();
+    await closeSandboxClean(agentSandbox);
   }
 }
 

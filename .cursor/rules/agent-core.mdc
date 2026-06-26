@@ -35,3 +35,12 @@ Milestones: M1 (Phase 0–2) → M2 (Phase 3) → M3 (Phase 4) → M4–M5 (Phas
 - Commit prefix: `sandcastle:`
 - Label agent-ready work with `Sandcastle` on GitHub
 - Run tests applicable to the current milestone before committing
+
+## Sandcastle autonomous runs (`npm run sandcastle`)
+
+When this session is started by Sandcastle (implementer or reviewer), the prompt is **complete** — not a truncated human message.
+
+- **Never** ask "what would you like to do next?" or wait for clarification
+- **Implementer:** read `open-sandcastle-issues.json`, implement the highest-priority issue, commit, push, open PR, then `<promise>COMPLETE</promise>`
+- **Reviewer:** review the branch diff, post the required PR comment, then `<promise>COMPLETE</promise>`
+- Do not read superpowers skills or unrelated `agent-transcripts` during Sandcastle runs

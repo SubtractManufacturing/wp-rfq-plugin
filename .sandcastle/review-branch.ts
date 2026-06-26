@@ -8,6 +8,7 @@
 import * as sandcastle from "@ai-hero/sandcastle";
 import { createReviewAgent } from "./agents.js";
 import { resolveSandboxMode, sandboxProvider } from "./sandbox.js";
+import { closeSandboxClean } from "./cleanup.js";
 import { ensureWindowsSh, printCodexWindowsHelp } from "./win32-sh.js";
 
 const branch = process.argv[2];
@@ -39,5 +40,5 @@ try {
   });
   console.log("\nReview complete.");
 } finally {
-  await agentSandbox.close();
+  await closeSandboxClean(agentSandbox);
 }

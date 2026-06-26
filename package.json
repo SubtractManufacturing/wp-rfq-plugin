@@ -12,6 +12,7 @@
     "sandcastle:wsl": "wsl -e bash -lc \"cd \\\"$(wslpath -a '%CD%')\\\" && npm run sandcastle\"",
     "sandcastle:build-image": "sandcastle docker build-image",
     "sandcastle:fix-ci": "tsx .sandcastle/fix-ci.ts",
+    "sandcastle:cleanup": "tsx .sandcastle/cleanup.ts",
     "labels:create": "node scripts/create-labels.mjs",
     "test": "composer test",
     "test:integration": "wp-env run tests-cli --env-cwd=wp-content/rfq-plugin-root vendor/bin/phpunit -c phpunit.integration.xml.dist",
