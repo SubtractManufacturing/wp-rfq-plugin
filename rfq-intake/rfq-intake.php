@@ -45,6 +45,7 @@ require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-client-interface.php
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-client.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-client-mock.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-key-builder.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-contact-validator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';

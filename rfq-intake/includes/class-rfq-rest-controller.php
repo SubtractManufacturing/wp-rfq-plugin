@@ -35,7 +35,7 @@ class RFQ_REST_Controller
 
         register_rest_route(self::NAMESPACE, '/sessions/(?P<session_id>[a-f0-9-]{36})/contact', [
             'methods' => 'PATCH',
-            'callback' => [self::class, 'not_implemented'],
+            'callback' => [self::class, 'patch_contact'],
             'permission_callback' => [self::class, 'jwt_permission'],
         ]);
 
@@ -167,6 +167,74 @@ class RFQ_REST_Controller
         }
 
         return new WP_REST_Response(['token' => $token], 200);
+    }
+
+    public static function patch_contact(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $session_id = (string) $request->get_param('session_id');
+        $session = self::get_session_row($session_id);
+
+        if ($session === null) {
+            return new WP_Error(
+                'rfq_session_not_found',
+                __('Intake session not found.', 'rfq-intake'),
+                ['status' => 404]
+            );
+        }
+
+        if ($session['status'] === 'submitted') {
+            return new WP_Error(
+                'rfq_session_submitted',
+                __('Submitted sessions cannot update contact information.', 'rfq-intake'),
+                ['status' => 403]
+            );
+        }
+
+        $params = $request->get_json_params();
+
+        if (! is_array($params)) {
+            return self::field_validation_error([
+                'body' => __('Request body must be a JSON object.', 'rfq-intake'),
+            ]);
+        }
+
+        $validation = RFQ_Contact_Validator::normalize_and_validate($params);
+
+        if ($validation['errors'] !== []) {
+            return self::field_validation_error($validation['errors']);
+        }
+
+        $contact = $validation['normalized'];
+        $now = current_time('mysql', true);
+
+        global $wpdb;
+
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            [
+                'contact_first_name' => $contact['first_name'],
+                'contact_last_name' => $contact['last_name'],
+                'contact_email' => $contact['email'],
+                'contact_company' => $contact['company'],
+                'contact_phone' => $contact['phone'],
+                'contact_phone_country_code' => $contact['phone_country_code'],
+                'contact_job_title' => $contact['job_title'],
+                'updated_at' => $now,
+            ],
+            ['session_id' => $session_id],
+            ['%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'],
+            ['%s']
+        );
+
+        if ($updated === false) {
+            return new WP_Error(
+                'rfq_contact_update_failed',
+                __('Unable to update contact information.', 'rfq-intake'),
+                ['status' => 500]
+            );
+        }
+
+        return new WP_REST_Response(self::contact_response($contact), 200);
     }
 
     public static function upload_urls(WP_REST_Request $request): WP_REST_Response|WP_Error
@@ -306,6 +374,23 @@ class RFQ_REST_Controller
         }
 
         return $errors;
+    }
+
+    /**
+     * @param array<string, string|null> $contact
+     * @return array<string, string|null>
+     */
+    private static function contact_response(array $contact): array
+    {
+        return [
+            'first_name' => $contact['first_name'],
+            'last_name' => $contact['last_name'],
+            'email' => $contact['email'],
+            'company' => $contact['company'],
+            'phone' => $contact['phone'],
+            'phone_country_code' => $contact['phone_country_code'],
+            'job_title' => $contact['job_title'],
+        ];
     }
 
     /**

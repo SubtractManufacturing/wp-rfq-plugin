@@ -1,0 +1,142 @@
+<?php
+
+declare(strict_types=1);
+
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\TestCase;
+
+#[CoversClass(RFQ_Contact_Validator::class)]
+#[Group('AC-WP-017')]
+class ContactValidatorTest extends TestCase
+{
+    public function test_valid_contact_with_all_required_fields(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+        ]);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame('Jane', $result['normalized']['first_name']);
+        $this->assertSame('Smith', $result['normalized']['last_name']);
+        $this->assertSame('jane@example.com', $result['normalized']['email']);
+        $this->assertNull($result['normalized']['company']);
+        $this->assertNull($result['normalized']['phone']);
+        $this->assertNull($result['normalized']['phone_country_code']);
+        $this->assertNull($result['normalized']['job_title']);
+    }
+
+    public function test_trims_whitespace_from_contact_fields(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => '  Jane  ',
+            'last_name' => ' Smith ',
+            'email' => ' jane@example.com ',
+            'company' => ' Acme ',
+            'job_title' => ' Buyer ',
+        ]);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame('Jane', $result['normalized']['first_name']);
+        $this->assertSame('Smith', $result['normalized']['last_name']);
+        $this->assertSame('jane@example.com', $result['normalized']['email']);
+        $this->assertSame('Acme', $result['normalized']['company']);
+        $this->assertSame('Buyer', $result['normalized']['job_title']);
+    }
+
+    public function test_blank_optional_fields_normalize_to_null(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'company' => '   ',
+            'job_title' => '',
+            'phone' => '',
+        ]);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertNull($result['normalized']['company']);
+        $this->assertNull($result['normalized']['job_title']);
+        $this->assertNull($result['normalized']['phone']);
+        $this->assertNull($result['normalized']['phone_country_code']);
+    }
+
+    public function test_phone_defaults_country_code_to_one(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'phone' => '5555550100',
+        ]);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame('5555550100', $result['normalized']['phone']);
+        $this->assertSame('1', $result['normalized']['phone_country_code']);
+    }
+
+    public function test_missing_required_fields_return_field_errors(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => '',
+            'last_name' => null,
+            'email' => '   ',
+        ]);
+
+        $this->assertArrayHasKey('first_name', $result['errors']);
+        $this->assertArrayHasKey('last_name', $result['errors']);
+        $this->assertArrayHasKey('email', $result['errors']);
+    }
+
+    public function test_invalid_email_returns_field_error(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'not-an-email',
+        ]);
+
+        $this->assertArrayHasKey('email', $result['errors']);
+    }
+
+    public function test_invalid_phone_length_returns_field_error(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'phone' => '555555010',
+            'phone_country_code' => '1',
+        ]);
+
+        $this->assertArrayHasKey('phone', $result['errors']);
+    }
+
+    public function test_country_code_without_phone_returns_field_error(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'phone_country_code' => '1',
+        ]);
+
+        $this->assertArrayHasKey('phone_country_code', $result['errors']);
+    }
+
+    public function test_non_v1_country_code_returns_field_error(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'phone' => '5555550100',
+            'phone_country_code' => '44',
+        ]);
+
+        $this->assertArrayHasKey('phone_country_code', $result['errors']);
+    }
+}

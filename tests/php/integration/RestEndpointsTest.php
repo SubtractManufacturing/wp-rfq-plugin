@@ -210,6 +210,144 @@ class RestEndpointsTest extends TestCase
         $response = rest_do_request($request);
 
         $this->assertSame(501, $response->get_status());
+
+        $submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
+        $submit->set_header('Authorization', 'Bearer ' . $token);
+
+        $this->assertSame(501, rest_do_request($submit)->get_status());
+    }
+
+    public function test_patch_contact_persists_valid_contact_and_keeps_draft_status(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => ' Jane ',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'company' => 'Acme Corp',
+            'phone' => '5555550100',
+            'job_title' => null,
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+
+        $data = $response->get_data();
+        $this->assertSame('Jane', $data['first_name']);
+        $this->assertSame('Smith', $data['last_name']);
+        $this->assertSame('jane@example.com', $data['email']);
+        $this->assertSame('Acme Corp', $data['company']);
+        $this->assertSame('5555550100', $data['phone']);
+        $this->assertSame('1', $data['phone_country_code']);
+        $this->assertNull($data['job_title']);
+
+        global $wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                'SELECT status, contact_first_name, contact_last_name, contact_email, contact_company, contact_phone, contact_phone_country_code, contact_job_title
+                 FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            ),
+            ARRAY_A
+        );
+
+        $this->assertSame('draft', $row['status']);
+        $this->assertSame('Jane', $row['contact_first_name']);
+        $this->assertSame('Smith', $row['contact_last_name']);
+        $this->assertSame('jane@example.com', $row['contact_email']);
+        $this->assertSame('Acme Corp', $row['contact_company']);
+        $this->assertSame('5555550100', $row['contact_phone']);
+        $this->assertSame('1', $row['contact_phone_country_code']);
+        $this->assertNull($row['contact_job_title']);
+    }
+
+    public function test_patch_contact_rejects_missing_required_fields(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => '',
+            'last_name' => 'Smith',
+            'email' => 'invalid',
+        ]);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('first_name', $response->get_data()['data']['params']);
+        $this->assertArrayHasKey('email', $response->get_data()['data']['params']);
+    }
+
+    public function test_patch_contact_rejects_invalid_phone_combination(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'phone' => '5555550100',
+            'phone_country_code' => '44',
+        ]);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('phone_country_code', $response->get_data()['data']['params']);
+    }
+
+    public function test_patch_contact_persists_blank_optional_fields_as_null(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'company' => '   ',
+            'phone' => '',
+            'job_title' => '',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+        $this->assertNull($response->get_data()['company']);
+        $this->assertNull($response->get_data()['phone']);
+        $this->assertNull($response->get_data()['phone_country_code']);
+        $this->assertNull($response->get_data()['job_title']);
+    }
+
+    public function test_patch_contact_rejects_invalid_jwt(): void
+    {
+        $create = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
+        $session_id = $create->get_data()['session_id'];
+
+        $response = $this->request_contact_patch($session_id, 'invalid-token', [
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+        ]);
+
+        $this->assertSame(401, $response->get_status());
+    }
+
+    public function test_patch_contact_rejects_submitted_session(): void
+    {
+        global $wpdb;
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            ['status' => 'submitted'],
+            ['session_id' => $session_id],
+            ['%s'],
+            ['%s']
+        );
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+        ]);
+
+        $this->assertSame(403, $response->get_status());
     }
 
     public function test_upload_urls_returns_presigned_put_for_part_file(): void
@@ -394,6 +532,19 @@ class RestEndpointsTest extends TestCase
     private function request_upload_url(string $session_id, string $token, array $body): WP_REST_Response
     {
         $request = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/upload-urls');
+        $request->set_header('Authorization', 'Bearer ' . $token);
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(wp_json_encode($body));
+
+        return rest_do_request($request);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function request_contact_patch(string $session_id, string $token, array $body): WP_REST_Response
+    {
+        $request = new WP_REST_Request('PATCH', '/rfq/v1/sessions/' . $session_id . '/contact');
         $request->set_header('Authorization', 'Bearer ' . $token);
         $request->set_header('Content-Type', 'application/json');
         $request->set_body(wp_json_encode($body));
