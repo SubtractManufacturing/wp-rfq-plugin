@@ -17,6 +17,8 @@ if (!defined('ABSPATH')) {
 define('RFQ_INTAKE_VERSION', '0.1.0');
 define('RFQ_MAX_PARTS', 20);
 define('RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200);
+/** Draft session retention in WP DB before archive/delete (PRD §10). */
+define('RFQ_DRAFT_SESSION_RETENTION_DAYS', 90);
 /** Session creation rate limit: requests per hour per IP. */
 define('RFQ_SESSION_RATE_LIMIT', 10);
 define('RFQ_INTAKE_PLUGIN_FILE', __FILE__);
