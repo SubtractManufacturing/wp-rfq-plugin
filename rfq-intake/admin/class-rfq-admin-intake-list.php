@@ -130,10 +130,9 @@ class RFQ_Admin_Intake_List
             return '';
         }
 
-        $formatted = mysql2date(
-            get_option('date_format') . ' ' . get_option('time_format'),
+        $formatted = get_date_from_gmt(
             $created_at,
-            true
+            get_option('date_format') . ' ' . get_option('time_format')
         );
 
         return is_string($formatted) ? $formatted : '';

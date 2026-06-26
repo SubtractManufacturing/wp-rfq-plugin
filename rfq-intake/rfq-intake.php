@@ -22,14 +22,27 @@ define('RFQ_SESSION_RATE_LIMIT', 10);
 define('RFQ_INTAKE_PLUGIN_FILE', __FILE__);
 define('RFQ_INTAKE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
-$rfq_autoload = dirname(__DIR__) . '/vendor/autoload.php';
+$rfq_autoload_candidates = [
+    dirname(__DIR__) . '/vendor/autoload.php',
+];
 
-if (file_exists($rfq_autoload)) {
-    require_once $rfq_autoload;
+if (defined('WP_CONTENT_DIR')) {
+    $rfq_autoload_candidates[] = WP_CONTENT_DIR . '/rfq-plugin-root/vendor/autoload.php';
+}
+
+foreach ($rfq_autoload_candidates as $rfq_autoload) {
+    if (file_exists($rfq_autoload)) {
+        require_once $rfq_autoload;
+        break;
+    }
 }
 
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-secrets.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-material-catalog.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-jwt.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rate-limiter.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-s3-client.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';
 

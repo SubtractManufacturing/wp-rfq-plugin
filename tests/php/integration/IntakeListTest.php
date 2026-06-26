@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-028
- */
+#[CoversClass(RFQ_Admin_Intake_List::class)]
+#[Group('AC-WP-028')]
 class IntakeListTest extends TestCase
 {
     protected function setUp(): void
@@ -95,9 +96,10 @@ class IntakeListTest extends TestCase
         update_option('date_format', 'Y-m-d');
         update_option('time_format', 'H:i');
 
+        // created_at is stored UTC via current_time('mysql', true).
         $formatted = RFQ_Admin_Intake_List::format_created_at('2026-06-15 14:30:00');
 
-        $this->assertSame('2026-06-15 14:30', $formatted);
+        $this->assertSame('2026-06-15 10:30', $formatted);
         $this->assertSame('', RFQ_Admin_Intake_List::format_created_at('0000-00-00 00:00:00'));
     }
 
