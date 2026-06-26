@@ -24,4 +24,10 @@ else
 fi
 
 echo
-npx wp-env run cli wp eval-file "wp-content/rfq-plugin-root/scripts/smoke-rest.php"
+echo "1–6. REST dispatch checks (tests-cli — isolated from dev site settings)"
+# Use tests-cli (port 8889), not cli (port 8888). smoke-rest.php clears S3 options
+# to assert health-without-config; running it on cli wipes local admin credentials.
+npx wp-env run tests-cli --env-cwd=wp-content/rfq-plugin-root wp eval-file scripts/smoke-rest.php
+
+echo
+bash "$ROOT/scripts/restore-dev-s3-from-env.sh"

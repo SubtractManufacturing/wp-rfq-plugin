@@ -171,13 +171,13 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
         }
 
         try {
+            // Do not attach Metadata here: signed metadata headers must be sent on
+            // browser PUT and Supabase/S3 return 403 SignatureDoesNotMatch without them.
+            // Size limits are enforced client-side and at submit via headObject.
             $command = $this->aws_client->getCommand('PutObject', [
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'ContentType' => $content_type,
-                'Metadata' => [
-                    'rfq-max-bytes' => (string) $max_bytes,
-                ],
             ]);
 
             $request = $this->aws_client->createPresignedRequest(

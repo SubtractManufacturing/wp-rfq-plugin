@@ -47,7 +47,7 @@ class RFQ_Rate_Limiter
         $key = self::upload_url_transient_key($session_id);
         $count = self::get_upload_url_count($session_id) + 1;
 
-        set_transient($key, $count, DAY_IN_SECONDS);
+        set_transient($key, $count, RFQ_DRAFT_SESSION_RETENTION_DAYS * DAY_IN_SECONDS);
     }
 
     private static function session_transient_key(string $ip): string

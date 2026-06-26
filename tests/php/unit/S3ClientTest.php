@@ -111,7 +111,7 @@ class S3ClientTest extends TestCase
         $this->assertIsString($url);
         $this->assertStringContainsString('intake/session/parts/uuid_bracket.step', $url);
         $this->assertStringContainsString('X-Amz-Expires=1800', $url);
-        $this->assertStringContainsString('x-amz-meta-rfq-max-bytes=524288000', $url);
+        $this->assertStringNotContainsString('x-amz-meta-rfq-max-bytes', $url);
     }
 
     public function test_create_presigned_put_rejects_non_positive_expiry(): void

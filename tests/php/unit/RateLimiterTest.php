@@ -44,4 +44,17 @@ class RateLimiterTest extends TestCase
             RFQ_Rate_Limiter::get_upload_url_count(self::SESSION_ID)
         );
     }
+
+    public function test_upload_url_counter_ttl_matches_draft_session_retention(): void
+    {
+        RFQ_Rate_Limiter::record_upload_url(self::SESSION_ID);
+
+        $key = 'rfq_upload_urls_' . self::SESSION_ID;
+        $this->assertArrayHasKey($key, $GLOBALS['rfq_test_transients']);
+
+        $expires_at = $GLOBALS['rfq_test_transients'][$key]['expires_at'];
+        $expected = time() + (RFQ_DRAFT_SESSION_RETENTION_DAYS * DAY_IN_SECONDS);
+
+        $this->assertEqualsWithDelta($expected, $expires_at, 2);
+    }
 }
