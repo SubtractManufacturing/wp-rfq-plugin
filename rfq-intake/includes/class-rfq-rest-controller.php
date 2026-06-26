@@ -258,6 +258,14 @@ class RFQ_REST_Controller
             );
         }
 
+        if (! self::session_has_required_contact($session)) {
+            return new WP_Error(
+                'rfq_contact_required',
+                __('Complete contact information before requesting upload URLs.', 'rfq-intake'),
+                ['status' => 403]
+            );
+        }
+
         if (! RFQ_Rate_Limiter::is_upload_url_allowed($session_id)) {
             return new WP_Error(
                 'rfq_upload_url_rate_limited',
@@ -369,8 +377,11 @@ class RFQ_REST_Controller
 
         if ($postal_code !== null && RFQ_Postal_Code::is_valid($postal_code)) {
             $update_data['shipping_postal_code'] = RFQ_Postal_Code::normalize($postal_code);
-            $update_formats[] = '%s';
+        } else {
+            $update_data['shipping_postal_code'] = null;
         }
+
+        $update_formats[] = '%s';
 
         global $wpdb;
 
@@ -467,18 +478,7 @@ class RFQ_REST_Controller
      */
     private static function sanitize_draft_payload(array $params, string $session_id): array|WP_Error
     {
-        $blob_fields = ['file_data', 'file_content', 'blob', 'content_base64', 'bytes'];
         $errors = [];
-
-        foreach ($blob_fields as $field) {
-            if (array_key_exists($field, $params)) {
-                $errors[$field] = __('File blobs are not accepted in draft autosave.', 'rfq-intake');
-            }
-        }
-
-        if ($errors !== []) {
-            return self::field_validation_error($errors);
-        }
 
         if (isset($params['contact']) && ! is_array($params['contact'])) {
             $errors['contact'] = __('contact must be an object.', 'rfq-intake');
@@ -496,6 +496,12 @@ class RFQ_REST_Controller
             return self::field_validation_error($errors);
         }
 
+        $blob_errors = self::find_draft_blob_field_errors($params);
+
+        if ($blob_errors !== []) {
+            return self::field_validation_error($blob_errors);
+        }
+
         $draft = $params;
         $draft['session_id'] = $session_id;
 
@@ -507,15 +513,6 @@ class RFQ_REST_Controller
                     $errors['parts.' . $index] = __('Each part entry must be an object.', 'rfq-intake');
 
                     continue;
-                }
-
-                foreach ($blob_fields as $field) {
-                    if (array_key_exists($field, $part)) {
-                        $errors['parts.' . $index . '.' . $field] = __(
-                            'File blobs are not accepted in draft autosave.',
-                            'rfq-intake'
-                        );
-                    }
                 }
 
                 unset($part['upload_url']);
@@ -530,6 +527,32 @@ class RFQ_REST_Controller
         }
 
         return $draft;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, string>
+     */
+    private static function find_draft_blob_field_errors(array $data, string $prefix = ''): array
+    {
+        $blob_fields = ['file_data', 'file_content', 'blob', 'content_base64', 'bytes'];
+        $errors = [];
+
+        foreach ($blob_fields as $field) {
+            if (array_key_exists($field, $data)) {
+                $path = $prefix === '' ? $field : $prefix . '.' . $field;
+                $errors[$path] = __('File blobs are not accepted in draft autosave.', 'rfq-intake');
+            }
+        }
+
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $child_prefix = $prefix === '' ? (string) $key : $prefix . '.' . $key;
+                $errors = array_merge($errors, self::find_draft_blob_field_errors($value, $child_prefix));
+            }
+        }
+
+        return $errors;
     }
 
     /**
@@ -558,6 +581,22 @@ class RFQ_REST_Controller
         $trimmed = trim($postal_code);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @param array<string, mixed> $session
+     */
+    private static function session_has_required_contact(array $session): bool
+    {
+        foreach (['contact_first_name', 'contact_last_name', 'contact_email'] as $field) {
+            $value = $session[$field] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -627,7 +666,8 @@ class RFQ_REST_Controller
 
         $row = $wpdb->get_row(
             $wpdb->prepare(
-                'SELECT session_id, status FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                'SELECT session_id, status, contact_first_name, contact_last_name, contact_email
+                 FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
                 $session_id
             ),
             ARRAY_A

@@ -19,8 +19,8 @@ class RFQ_Contact_Validator
         $first_name = self::normalize_required_string($params['first_name'] ?? null, 'first_name', $errors);
         $last_name = self::normalize_required_string($params['last_name'] ?? null, 'last_name', $errors);
         $email = self::normalize_required_string($params['email'] ?? null, 'email', $errors);
-        $company = self::normalize_optional_string($params['company'] ?? null);
-        $job_title = self::normalize_optional_string($params['job_title'] ?? null);
+        $company = self::normalize_optional_string($params['company'] ?? null, 'company', $errors);
+        $job_title = self::normalize_optional_string($params['job_title'] ?? null, 'job_title', $errors);
 
         if ($email !== null && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = __('A valid email address is required.', 'rfq-intake');
@@ -74,13 +74,18 @@ class RFQ_Contact_Validator
         return $trimmed;
     }
 
-    private static function normalize_optional_string(mixed $value): ?string
+    /**
+     * @param array<string, string> $errors
+     */
+    private static function normalize_optional_string(mixed $value, string $field, array &$errors): ?string
     {
         if ($value === null) {
             return null;
         }
 
         if (! is_string($value)) {
+            $errors[$field] = __('This field must be a string.', 'rfq-intake');
+
             return null;
         }
 
@@ -98,8 +103,28 @@ class RFQ_Contact_Validator
         mixed $phone_country_code,
         array &$errors
     ): array {
-        $normalized_phone = self::normalize_optional_string($phone);
-        $normalized_country_code = self::normalize_optional_string($phone_country_code);
+        if ($phone !== null && ! is_string($phone)) {
+            $errors['phone'] = __('This field must be a string.', 'rfq-intake');
+
+            return [null, null];
+        }
+
+        if ($phone_country_code !== null && ! is_string($phone_country_code)) {
+            $errors['phone_country_code'] = __('This field must be a string.', 'rfq-intake');
+
+            return [null, null];
+        }
+
+        $normalized_phone = $phone === null ? null : trim($phone);
+        $normalized_country_code = $phone_country_code === null ? null : trim($phone_country_code);
+
+        if ($normalized_phone === '') {
+            $normalized_phone = null;
+        }
+
+        if ($normalized_country_code === '') {
+            $normalized_country_code = null;
+        }
 
         if ($normalized_phone === null) {
             if ($normalized_country_code !== null) {

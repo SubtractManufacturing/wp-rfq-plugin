@@ -8,6 +8,7 @@ class RFQ_Plugin
 {
     public static function init(): void
     {
+        RFQ_Activator::maybe_upgrade();
         RFQ_REST_Controller::init();
 
         require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-settings.php';
