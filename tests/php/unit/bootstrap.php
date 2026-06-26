@@ -19,3 +19,4 @@ require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-rate-limiter.
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client-interface.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client-mock.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-key-builder.php';
