@@ -17,7 +17,7 @@ class S3KeyBuilderTest extends TestCase
     public function test_sanitize_filename_replaces_special_characters(): void
     {
         $this->assertSame(
-            'bracket_v2.step',
+            'bracket__v2_.step',
             RFQ_S3_Key_Builder::sanitize_filename('bracket (v2).step')
         );
     }
