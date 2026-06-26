@@ -4,8 +4,8 @@
 #
 # Usage:
 #   npm run qa:upload-urls
-#   npm run qa:upload-urls -- --put bracket.step   # also PUT a test file to S3
-#   npm run qa:upload-urls -- --full               # include rate-limit probes (slow)
+#   npm run qa:s3-upload                         # full E2E PUT + delete edge cases (config/PlaceHolder.step)
+#   npm run qa:upload-urls -- --full             # include rate-limit probes (slow)
 set -euo pipefail
 
 BASE_URL="${WP_BASE_URL:-http://localhost:8888}"
