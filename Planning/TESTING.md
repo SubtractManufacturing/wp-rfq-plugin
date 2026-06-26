@@ -247,7 +247,10 @@ phpunit.xml.dist                # M1
 playwright.config.ts            # M4
 .github/workflows/test.yml      # M1, grows by milestone
 scripts/check-acceptance-coverage.php  # M1
+.cursor/skills/jm-sandcastle-pr-fixes/qa-reference.md  # runnable QA index for agents
 ```
+
+**Agent maintenance:** When you add or change a QA script under `scripts/` or a test command in `package.json` / `composer.json`, add or update a row in `qa-reference.md` in the same PR. Strategy lives here; the runnable command index lives there so JM-Sandcastle-PR-Fixes and other agents discover new checks automatically.
 
 **Design requirement:** S3 access behind `S3ClientInterface` so unit tests, mock adapter, Supabase, and LocalStack swap without changing business logic. See [ADD §23](ADD.md).
 
@@ -276,6 +279,8 @@ npm run test:e2e
 npm run test:e2e:localstack   # or test:e2e:supabase
 npm run test:acceptance-coverage
 ```
+
+See `.cursor/skills/jm-sandcastle-pr-fixes/qa-reference.md` for the current runnable index (includes `npm run test:pre-merge`, `qa:upload-urls`, etc.).
 
 ---
 
