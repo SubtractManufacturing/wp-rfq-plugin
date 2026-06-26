@@ -17,6 +17,7 @@ import { readdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { CloseResult, Sandbox } from "@ai-hero/sandcastle";
+import { formatGhError, ghJson } from "./gh.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -132,17 +133,26 @@ async function isBranchMergedInto(branch: string, base: string): Promise<boolean
   }
 }
 
-async function hasOpenPr(headBranch: string): Promise<boolean> {
+type OpenPrStatus = "open" | "none" | "unknown";
+
+async function checkOpenPr(headBranch: string): Promise<OpenPrStatus> {
   try {
-    const out = await execFileAsync(
-      "gh",
-      ["pr", "list", "--head", headBranch, "--state", "open", "--json", "number"],
-      { cwd: repoRoot(), maxBuffer: 1024 * 1024 },
+    const prs = await ghJson<unknown[]>([
+      "pr",
+      "list",
+      "--head",
+      headBranch,
+      "--state",
+      "open",
+      "--json",
+      "number",
+    ]);
+    return prs.length > 0 ? "open" : "none";
+  } catch (error) {
+    console.warn(
+      `Could not check open PR for ${headBranch}: ${formatGhError(error)}`,
     );
-    const prs = JSON.parse(out.stdout || "[]") as unknown[];
-    return prs.length > 0;
-  } catch {
-    return false;
+    return "unknown";
   }
 }
 
@@ -314,7 +324,16 @@ export async function runCleanupCli(argv: string[]): Promise<void> {
     }
 
     const merged = await isBranchMergedInto(shortBranch, "main");
-    const openPr = await hasOpenPr(shortBranch);
+    const prStatus = await checkOpenPr(shortBranch);
+
+    if (prStatus === "unknown") {
+      console.log(
+        `Keeping worktree ${shortBranch} (PR status unknown — gh error)`,
+      );
+      continue;
+    }
+
+    const openPr = prStatus === "open";
     const safeEmpty = !dirty;
 
     if (opts.all || merged || (safeEmpty && !openPr)) {
