@@ -22,3 +22,4 @@ require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client-moc
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-key-builder.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-contact-validator.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-postal-code.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-manifest-validator.php';
