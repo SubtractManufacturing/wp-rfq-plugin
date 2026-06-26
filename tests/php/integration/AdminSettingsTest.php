@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-010
- * @covers AC-WP-011
- * @covers AC-WP-020
- */
+#[CoversClass(RFQ_Admin_Settings::class)]
+#[Group('AC-WP-010')]
+#[Group('AC-WP-011')]
+#[Group('AC-WP-020')]
 class AdminSettingsTest extends TestCase
 {
     protected function setUp(): void

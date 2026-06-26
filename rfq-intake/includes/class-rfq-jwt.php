@@ -25,6 +25,7 @@ class RFQ_Jwt
             'session_id' => $session_id,
             'iat' => $issued_at,
             'exp' => $issued_at + self::TTL_SECONDS,
+            'jti' => bin2hex(random_bytes(16)),
         ];
 
         return JWT::encode($payload, $secret, self::ALGORITHM);

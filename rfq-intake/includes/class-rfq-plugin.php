@@ -10,9 +10,10 @@ class RFQ_Plugin
     {
         RFQ_REST_Controller::init();
 
+        require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-settings.php';
+        require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-intake-list.php';
+
         if (is_admin()) {
-            require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-settings.php';
-            require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-intake-list.php';
             RFQ_Admin_Settings::init();
             RFQ_Admin_Intake_List::init();
         }

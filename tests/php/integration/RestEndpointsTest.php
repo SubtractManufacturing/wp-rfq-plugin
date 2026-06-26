@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-006
- * @covers AC-WP-012
- */
+#[CoversClass(RFQ_REST_Controller::class)]
+#[Group('AC-WP-006')]
+#[Group('AC-WP-012')]
 class RestEndpointsTest extends TestCase
 {
     protected function setUp(): void

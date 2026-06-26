@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-006
- */
+#[CoversClass(RFQ_Rate_Limiter::class)]
+#[Group('AC-WP-006')]
 class RateLimiterTest extends TestCase
 {
     private const IP = '203.0.113.10';

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-006
- */
+#[CoversClass(RFQ_Jwt::class)]
+#[Group('AC-WP-006')]
 class JwtTest extends TestCase
 {
     private const SESSION_ID = '11111111-1111-4111-8111-111111111111';

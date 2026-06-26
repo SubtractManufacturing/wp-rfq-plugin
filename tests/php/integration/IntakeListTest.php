@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-028
- */
+#[CoversClass(RFQ_Admin_Intake_List::class)]
+#[Group('AC-WP-028')]
 class IntakeListTest extends TestCase
 {
     protected function setUp(): void

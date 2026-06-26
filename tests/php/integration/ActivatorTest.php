@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-023
- */
+#[CoversClass(RFQ_Activator::class)]
+#[Group('AC-WP-023')]
 class ActivatorTest extends TestCase
 {
     public function test_double_activation_is_idempotent(): void

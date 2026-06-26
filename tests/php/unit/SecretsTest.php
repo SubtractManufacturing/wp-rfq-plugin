@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-011
- * @covers AC-WP-020
- */
+#[CoversClass(RFQ_Secrets::class)]
+#[Group('AC-WP-011')]
+#[Group('AC-WP-020')]
 class SecretsTest extends TestCase
 {
     protected function setUp(): void
