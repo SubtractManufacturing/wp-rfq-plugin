@@ -13,6 +13,10 @@ if (! defined('RFQ_INTAKE_PLUGIN_DIR')) {
 require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
 require_once dirname(__DIR__, 3) . '/tests/php/unit/wp-stubs.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-secrets.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-material-catalog.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-jwt.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-rate-limiter.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client-interface.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-client-mock.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-s3-key-builder.php';

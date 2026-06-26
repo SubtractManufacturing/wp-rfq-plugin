@@ -77,6 +77,7 @@ Or from PowerShell: `npm run sandcastle:wsl`.
 | No commits | No open `Sandcastle`-labeled issues |
 | Stuck CI | `npm run sandcastle:fix-ci -- <PR#>` (Composer 2.5); escalate manually if needed |
 | Stale worktrees / logs | `npm run sandcastle:cleanup` (see `--dry-run`, `--all`) |
+| Sandcastle exits immediately / cleanup keeps all worktrees | Run `gh auth status`; set `GH_TOKEN` in `.sandcastle/.env` |
 
 Logs: `.sandcastle/logs/`
 

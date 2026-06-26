@@ -50,6 +50,15 @@ Pick up issues labeled **`Sandcastle`**. Issue sizing and planning split: `docs/
 - Review fixes: `sandcastle: review: <summary>`
 - CI fixes: `sandcastle: ci: <summary>`
 
+## Testing & QA
+
+| Doc | Purpose |
+|-----|---------|
+| `Planning/TESTING.md` | What to test — acceptance criteria, CI tiers, manual staging |
+| `.cursor/skills/jm-sandcastle-pr-fixes/qa-reference.md` | Runnable QA command index for agents |
+
+**When adding or changing a QA script** (`scripts/qa-*.sh`, `scripts/test-*.sh`, `scripts/smoke-*.sh`) or an `npm run` / `composer` test command: register it in `qa-reference.md` in the same PR.
+
 ## Out of scope
 
 Everything in `Planning/FUTURE.md` and ERP Phase 7 (M6).

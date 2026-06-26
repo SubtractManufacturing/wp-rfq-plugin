@@ -61,10 +61,21 @@ const hooks = {
 
 let consecutiveImplementFailures = 0;
 
+function issueCountOrExit(): number {
+  const count = countOpenSandcastleIssues();
+  if (count === null) {
+    console.error(
+      "Cannot verify Sandcastle issue queue (gh unavailable). Exiting.",
+    );
+    process.exit(1);
+  }
+  return count;
+}
+
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
 
-  if (countOpenSandcastleIssues() === 0) {
+  if (issueCountOrExit() === 0) {
     console.log("No open Sandcastle-labeled issues. Nothing to do.");
     break;
   }
@@ -86,7 +97,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     });
 
     if (!implement.commits.length) {
-      if (implement.completionSignal && countOpenSandcastleIssues() === 0) {
+      if (implement.completionSignal && issueCountOrExit() === 0) {
         console.log(
           "Implementer finished with no new commits and the queue is empty.",
         );

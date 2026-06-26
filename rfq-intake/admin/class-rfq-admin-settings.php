@@ -213,13 +213,13 @@ class RFQ_Admin_Settings
             return '';
         }
 
-        json_decode($value);
+        $decoded = json_decode($value, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        if (json_last_error() !== JSON_ERROR_NONE || !RFQ_Material_Catalog::is_valid_override_shape($decoded)) {
             add_settings_error(
                 self::SETTINGS_GROUP,
                 'rfq_material_overrides_invalid',
-                __('Material catalog overrides must be valid JSON. The previous value was kept.', 'rfq-intake'),
+                __('Material catalog overrides must be valid JSON with disabled, renamed, and added keys in the expected shape. The previous value was kept.', 'rfq-intake'),
                 'error'
             );
 

@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @covers AC-WP-010
- * @covers AC-WP-011
- * @covers AC-WP-020
- */
+#[CoversClass(RFQ_Admin_Settings::class)]
+#[Group('AC-WP-010')]
+#[Group('AC-WP-011')]
+#[Group('AC-WP-020')]
 class AdminSettingsTest extends TestCase
 {
     protected function setUp(): void
@@ -78,6 +79,15 @@ class AdminSettingsTest extends TestCase
         $sanitized = RFQ_Admin_Settings::sanitize_material_overrides('{not-json');
 
         $this->assertSame('{"valid":true}', $sanitized);
+    }
+
+    public function test_invalid_material_override_shape_keeps_previous_value(): void
+    {
+        update_option('rfq_material_overrides', '{"disabled":[]}');
+
+        $sanitized = RFQ_Admin_Settings::sanitize_material_overrides('{"disabled":"not-array"}');
+
+        $this->assertSame('{"disabled":[]}', $sanitized);
     }
 
     public function test_activation_bootstraps_encryption_key_and_jwt_secret(): void
