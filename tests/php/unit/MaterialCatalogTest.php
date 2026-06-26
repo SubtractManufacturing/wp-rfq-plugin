@@ -76,4 +76,33 @@ class MaterialCatalogTest extends TestCase
         $this->assertCount(4, $catalog);
         $this->assertSame('1018 Steel', $catalog[0]['label']);
     }
+
+    public function test_added_entry_with_existing_id_is_skipped(): void
+    {
+        update_option(
+            'rfq_material_overrides',
+            json_encode([
+                'added' => [
+                    [
+                        'id' => '1018-steel',
+                        'label' => 'Duplicate Steel',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        $catalog = RFQ_Material_Catalog::get_effective_catalog();
+        $labels = array_column($catalog, 'label');
+
+        $this->assertContains('1018 Steel', $labels);
+        $this->assertNotContains('Duplicate Steel', $labels);
+    }
+
+    public function test_is_valid_override_shape_rejects_wrong_types(): void
+    {
+        $this->assertTrue(RFQ_Material_Catalog::is_valid_override_shape([]));
+        $this->assertFalse(RFQ_Material_Catalog::is_valid_override_shape(['disabled' => 'not-array']));
+        $this->assertFalse(RFQ_Material_Catalog::is_valid_override_shape(['renamed' => true]));
+        $this->assertFalse(RFQ_Material_Catalog::is_valid_override_shape(['added' => [['id' => '', 'label' => 'X']]]));
+    }
 }

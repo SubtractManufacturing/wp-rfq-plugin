@@ -77,6 +77,30 @@ class IntakeListTest extends TestCase
         unset($_GET['per_page']);
     }
 
+    public function test_resolve_page_number_caps_to_total_pages(): void
+    {
+        $_GET['paged'] = '99';
+
+        $this->assertSame(3, RFQ_Admin_Intake_List::resolve_page_number(3));
+
+        $_GET['paged'] = '0';
+        $this->assertSame(1, RFQ_Admin_Intake_List::resolve_page_number(3));
+
+        unset($_GET['paged']);
+    }
+
+    public function test_format_created_at_uses_site_timezone(): void
+    {
+        update_option('timezone_string', 'America/New_York');
+        update_option('date_format', 'Y-m-d');
+        update_option('time_format', 'H:i');
+
+        $formatted = RFQ_Admin_Intake_List::format_created_at('2026-06-15 14:30:00');
+
+        $this->assertSame('2026-06-15 14:30', $formatted);
+        $this->assertSame('', RFQ_Admin_Intake_List::format_created_at('0000-00-00 00:00:00'));
+    }
+
     private function truncate_sessions(): void
     {
         global $wpdb;
