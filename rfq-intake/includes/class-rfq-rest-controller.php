@@ -108,17 +108,23 @@ class RFQ_REST_Controller
             );
         }
 
-        RFQ_Rate_Limiter::record_session_creation($ip);
-
         try {
             $token = RFQ_Jwt::issue($session_id);
         } catch (Throwable $exception) {
+            $wpdb->delete(
+                $wpdb->prefix . 'rfq_sessions',
+                ['session_id' => $session_id],
+                ['%s']
+            );
+
             return new WP_Error(
                 'rfq_token_issue_failed',
                 __('Unable to issue session token.', 'rfq-intake'),
                 ['status' => 500]
             );
         }
+
+        RFQ_Rate_Limiter::record_session_creation($ip);
 
         return new WP_REST_Response(
             [

@@ -125,15 +125,9 @@ class RFQ_Admin_Intake_List
             return '';
         }
 
-        $timestamp = mysql2date('U', $created_at, false);
-
-        if ($timestamp === false) {
-            return '';
-        }
-
-        return wp_date(
-            get_option('date_format') . ' ' . get_option('time_format'),
-            (int) $timestamp
+        return get_date_from_gmt(
+            $created_at,
+            get_option('date_format') . ' ' . get_option('time_format')
         );
     }
 

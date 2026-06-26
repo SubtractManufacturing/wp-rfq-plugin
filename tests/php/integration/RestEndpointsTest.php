@@ -39,6 +39,10 @@ class RestEndpointsTest extends TestCase
             )
         );
 
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+
         remove_all_filters('rfq_s3_verify_connectivity');
     }
 
@@ -128,6 +132,8 @@ class RestEndpointsTest extends TestCase
 
     public function test_session_creation_rate_limit_returns_429_on_eleventh_request(): void
     {
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.99';
+
         for ($index = 0; $index < RFQ_SESSION_RATE_LIMIT; $index++) {
             $response = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
             $this->assertSame(201, $response->get_status(), 'Request ' . ($index + 1));
@@ -136,6 +142,24 @@ class RestEndpointsTest extends TestCase
         $response = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
 
         $this->assertSame(429, $response->get_status());
+    }
+
+    public function test_create_session_rolls_back_when_jwt_issue_fails(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '203.0.113.50';
+        update_option('rfq_jwt_secret', 'invalid-blob');
+
+        $this->assertNull(RFQ_Secrets::get_secret('rfq_jwt_secret'));
+
+        $response = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
+
+        $this->assertSame(500, $response->get_status());
+
+        global $wpdb;
+
+        $count = (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . $wpdb->prefix . 'rfq_sessions');
+        $this->assertSame(0, $count);
+        $this->assertSame(0, RFQ_Rate_Limiter::get_session_creation_count('203.0.113.50'));
     }
 
     public function test_health_returns_503_when_s3_is_not_configured(): void
