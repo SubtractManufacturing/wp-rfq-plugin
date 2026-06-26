@@ -80,6 +80,15 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('{"valid":true}', $sanitized);
     }
 
+    public function test_invalid_material_override_shape_keeps_previous_value(): void
+    {
+        update_option('rfq_material_overrides', '{"disabled":[]}');
+
+        $sanitized = RFQ_Admin_Settings::sanitize_material_overrides('{"disabled":"not-array"}');
+
+        $this->assertSame('{"disabled":[]}', $sanitized);
+    }
+
     public function test_activation_bootstraps_encryption_key_and_jwt_secret(): void
     {
         delete_option('rfq_encryption_key');
