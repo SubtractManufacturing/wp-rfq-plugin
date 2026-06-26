@@ -5,6 +5,12 @@ set -euo pipefail
 : "${BASE_URL:=${WP_BASE_URL:-http://localhost:8888}}"
 : "${REST:=${BASE_URL}/?rest_route=/rfq/v1}"
 
+qa_clear_session_rate_limits() {
+  npx wp-env run cli --env-cwd=wp-content/rfq-plugin-root wp db query \
+    "DELETE FROM wp_options WHERE option_name LIKE '_transient_rfq_sessions_%' OR option_name LIKE '_transient_timeout_rfq_sessions_%';" \
+    >/dev/null 2>&1 || true
+}
+
 qa_json_field() {
   local json="$1"
   local field="$2"

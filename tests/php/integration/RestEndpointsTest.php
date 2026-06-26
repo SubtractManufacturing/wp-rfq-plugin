@@ -357,12 +357,10 @@ class RestEndpointsTest extends TestCase
         $this->assertSame(400, $response->get_status());
 
         $data = $response->get_data();
-        $params = $data['data']['params'] ?? null;
+        $this->assertContains($data['code'], ['rest_invalid_json', 'rfq_validation_error']);
 
-        if (is_array($params)) {
-            $this->assertArrayHasKey('body', $params);
-        } else {
-            $this->assertSame('rest_invalid_json', $data['code']);
+        if ($data['code'] === 'rfq_validation_error') {
+            $this->assertArrayHasKey('body', $data['data']['params']);
         }
     }
 

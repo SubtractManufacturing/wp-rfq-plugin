@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Manual QA for PR #29 upload-urls — runs against wp-env dev site (localhost:8888).
+# Manual QA for upload-urls — runs against wp-env dev site (localhost:8888).
 # Requires: wp-env running, S3 configured (npm run dev:restore-s3).
+# Contact must be saved before upload URLs (Phase 3.3 gate).
 #
 # Usage:
 #   npm run qa:upload-urls
@@ -11,6 +12,8 @@ set -euo pipefail
 BASE_URL="${WP_BASE_URL:-http://localhost:8888}"
 REST="${BASE_URL}/?rest_route=/rfq/v1"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=qa-common.sh
+source "$(dirname "$0")/qa-common.sh"
 
 DO_PUT=""
 DO_FULL=0
@@ -71,8 +74,25 @@ api_post() {
   curl -sS -X POST "${REST}${path}" "$@" -w "\n__HTTP__:%{http_code}"
 }
 
+api_patch() {
+  local path="$1"
+  shift
+  curl -sS -X PATCH "${REST}${path}" "$@" -w "\n__HTTP__:%{http_code}"
+}
+
+patch_contact() {
+  local sid="$1"
+  local token="$2"
+  api_patch "/sessions/${sid}/contact" \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/json" \
+    -d '{"first_name":"Jane","last_name":"Smith","email":"jane@example.com"}'
+}
+
 echo "QA upload-urls (HTTP via ${BASE_URL})"
 echo
+
+qa_clear_session_rate_limits
 
 echo "0. Health check"
 health="$(curl -sS "${REST}/health" -w "\n__HTTP__:%{http_code}")"
@@ -97,12 +117,14 @@ fi
 
 auth=(-H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json")
 
-echo "2. Warm-lead contact (required before upload-urls)"
-contact="$(curl -sS -X PATCH "${REST}/sessions/${SID}/contact" "${auth[@]}" \
-  -d '{"first_name":"Jane","last_name":"Smith","email":"jane@example.com"}' -w "\n__HTTP__:%{http_code}")"
-assert_status "patch contact" "200" "$contact"
+echo "2. Contact gate — upload-urls before PATCH /contact"
+assert_status "upload-urls without contact" "403" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
+  -d '{"part_id":"11111111-1111-4111-8111-111111111111","file_type":"part","filename":"bracket.step","content_type":"application/octet-stream"}')"
 
-echo "3. Happy path — part upload URL"
+echo "3. PATCH /contact (required before uploads)"
+assert_status "patch contact" "200" "$(patch_contact "$SID" "$TOKEN")"
+
+echo "4. Happy path — part upload URL"
 part="$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"22222222-2222-4222-8222-222222222222","file_type":"part","filename":"bracket.step","content_type":"application/octet-stream"}')"
 assert_status "part upload-url" "200" "$part"
@@ -118,7 +140,7 @@ else
   fail=$((fail + 1))
 fi
 
-echo "4. Happy path — drawing upload URL"
+echo "5. Happy path — drawing upload URL"
 drawing="$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"33333333-3333-4333-8333-333333333333","file_type":"drawing","filename":"drawing.pdf","content_type":"application/pdf"}')"
 assert_status "drawing upload-url" "200" "$drawing"
@@ -131,7 +153,7 @@ else
   fail=$((fail + 1))
 fi
 
-echo "5. Filename sanitization"
+echo "6. Filename sanitization"
 sanitize="$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"44444444-4444-4444-8444-444444444444","file_type":"part","filename":"my bracket (rev 2).step","content_type":"application/octet-stream"}')"
 assert_status "sanitized filename" "200" "$sanitize"
@@ -144,7 +166,7 @@ else
   fail=$((fail + 1))
 fi
 
-echo "6. Validation (expect 400)"
+echo "7. Validation (expect 400)"
 assert_status "invalid part_id" "400" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"not-a-uuid","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 assert_status "invalid file_type" "400" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
@@ -157,7 +179,7 @@ assert_status "drawing unsupported content_type" "400" "$(api_post "/sessions/${
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"drawing","filename":"a.gif","content_type":"image/gif"}')"
 assert_status "non-json body" "400" "$(api_post "/sessions/${SID}/upload-urls" -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: text/plain" -d 'not json')"
 
-echo "7. Auth and session state"
+echo "8. Auth and session state"
 assert_status "no bearer token" "401" "$(api_post "/sessions/${SID}/upload-urls" -H "Content-Type: application/json" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 assert_status "invalid jwt" "401" "$(api_post "/sessions/${SID}/upload-urls" -H "Authorization: Bearer bad-token" -H "Content-Type: application/json" \
@@ -178,13 +200,13 @@ assert_status "deleted session not found" "404" "$(api_post "/sessions/${GHOST_S
   -H "Authorization: Bearer ${GHOST_TOKEN}" -H "Content-Type: application/json" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 
-echo "8. Submitted session (403 via wp-cli DB update)"
+echo "9. Submitted session (403 via wp-cli DB update)"
 npx wp-env run cli --env-cwd=wp-content/rfq-plugin-root wp db query \
   "UPDATE wp_rfq_sessions SET status='submitted' WHERE session_id='${SID}';" >/dev/null
 assert_status "submitted session rejected" "403" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 
-echo "9. Regression — refresh + draft + submit"
+echo "10. Regression — refresh + draft + submit"
 refresh="$(api_post "/sessions/${OTHER_SID}/refresh" -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 assert_status "refresh still works" "200" "$refresh"
 assert_status "put draft" "200" "$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
@@ -196,7 +218,7 @@ assert_status "submit still 501" "501" "$(api_post "/sessions/${OTHER_SID}/submi
   -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 
 if [[ -n "$DO_PUT" ]]; then
-  echo "10. End-to-end S3 PUT (${DO_PUT})"
+  echo "11. End-to-end S3 PUT (${DO_PUT})"
   if [[ ! -f "$DO_PUT" ]]; then
     echo "  FAIL  file not found: ${DO_PUT}" >&2
     fail=$((fail + 1))
@@ -218,10 +240,11 @@ if [[ -n "$DO_PUT" ]]; then
 fi
 
 if [[ "$DO_FULL" == "1" ]]; then
-  echo "11. Rate limits (--full)"
+  echo "12. Rate limits (--full)"
   fresh="$(api_post "/sessions")"
   FULL_SID="$(json_field "$(body_only "$fresh")" session_id)"
   FULL_TOKEN="$(json_field "$(body_only "$fresh")" token)"
+  assert_status "patch contact for rate-limit session" "200" "$(patch_contact "$FULL_SID" "$FULL_TOKEN")"
   full_auth=(-H "Authorization: Bearer ${FULL_TOKEN}" -H "Content-Type: application/json")
 
   allowed=0

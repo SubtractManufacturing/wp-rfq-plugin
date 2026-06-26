@@ -37,6 +37,8 @@ echo
 echo "0. Restore dev S3 settings + health"
 bash "$ROOT/scripts/restore-dev-s3-from-env.sh" >/dev/null
 
+qa_clear_session_rate_limits
+
 health="$(curl -sS "${REST}/health" -w "\n__HTTP__:%{http_code}")"
 qa_assert_status "health ok" "200" "$health"
 if [[ "$(qa_json_field "$(qa_body_only "$health")" status)" != "ok" ]]; then

@@ -32,9 +32,6 @@ if [[ "$SMOKE" -eq 1 ]]; then
   bash "$ROOT/scripts/smoke-rest.sh"
 fi
 
-echo
-echo "Pre-merge checks passed."
-
 bash "$ROOT/scripts/restore-dev-s3-from-env.sh"
 
 if [[ -f "$ROOT/config/dev.env.local" ]]; then
@@ -45,3 +42,6 @@ else
   echo
   echo "==> S3 upload E2E skipped (no config/dev.env.local)"
 fi
+
+echo
+echo "Pre-merge checks passed."
