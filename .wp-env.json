@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.wp.org/wp-env/trunk/config.json",
+  "core": "WordPress/WordPress",
+  "phpVersion": "8.3",
+  "themes": [
+    "WordPress/twentytwentyfour"
+  ],
+  "mappings": {
+    "wp-content/rfq-plugin-root": "."
+  }
+}

@@ -13,7 +13,9 @@
     "sandcastle:build-image": "sandcastle docker build-image",
     "sandcastle:fix-ci": "tsx .sandcastle/fix-ci.ts",
     "labels:create": "node scripts/create-labels.mjs",
-    "test": "echo \"No tests at repo root yet — see Planning/TESTING.md\" && exit 0",
+    "test": "composer test",
+    "test:integration": "wp-env run tests-cli --env-cwd=wp-content/rfq-plugin-root vendor/bin/phpunit -c phpunit.integration.xml.dist",
+    "wp-env": "wp-env",
     "typecheck": "echo \"No TypeScript at repo root yet\" && exit 0"
   },
   "repository": {
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@ai-hero/sandcastle": "^0.10.0",
     "@types/node": "^26.0.1",
+    "@wordpress/env": "^10.22.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
