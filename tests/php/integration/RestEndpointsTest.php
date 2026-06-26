@@ -350,12 +350,41 @@ class RestEndpointsTest extends TestCase
         $this->assertSame(403, $response->get_status());
     }
 
+    public function test_patch_contact_rejects_non_json_body(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $request = new WP_REST_Request('PATCH', '/rfq/v1/sessions/' . $session_id . '/contact');
+        $request->set_header('Authorization', 'Bearer ' . $token);
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body('not-json');
+
+        $response = rest_do_request($request);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('body', $response->get_data()['data']['params']);
+    }
+
+    public function test_upload_urls_rejects_session_without_contact(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => '11111111-1111-4111-8111-111111111111',
+            'file_type' => 'part',
+            'filename' => 'bracket.step',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(403, $response->get_status());
+    }
+
     public function test_upload_urls_returns_presigned_put_for_part_file(): void
     {
         $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
         add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
 
-        [$session_id, $token] = $this->create_authenticated_session();
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
         $part_id = '22222222-2222-4222-8222-222222222222';
 
         $response = $this->request_upload_url($session_id, $token, [
@@ -383,7 +412,7 @@ class RestEndpointsTest extends TestCase
         $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
         add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
 
-        [$session_id, $token] = $this->create_authenticated_session();
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
         $part_id = '33333333-3333-4333-8333-333333333333';
 
         $response = $this->request_upload_url($session_id, $token, [
@@ -405,7 +434,7 @@ class RestEndpointsTest extends TestCase
         $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
         add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
 
-        [$session_id, $token] = $this->create_authenticated_session();
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
 
         $response = $this->request_upload_url($session_id, $token, [
             'part_id' => '44444444-4444-4444-8444-444444444444',
@@ -435,7 +464,7 @@ class RestEndpointsTest extends TestCase
 
     public function test_upload_urls_rejects_unsupported_file_type(): void
     {
-        [$session_id, $token] = $this->create_authenticated_session();
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
 
         $response = $this->request_upload_url($session_id, $token, [
             'part_id' => '66666666-6666-4666-8666-666666666666',
@@ -450,7 +479,7 @@ class RestEndpointsTest extends TestCase
 
     public function test_upload_urls_rejects_unsupported_content_type_for_drawing(): void
     {
-        [$session_id, $token] = $this->create_authenticated_session();
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
 
         $response = $this->request_upload_url($session_id, $token, [
             'part_id' => '77777777-7777-4777-8777-777777777777',
@@ -492,7 +521,7 @@ class RestEndpointsTest extends TestCase
         $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
         add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
 
-        [$session_id, $token] = $this->create_authenticated_session();
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
 
         for ($index = 0; $index < RFQ_MAX_UPLOAD_URLS_PER_SESSION; $index++) {
             $response = $this->request_upload_url($session_id, $token, [
@@ -513,6 +542,24 @@ class RestEndpointsTest extends TestCase
         ]);
 
         $this->assertSame(429, $response->get_status());
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function create_authenticated_session_with_contact(): array
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+
+        return [$session_id, $token];
     }
 
     /**

@@ -3,11 +3,9 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(RFQ_Contact_Validator::class)]
-#[Group('AC-WP-017')]
 class ContactValidatorTest extends TestCase
 {
     public function test_valid_contact_with_all_required_fields(): void
@@ -138,5 +136,19 @@ class ContactValidatorTest extends TestCase
         ]);
 
         $this->assertArrayHasKey('phone_country_code', $result['errors']);
+    }
+
+    public function test_non_string_optional_fields_return_type_errors(): void
+    {
+        $result = RFQ_Contact_Validator::normalize_and_validate([
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'company' => 123,
+            'job_title' => false,
+        ]);
+
+        $this->assertArrayHasKey('company', $result['errors']);
+        $this->assertArrayHasKey('job_title', $result['errors']);
     }
 }

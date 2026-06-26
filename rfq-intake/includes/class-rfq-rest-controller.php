@@ -258,6 +258,14 @@ class RFQ_REST_Controller
             );
         }
 
+        if (! self::session_has_required_contact($session)) {
+            return new WP_Error(
+                'rfq_contact_required',
+                __('Complete contact information before requesting upload URLs.', 'rfq-intake'),
+                ['status' => 403]
+            );
+        }
+
         if (! RFQ_Rate_Limiter::is_upload_url_allowed($session_id)) {
             return new WP_Error(
                 'rfq_upload_url_rate_limited',
@@ -377,6 +385,22 @@ class RFQ_REST_Controller
     }
 
     /**
+     * @param array<string, mixed> $session
+     */
+    private static function session_has_required_contact(array $session): bool
+    {
+        foreach (['contact_first_name', 'contact_last_name', 'contact_email'] as $field) {
+            $value = $session[$field] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @param array<string, string|null> $contact
      * @return array<string, string|null>
      */
@@ -443,7 +467,8 @@ class RFQ_REST_Controller
 
         $row = $wpdb->get_row(
             $wpdb->prepare(
-                'SELECT session_id, status FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                'SELECT session_id, status, contact_first_name, contact_last_name, contact_email
+                 FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
                 $session_id
             ),
             ARRAY_A
