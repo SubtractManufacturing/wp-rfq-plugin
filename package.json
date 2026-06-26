@@ -20,6 +20,7 @@
     "test:pre-merge": "bash scripts/test-pre-merge.sh",
     "test:pre-merge:automated": "bash scripts/test-pre-merge.sh --no-smoke",
     "dev:restore-s3": "bash scripts/restore-dev-s3-from-env.sh",
+    "qa:upload-urls": "bash scripts/qa-upload-urls.sh",
     "wp-env": "wp-env",
     "typecheck": "echo \"No TypeScript at repo root yet\" && exit 0"
   },
