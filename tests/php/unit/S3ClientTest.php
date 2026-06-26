@@ -79,6 +79,25 @@ class S3ClientTest extends TestCase
         $this->assertFalse($client->head_object('missing.key'));
     }
 
+    public function test_head_object_returns_false_for_nosuchkey_with_non_404_status(): void
+    {
+        $mock = new MockHandler();
+        $mock->append(function (): void {
+            throw new Aws\Exception\AwsException(
+                'Bad Request',
+                new Command('HeadObject'),
+                [
+                    'response' => new GuzzleHttp\Psr7\Response(400),
+                    'code' => 'NoSuchKey',
+                ]
+            );
+        });
+
+        $client = $this->create_mocked_aws_client([], $mock);
+
+        $this->assertFalse($client->head_object('missing.key'));
+    }
+
     public function test_create_presigned_put_binds_key_content_type_and_default_expiry(): void
     {
         $client = $this->create_mocked_aws_client([]);

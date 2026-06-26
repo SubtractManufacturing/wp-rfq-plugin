@@ -127,7 +127,7 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
 
             return true;
         } catch (AwsException $exception) {
-            if ($exception->getStatusCode() === 404) {
+            if (self::is_object_not_found($exception)) {
                 return false;
             }
 
@@ -213,6 +213,17 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
                 'secret' => $secret,
             ],
         ]);
+    }
+
+    private static function is_object_not_found(AwsException $exception): bool
+    {
+        if ($exception->getStatusCode() === 404) {
+            return true;
+        }
+
+        $error_code = $exception->getAwsErrorCode();
+
+        return in_array($error_code, ['NoSuchKey', 'NotFound', '404'], true);
     }
 
     private static function map_exception(Throwable $exception): WP_Error
