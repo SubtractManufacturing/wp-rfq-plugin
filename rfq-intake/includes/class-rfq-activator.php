@@ -43,6 +43,7 @@ class RFQ_Activator
             contact_phone_country_code varchar(4) DEFAULT NULL,
             contact_job_title varchar(255) DEFAULT NULL,
             shipping_postal_code varchar(16) DEFAULT NULL,
+            draft_json longtext DEFAULT NULL,
             submitted_part_count int(10) unsigned DEFAULT NULL,
             receipt_number varchar(64) DEFAULT NULL,
             s3_prefix varchar(512) DEFAULT NULL,

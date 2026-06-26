@@ -204,13 +204,6 @@ class RestEndpointsTest extends TestCase
         $session_id = $create->get_data()['session_id'];
         $token = $create->get_data()['token'];
 
-        $request = new WP_REST_Request('PUT', '/rfq/v1/sessions/' . $session_id . '/draft');
-        $request->set_header('Authorization', 'Bearer ' . $token);
-
-        $response = rest_do_request($request);
-
-        $this->assertSame(501, $response->get_status());
-
         $submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
         $submit->set_header('Authorization', 'Bearer ' . $token);
 
@@ -542,6 +535,198 @@ class RestEndpointsTest extends TestCase
         ]);
 
         $this->assertSame(429, $response->get_status());
+    }
+
+    public function test_put_draft_persists_metadata_to_database_and_s3(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $draft = $this->sample_draft_payload($session_id);
+
+        $response = $this->request_draft_put($session_id, $token, $draft);
+
+        $this->assertSame(200, $response->get_status());
+        $this->assertSame(['status' => 'saved'], $response->get_data());
+
+        global $wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                'SELECT draft_json, shipping_postal_code, status FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            ),
+            ARRAY_A
+        );
+
+        $this->assertSame('draft', $row['status']);
+        $this->assertSame('90210', $row['shipping_postal_code']);
+
+        $stored = json_decode((string) $row['draft_json'], true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($session_id, $stored['session_id']);
+        $this->assertSame('Jane', $stored['contact']['first_name']);
+        $this->assertSame('intake/' . $session_id . '/parts/file.step', $stored['parts'][0]['part_file_key']);
+        $this->assertArrayNotHasKey('upload_url', $stored['parts'][0]);
+
+        $s3_key = 'intake/' . $session_id . '/meta/draft.json';
+        $this->assertArrayHasKey($s3_key, $mock->objects);
+        $s3_payload = json_decode($mock->objects[$s3_key]['body'], true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($session_id, $s3_payload['session_id']);
+    }
+
+    public function test_put_draft_allows_invalid_postal_code_without_blocking_save(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $draft = $this->sample_draft_payload($session_id);
+        $draft['global']['shipping_destination']['postal_code'] = 'NOT-A-ZIP';
+
+        $response = $this->request_draft_put($session_id, $token, $draft);
+
+        $this->assertSame(200, $response->get_status());
+
+        global $wpdb;
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                'SELECT draft_json, shipping_postal_code FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            ),
+            ARRAY_A
+        );
+
+        $this->assertNotNull($row['draft_json']);
+        $this->assertNull($row['shipping_postal_code']);
+    }
+
+    public function test_put_draft_rejects_file_blob_fields(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $draft = $this->sample_draft_payload($session_id);
+        $draft['file_data'] = 'binary';
+
+        $response = $this->request_draft_put($session_id, $token, $draft);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('file_data', $response->get_data()['data']['params']);
+    }
+
+    public function test_put_draft_rejects_malformed_parts_array(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_draft_put($session_id, $token, [
+            'parts' => 'not-an-array',
+        ]);
+
+        $this->assertSame(400, $response->get_status());
+        $this->assertArrayHasKey('parts', $response->get_data()['data']['params']);
+    }
+
+    public function test_put_draft_rejects_invalid_jwt(): void
+    {
+        $create = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
+        $session_id = $create->get_data()['session_id'];
+
+        $response = $this->request_draft_put($session_id, 'invalid-token', $this->sample_draft_payload($session_id));
+
+        $this->assertSame(401, $response->get_status());
+    }
+
+    public function test_put_draft_rejects_submitted_session(): void
+    {
+        global $wpdb;
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            ['status' => 'submitted'],
+            ['session_id' => $session_id],
+            ['%s'],
+            ['%s']
+        );
+
+        $response = $this->request_draft_put($session_id, $token, $this->sample_draft_payload($session_id));
+
+        $this->assertSame(403, $response->get_status());
+    }
+
+    public function test_put_draft_returns_s3_error_but_keeps_wordpress_draft_on_s3_failure(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        $mock->should_fail = true;
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_draft_put($session_id, $token, $this->sample_draft_payload($session_id));
+
+        $this->assertSame(502, $response->get_status());
+
+        global $wpdb;
+
+        $draft_json = $wpdb->get_var(
+            $wpdb->prepare(
+                'SELECT draft_json FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            )
+        );
+
+        $this->assertNotNull($draft_json);
+        $stored = json_decode((string) $draft_json, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($session_id, $stored['session_id']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sample_draft_payload(string $session_id): array
+    {
+        return [
+            'session_id' => $session_id,
+            'contact' => [
+                'first_name' => 'Jane',
+                'last_name' => 'Smith',
+                'email' => 'jane@example.com',
+            ],
+            'parts' => [
+                [
+                    'part_id' => '11111111-1111-4111-8111-111111111111',
+                    'part_file_key' => 'intake/' . $session_id . '/parts/file.step',
+                    'drawing_file_keys' => [],
+                    'material' => 'aluminum-6061',
+                    'upload_url' => 'https://example.test/upload',
+                ],
+            ],
+            'global' => [
+                'required_delivery_date' => '2026-08-01',
+                'lead_time_preference' => 'standard',
+                'shipping_destination' => [
+                    'postal_code' => '90210',
+                ],
+                'nda_required' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function request_draft_put(string $session_id, string $token, array $body): WP_REST_Response
+    {
+        $request = new WP_REST_Request('PUT', '/rfq/v1/sessions/' . $session_id . '/draft');
+        $request->set_header('Authorization', 'Bearer ' . $token);
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(wp_json_encode($body));
+
+        return rest_do_request($request);
     }
 
     /**
