@@ -46,6 +46,31 @@ class AdminSettingsTest extends TestCase
         $this->assertNotSame('old-secret', RFQ_Secrets::get_secret('rfq_jwt_secret'));
     }
 
+    public function test_first_secret_save_survives_double_sanitize(): void
+    {
+        $first_pass = RFQ_Admin_Settings::sanitize_secret_field('rfq_s3_secret_key', 'brand-new-secret');
+        $second_pass = RFQ_Admin_Settings::sanitize_secret_field('rfq_s3_secret_key', $first_pass);
+
+        $this->assertSame($first_pass, $second_pass);
+        $this->assertSame('brand-new-secret', RFQ_Secrets::get_secret('rfq_s3_secret_key'));
+    }
+
+    public function test_secret_save_persists_with_autoload_disabled(): void
+    {
+        RFQ_Admin_Settings::sanitize_secret_field('rfq_erp_webhook_secret', 'webhook-secret');
+
+        global $wpdb;
+
+        $autoload = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT autoload FROM {$wpdb->options} WHERE option_name = %s",
+                'rfq_erp_webhook_secret'
+            )
+        );
+
+        $this->assertContains($autoload, ['no', 'off'], 'Secret options must not autoload');
+    }
+
     public function test_invalid_material_override_json_keeps_previous_value(): void
     {
         update_option('rfq_material_overrides', '{"valid":true}');

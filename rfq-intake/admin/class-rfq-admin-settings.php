@@ -179,7 +179,15 @@ class RFQ_Admin_Settings
             return is_string($existing) ? $existing : '';
         }
 
-        return RFQ_Secrets::encrypt($value);
+        // Settings API may sanitize twice on first save; the second pass receives the encrypted blob.
+        if (RFQ_Secrets::is_encrypted_blob($value)) {
+            return $value;
+        }
+
+        RFQ_Secrets::set_secret($option_name, $value);
+        $stored = get_option($option_name, '');
+
+        return is_string($stored) ? $stored : '';
     }
 
     public static function sanitize_text_field(mixed $value): string
