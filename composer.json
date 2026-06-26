@@ -14,7 +14,7 @@
   },
   "scripts": {
     "test": "phpunit -c phpunit.unit.xml.dist",
-    "test:integration": "phpunit -c phpunit.integration.xml.dist"
+    "test:integration": "npm run test:integration"
   },
   "config": {
     "sort-packages": true,

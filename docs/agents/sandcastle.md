@@ -76,5 +76,15 @@ Or from PowerShell: `npm run sandcastle:wsl`.
 | `gpt-5.5` model not found | Test in PowerShell: `codex exec -m gpt-5.5 "say ok"` (prompt is the argument, not `-c`). If it fails, set `SANDCASTLE_REVIEW_MODEL` to a model your Codex CLI supports (e.g. `gpt-5.4`). |
 | No commits | No open `Sandcastle`-labeled issues |
 | Stuck CI | `npm run sandcastle:fix-ci -- <PR#>` (Composer 2.5); escalate manually if needed |
+| Stale worktrees / logs | `npm run sandcastle:cleanup` (see `--dry-run`, `--all`) |
 
 Logs: `.sandcastle/logs/`
+
+### Worktree and log cleanup
+
+Sandcastle calls `close()` after each iteration, but **preserves worktrees when git sees uncommitted changes**. Our prompts write ephemeral files (`open-sandcastle-issues.json`, `review-diff.patch`) that count as dirty, so worktrees (and their `node_modules`) can linger.
+
+- **Prevention:** `main.ts` / `review-branch.ts` strip those files before `close()`.
+- **Bulk cleanup:** `npm run sandcastle:cleanup` removes merged or clean sandcastle worktrees and prunes old logs (default: older than 14 days, keep 10 newest).
+- **Preview:** `npm run sandcastle:cleanup -- --dry-run`
+- **Nuke all sandcastle worktrees:** `npm run sandcastle:cleanup -- --all`

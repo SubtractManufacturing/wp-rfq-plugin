@@ -39,11 +39,16 @@ class RFQ_Admin_Intake_List
             : self::DEFAULT_PER_PAGE;
     }
 
-    public static function resolve_page_number(): int
+    public static function resolve_page_number(?int $total_pages = null): int
     {
         $paged = isset($_GET['paged']) ? (int) $_GET['paged'] : 1;
+        $page = max(1, $paged);
 
-        return max(1, $paged);
+        if ($total_pages !== null) {
+            $page = min($page, max(1, $total_pages));
+        }
+
+        return $page;
     }
 
     public static function count_sessions(): int
@@ -125,10 +130,12 @@ class RFQ_Admin_Intake_List
             return '';
         }
 
-        return get_date_from_gmt(
+        $formatted = get_date_from_gmt(
             $created_at,
             get_option('date_format') . ' ' . get_option('time_format')
         );
+
+        return is_string($formatted) ? $formatted : '';
     }
 
     public static function render_page(): void
@@ -138,10 +145,10 @@ class RFQ_Admin_Intake_List
         }
 
         $per_page = self::resolve_per_page();
-        $page = self::resolve_page_number();
         $total = self::count_sessions();
-        $sessions = self::query_sessions($per_page, $page);
         $total_pages = max(1, (int) ceil($total / $per_page));
+        $page = self::resolve_page_number($total_pages);
+        $sessions = self::query_sessions($per_page, $page);
 
         require RFQ_INTAKE_PLUGIN_DIR . 'admin/views/intake-list-page.php';
     }

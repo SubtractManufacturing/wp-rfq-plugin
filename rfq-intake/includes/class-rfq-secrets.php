@@ -101,6 +101,21 @@ class RFQ_Secrets
         return is_string($blob) && $blob !== '';
     }
 
+    public static function is_encrypted_blob(string $value): bool
+    {
+        if ($value === '') {
+            return false;
+        }
+
+        try {
+            self::decrypt($value);
+
+            return true;
+        } catch (RuntimeException) {
+            return false;
+        }
+    }
+
     /**
      * @return string 32-byte binary key
      */

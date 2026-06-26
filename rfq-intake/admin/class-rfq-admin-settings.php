@@ -179,7 +179,15 @@ class RFQ_Admin_Settings
             return is_string($existing) ? $existing : '';
         }
 
-        return RFQ_Secrets::encrypt($value);
+        // Settings API may sanitize twice on first save; the second pass receives the encrypted blob.
+        if (RFQ_Secrets::is_encrypted_blob($value)) {
+            return $value;
+        }
+
+        RFQ_Secrets::set_secret($option_name, $value);
+        $stored = get_option($option_name, '');
+
+        return is_string($stored) ? $stored : '';
     }
 
     public static function sanitize_text_field(mixed $value): string
@@ -205,13 +213,13 @@ class RFQ_Admin_Settings
             return '';
         }
 
-        json_decode($value);
+        $decoded = json_decode($value, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        if (json_last_error() !== JSON_ERROR_NONE || !RFQ_Material_Catalog::is_valid_override_shape($decoded)) {
             add_settings_error(
                 self::SETTINGS_GROUP,
                 'rfq_material_overrides_invalid',
-                __('Material catalog overrides must be valid JSON. The previous value was kept.', 'rfq-intake'),
+                __('Material catalog overrides must be valid JSON with disabled, renamed, and added keys in the expected shape. The previous value was kept.', 'rfq-intake'),
                 'error'
             );
 

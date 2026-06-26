@@ -56,4 +56,16 @@ class SecretsTest extends TestCase
         $this->assertIsString($stored);
         $this->assertStringNotContainsString('jwt-signing-secret', $stored);
     }
+
+    public function test_is_encrypted_blob_detects_stored_secrets(): void
+    {
+        RFQ_Secrets::ensure_encryption_key();
+        RFQ_Secrets::set_secret('rfq_s3_secret_key', 'stored-secret');
+
+        $stored = get_option('rfq_s3_secret_key');
+
+        $this->assertIsString($stored);
+        $this->assertTrue(RFQ_Secrets::is_encrypted_blob($stored));
+        $this->assertFalse(RFQ_Secrets::is_encrypted_blob('plain-text-secret'));
+    }
 }

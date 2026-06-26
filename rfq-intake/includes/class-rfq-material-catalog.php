@@ -72,13 +72,101 @@ class RFQ_Material_Catalog
             $result[] = $entry;
         }
 
+        $existing_ids = [];
+
+        foreach ($result as $entry) {
+            $existing_ids[$entry['id']] = true;
+        }
+
         foreach (self::normalize_entries(self::collect_added_entries($overrides)) as $entry) {
-            if (!isset($disabled[$entry['id']])) {
-                $result[] = $entry;
+            if (isset($disabled[$entry['id']]) || isset($existing_ids[$entry['id']])) {
+                continue;
             }
+
+            $result[] = $entry;
+            $existing_ids[$entry['id']] = true;
         }
 
         return $result;
+    }
+
+    /**
+     * @param mixed $overrides
+     */
+    public static function is_valid_override_shape(mixed $overrides): bool
+    {
+        if (!is_array($overrides)) {
+            return false;
+        }
+
+        foreach (['disabled', 'disable'] as $key) {
+            if (!isset($overrides[$key])) {
+                continue;
+            }
+
+            if (!is_array($overrides[$key])) {
+                return false;
+            }
+
+            foreach ($overrides[$key] as $id) {
+                if (!is_string($id) || $id === '') {
+                    return false;
+                }
+            }
+        }
+
+        foreach (['renamed', 'rename'] as $key) {
+            if (!isset($overrides[$key])) {
+                continue;
+            }
+
+            if (!is_array($overrides[$key])) {
+                return false;
+            }
+
+            foreach ($overrides[$key] as $id => $label) {
+                if (!is_string($id) || $id === '' || !is_string($label) || $label === '') {
+                    return false;
+                }
+            }
+        }
+
+        foreach (['added', 'add'] as $key) {
+            if (!isset($overrides[$key])) {
+                continue;
+            }
+
+            if (!is_array($overrides[$key])) {
+                return false;
+            }
+
+            foreach ($overrides[$key] as $entry) {
+                if (!is_array($entry)) {
+                    return false;
+                }
+
+                $id = isset($entry['id']) ? (string) $entry['id'] : '';
+                $label = isset($entry['label']) ? (string) $entry['label'] : '';
+
+                if ($id === '' || $label === '') {
+                    return false;
+                }
+
+                if (isset($entry['aliases']) && !is_array($entry['aliases'])) {
+                    return false;
+                }
+
+                if (isset($entry['aliases'])) {
+                    foreach ($entry['aliases'] as $alias) {
+                        if (!is_string($alias) || $alias === '') {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

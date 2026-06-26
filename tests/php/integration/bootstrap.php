@@ -31,6 +31,8 @@ tests_add_filter(
     'muplugins_loaded',
     static function (): void {
         require dirname(__DIR__, 3) . '/rfq-intake/rfq-intake.php';
+        // Admin settings class is only loaded in is_admin(); tests need it directly.
+        require dirname(__DIR__, 3) . '/rfq-intake/admin/class-rfq-admin-settings.php';
     }
 );
 
