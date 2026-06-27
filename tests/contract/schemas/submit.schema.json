@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "submit.schema.json",
+  "type": "object",
+  "required": ["receipt_number"],
+  "properties": {
+    "receipt_number": {
+      "type": "string",
+      "pattern": "^RFQ-[0-9]{8}-[0-9]{6}$"
+    }
+  },
+  "additionalProperties": false
+}

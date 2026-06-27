@@ -1,0 +1,12 @@
+parameters:
+    level: 5
+    treatPhpDocTypesAsCertain: false
+    paths:
+        - rfq-intake/includes
+        - rfq-intake/admin
+    excludePaths:
+        - rfq-intake/admin/views/*
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    scanFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php

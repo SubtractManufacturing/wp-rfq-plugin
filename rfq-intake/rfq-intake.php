@@ -10,44 +10,44 @@
  * Text Domain: rfq-intake
  */
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
 // Apache/CGI often strips Authorization before PHP sets HTTP_AUTHORIZATION.
-if (! isset($_SERVER['HTTP_AUTHORIZATION'])) {
-    if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) && is_string($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-        $_SERVER['HTTP_AUTHORIZATION'] = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-    } elseif (function_exists('apache_request_headers')) {
+if ( ! isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+    if ( isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) && is_string( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
+        $_SERVER['HTTP_AUTHORIZATION'] = sanitize_text_field( wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) );
+    } elseif ( function_exists( 'apache_request_headers' ) ) {
         $apache_headers = apache_request_headers();
-        $authorization = $apache_headers['Authorization'] ?? $apache_headers['authorization'] ?? null;
+        $authorization  = $apache_headers['Authorization'] ?? $apache_headers['authorization'] ?? null;
 
-        if (is_string($authorization) && $authorization !== '') {
+        if ( is_string( $authorization ) && $authorization !== '' ) {
             $_SERVER['HTTP_AUTHORIZATION'] = $authorization;
         }
     }
 }
 
-define('RFQ_INTAKE_VERSION', '0.1.0');
-define('RFQ_MAX_PARTS', 20);
-define('RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200);
+define( 'RFQ_INTAKE_VERSION', '0.1.0' );
+define( 'RFQ_MAX_PARTS', 20 );
+define( 'RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200 );
 /** Draft session retention in WP DB before archive/delete (PRD §10). */
-define('RFQ_DRAFT_SESSION_RETENTION_DAYS', 90);
+define( 'RFQ_DRAFT_SESSION_RETENTION_DAYS', 90 );
 /** Session creation rate limit: requests per hour per IP. */
-define('RFQ_SESSION_RATE_LIMIT', 10);
-define('RFQ_INTAKE_PLUGIN_FILE', __FILE__);
-define('RFQ_INTAKE_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define( 'RFQ_SESSION_RATE_LIMIT', 10 );
+define( 'RFQ_INTAKE_PLUGIN_FILE', __FILE__ );
+define( 'RFQ_INTAKE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 $rfq_autoload_candidates = [
-    dirname(__DIR__) . '/vendor/autoload.php',
+    dirname( __DIR__ ) . '/vendor/autoload.php',
 ];
 
-if (defined('WP_CONTENT_DIR')) {
+if ( defined( 'WP_CONTENT_DIR' ) ) {
     $rfq_autoload_candidates[] = WP_CONTENT_DIR . '/rfq-plugin-root/vendor/autoload.php';
 }
 
-foreach ($rfq_autoload_candidates as $rfq_autoload) {
-    if (file_exists($rfq_autoload)) {
+foreach ( $rfq_autoload_candidates as $rfq_autoload ) {
+    if ( file_exists( $rfq_autoload ) ) {
         require_once $rfq_autoload;
         break;
     }
@@ -68,7 +68,10 @@ require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-receipt-service.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-webhook.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-intake-maintenance.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-shortcode.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';
 
-register_activation_hook(__FILE__, ['RFQ_Activator', 'activate']);
-add_action('plugins_loaded', ['RFQ_Plugin', 'init']);
+register_activation_hook( __FILE__, [ 'RFQ_Activator', 'activate' ] );
+register_deactivation_hook( __FILE__, [ 'RFQ_Intake_Maintenance', 'unschedule' ] );
+add_action( 'plugins_loaded', [ 'RFQ_Plugin', 'init' ] );

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contact.schema.json",
+  "type": "object",
+  "required": ["first_name", "last_name", "email"],
+  "properties": {
+    "first_name": { "type": "string" },
+    "last_name": { "type": "string" },
+    "email": { "type": "string" },
+    "company": { "type": ["string", "null"] },
+    "phone": { "type": ["string", "null"] },
+    "phone_country_code": { "type": ["string", "null"] },
+    "job_title": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}
