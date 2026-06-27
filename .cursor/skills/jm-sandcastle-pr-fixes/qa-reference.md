@@ -57,12 +57,17 @@ Fork PRs from outside collaborators do not receive repository secrets.
 | Command | Purpose | Milestone |
 |---------|---------|-----------|
 | `composer test` | PHP unit tests | M1 |
+| `composer lint` | PHPCS + PHPStan on `rfq-intake/` | M1 |
 | `npm run test:integration` | PHP integration via wp-env | M1 |
 | `npm run test:smoke` | REST smoke only | M1 |
+| `npm run test:acceptance-coverage` | AC-WP-* mapping gate (M1–M3 backend scope) | M1+ |
 | `npm run wp-env start` | Start local WordPress | M1 |
 | `npm run dev:restore-s3` | Restore S3 admin settings from env | M2+ |
 | `npm run qa:upload-urls` | Upload-url REST QA | M2+ |
 | `npm run qa:s3-upload` | Presigned PUT E2E with `config/PlaceHolder.step` | M2+ |
+| `npm run qa:s3-spike` | TESTING.md §5.1 supplementary S3 checks | M2+ |
+| `npm run qa:bucket-privacy` | Anonymous GET object URL → expect 401/403 (ops) | M2+ |
+| `npm run test:contract` | REST contract JSON schema fixtures | M1+ |
 | `npm run qa:staging-m3` | TESTING.md §11 backend staging checks (submit + health) | M3 |
 | `npm run qa:webhook-e2e` | HTTP webhook E2E against `ci-webhook-mock.mjs` | M3 |
 | `npm run webhook:mock` | Start local ERP webhook mock receiver | M3 |
@@ -75,7 +80,6 @@ From `Planning/TESTING.md` §9 — run if present in `package.json`:
 
 | Command | Purpose | Milestone |
 |---------|---------|-----------|
-| `npm run test:acceptance-coverage` | AC-WP-* mapping gate | M1+ |
 | `npm run test` (Vitest) | React unit tests | M4–M5 |
 | `npm run test:e2e` | Playwright E2E (mocked S3) | M4–M5 |
 | `npm run test:e2e:localstack` | LocalStack E2E | Pre-release |

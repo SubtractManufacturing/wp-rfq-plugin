@@ -14,6 +14,10 @@ echo "==> PHP unit tests"
 composer test
 
 echo
+echo "==> Acceptance coverage (M1–M3 backend AC IDs)"
+npm run test:acceptance-coverage
+
+echo
 echo "==> PHP integration tests (wp-env tests-cli)"
 if ! npx wp-env status >/dev/null 2>&1; then
   echo "    wp-env not running — starting..."

@@ -9,12 +9,23 @@
     "firebase/php-jwt": "^7.1"
   },
   "require-dev": {
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpstan/phpstan": "^2.1",
     "phpunit/phpunit": "^11.5",
+    "php-stubs/wordpress-stubs": "^6.8",
+    "squizlabs/php_codesniffer": "^3.13",
+    "wp-coding-standards/wpcs": "^3.1",
     "yoast/phpunit-polyfills": "^4.0"
   },
   "scripts": {
     "test": "phpunit -c phpunit.unit.xml.dist",
-    "test:integration": "npm run test:integration"
+    "test:integration": "npm run test:integration",
+    "phpcs": "phpcs",
+    "phpstan": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G",
+    "lint": [
+      "@phpcs",
+      "@phpstan"
+    ]
   },
   "config": {
     "sort-packages": true,

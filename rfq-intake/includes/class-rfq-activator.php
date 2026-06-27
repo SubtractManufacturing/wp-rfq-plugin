@@ -1,34 +1,32 @@
 <?php
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class RFQ_Activator
-{
-    public static function activate(): void
-    {
+class RFQ_Activator {
+
+    public static function activate(): void {
         self::create_tables();
         self::bootstrap_secrets();
+        RFQ_Intake_Maintenance::schedule();
     }
 
-    public static function bootstrap_secrets(): void
-    {
+    public static function bootstrap_secrets(): void {
         RFQ_Secrets::ensure_encryption_key();
 
-        if (RFQ_Secrets::get_secret('rfq_jwt_secret') === null) {
-            RFQ_Secrets::set_secret('rfq_jwt_secret', bin2hex(random_bytes(32)));
+        if ( RFQ_Secrets::get_secret( 'rfq_jwt_secret' ) === null ) {
+            RFQ_Secrets::set_secret( 'rfq_jwt_secret', bin2hex( random_bytes( 32 ) ) );
         }
     }
 
-    public static function create_tables(): void
-    {
+    public static function create_tables(): void {
         global $wpdb;
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
         $charset_collate = $wpdb->get_charset_collate();
-        $sessions_table = $wpdb->prefix . 'rfq_sessions';
+        $sessions_table  = $wpdb->prefix . 'rfq_sessions';
         $sequences_table = $wpdb->prefix . 'rfq_receipt_sequences';
 
         $sql_sessions = "CREATE TABLE {$sessions_table} (
@@ -62,7 +60,7 @@ class RFQ_Activator
             PRIMARY KEY  (receipt_date)
         ) {$charset_collate};";
 
-        dbDelta($sql_sessions);
-        dbDelta($sql_sequences);
+        dbDelta( $sql_sessions );
+        dbDelta( $sql_sequences );
     }
 }

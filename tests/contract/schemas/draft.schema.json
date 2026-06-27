@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "draft.schema.json",
+  "type": "object",
+  "required": ["saved"],
+  "properties": {
+    "saved": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
