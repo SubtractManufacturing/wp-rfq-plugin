@@ -38,15 +38,15 @@ Re-run the same set after Bugbot fixes. Loop fix → re-run until green or block
 4. `scripts/restore-dev-s3-from-env.sh` — restore S3 options from env
 5. `scripts/qa-s3-upload.sh` — when `config/dev.env.local` or all `RFQ_S3_*` env vars are set
 
-**GitHub Actions secrets for S3 E2E** (optional — job skips when unset):
+**GitHub Actions secrets for S3 E2E** (optional — skipped when unset):
 
-| Secret | Maps to |
-|--------|---------|
-| `RFQ_S3_ENDPOINT` | S3-compatible endpoint URL |
-| `RFQ_S3_BUCKET` | Bucket name |
-| `RFQ_S3_ACCESS_KEY_ID` | Access key |
-| `RFQ_S3_REGION` | Region |
-| `RFQ_S3_SECRET_KEY` | Secret key |
+| Preferred secret | Legacy alias |
+|------------------|--------------|
+| `RFQ_S3_ENDPOINT` | `S3_ENDPOINT` |
+| `RFQ_S3_BUCKET` | `S3_BUCKET_NAME` |
+| `RFQ_S3_ACCESS_KEY_ID` | `S3_KEY_ID` |
+| `RFQ_S3_REGION` | `S3_REGION` |
+| `RFQ_S3_SECRET_KEY` | `S3_SECRET_KEY` |
 
 Fork PRs from outside collaborators do not receive repository secrets.
 

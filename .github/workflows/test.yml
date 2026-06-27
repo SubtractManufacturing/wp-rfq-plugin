@@ -56,11 +56,11 @@ jobs:
 
       - name: Pre-merge gate (unit + integration + REST smoke + optional S3 E2E)
         env:
-          RFQ_S3_ENDPOINT: ${{ secrets.RFQ_S3_ENDPOINT }}
-          RFQ_S3_BUCKET: ${{ secrets.RFQ_S3_BUCKET }}
-          RFQ_S3_ACCESS_KEY_ID: ${{ secrets.RFQ_S3_ACCESS_KEY_ID }}
-          RFQ_S3_REGION: ${{ secrets.RFQ_S3_REGION }}
-          RFQ_S3_SECRET_KEY: ${{ secrets.RFQ_S3_SECRET_KEY }}
+          RFQ_S3_ENDPOINT: ${{ secrets.RFQ_S3_ENDPOINT || secrets.S3_ENDPOINT }}
+          RFQ_S3_BUCKET: ${{ secrets.RFQ_S3_BUCKET || secrets.S3_BUCKET_NAME }}
+          RFQ_S3_ACCESS_KEY_ID: ${{ secrets.RFQ_S3_ACCESS_KEY_ID || secrets.S3_KEY_ID }}
+          RFQ_S3_REGION: ${{ secrets.RFQ_S3_REGION || secrets.S3_REGION }}
+          RFQ_S3_SECRET_KEY: ${{ secrets.RFQ_S3_SECRET_KEY || secrets.S3_SECRET_KEY }}
         run: npm run test:pre-merge
 
   webhook-e2e:
