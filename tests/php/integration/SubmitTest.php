@@ -120,6 +120,46 @@ class SubmitTest extends TestCase
         $this->assertSame($first_receipt_body, $this->mock->objects[$receipt_key]['body']);
     }
 
+    public function test_submit_retry_recovers_when_receipt_exists_in_s3_but_db_row_is_still_draft(): void
+    {
+        [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();
+        $this->seed_manifest_files($session_id, $manifest);
+
+        $first = $this->request_submit($session_id, $token, $manifest);
+        $receipt_number = $first->get_data()['receipt_number'];
+
+        global $wpdb;
+
+        $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            [
+                'status' => 'draft',
+                'receipt_number' => null,
+                'submitted_at' => null,
+                'submitted_part_count' => null,
+            ],
+            ['session_id' => $session_id],
+            ['%s', '%s', '%s', '%s'],
+            ['%s']
+        );
+
+        $second = $this->request_submit($session_id, $token, $manifest);
+
+        $this->assertSame(200, $second->get_status());
+        $this->assertSame($receipt_number, $second->get_data()['receipt_number']);
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                'SELECT status, receipt_number FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            ),
+            ARRAY_A
+        );
+
+        $this->assertSame('submitted', $row['status']);
+        $this->assertSame($receipt_number, $row['receipt_number']);
+    }
+
     public function test_submit_rejects_invalid_manifest_with_field_errors(): void
     {
         [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();

@@ -16,6 +16,11 @@ interface RFQ_S3_Client_Interface
     public function head_object(string $key): array|false|WP_Error;
 
     /**
+     * @return array<string, mixed>|false|WP_Error
+     */
+    public function get_json(string $key): array|false|WP_Error;
+
+    /**
      * @param array<string, mixed> $data
      */
     public function put_json(string $key, array $data): true|WP_Error;
