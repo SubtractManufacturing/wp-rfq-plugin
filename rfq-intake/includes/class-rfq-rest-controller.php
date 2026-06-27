@@ -53,7 +53,7 @@ class RFQ_REST_Controller
 
         register_rest_route(self::NAMESPACE, '/sessions/(?P<session_id>[a-f0-9-]{36})/submit', [
             'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [self::class, 'not_implemented'],
+            'callback' => [self::class, 'submit_session'],
             'permission_callback' => [self::class, 'jwt_permission'],
         ]);
     }
@@ -412,6 +412,20 @@ class RFQ_REST_Controller
         }
 
         return new WP_REST_Response(['status' => 'saved'], 200);
+    }
+
+    public static function submit_session(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $session_id = (string) $request->get_param('session_id');
+        $params = $request->get_json_params();
+
+        if (! is_array($params)) {
+            return self::field_validation_error([
+                'body' => __('Request body must be a JSON object.', 'rfq-intake'),
+            ]);
+        }
+
+        return RFQ_Receipt_Service::submit($session_id, $params);
     }
 
     public static function not_implemented(): WP_Error

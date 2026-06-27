@@ -54,13 +54,17 @@ class S3ClientTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function test_head_object_returns_true_when_object_exists(): void
+    public function test_head_object_returns_metadata_when_object_exists(): void
     {
         $client = $this->create_mocked_aws_client([
-            new Result(['ContentLength' => 10]),
+            new Result(['ContentLength' => 10, 'ContentType' => 'application/octet-stream']),
         ]);
 
-        $this->assertTrue($client->head_object('intake/session/parts/file.step'));
+        $head = $client->head_object('intake/session/parts/file.step');
+
+        $this->assertIsArray($head);
+        $this->assertSame(10, $head['content_length']);
+        $this->assertSame('application/octet-stream', $head['content_type']);
     }
 
     public function test_head_object_returns_false_for_missing_object(): void

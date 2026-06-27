@@ -117,15 +117,45 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
         return is_string($bucket) ? trim($bucket) : '';
     }
 
-    public function head_object(string $key): bool|WP_Error
+    public function head_object(string $key): array|false|WP_Error
     {
         try {
-            $this->aws_client->headObject([
+            $result = $this->aws_client->headObject([
                 'Bucket' => $this->bucket,
                 'Key' => $key,
             ]);
 
-            return true;
+            $content_type = $result['ContentType'] ?? null;
+
+            return [
+                'content_length' => (int) ($result['ContentLength'] ?? 0),
+                'content_type' => is_string($content_type) && $content_type !== '' ? $content_type : null,
+            ];
+        } catch (AwsException $exception) {
+            if (self::is_object_not_found($exception)) {
+                return false;
+            }
+
+            return self::map_exception($exception);
+        } catch (Throwable $exception) {
+            return self::map_exception($exception);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|false|WP_Error
+     */
+    public function get_json(string $key): array|false|WP_Error
+    {
+        try {
+            $result = $this->aws_client->getObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+            ]);
+
+            $decoded = json_decode((string) ($result['Body'] ?? ''), true);
+
+            return is_array($decoded) ? $decoded : false;
         } catch (AwsException $exception) {
             if (self::is_object_not_found($exception)) {
                 return false;

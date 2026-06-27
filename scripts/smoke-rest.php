@@ -187,7 +187,7 @@ $invalid_type = $request_upload_url($session_id, $new_token, [
 ]);
 $assert_status('upload-urls rejects invalid file_type', $invalid_type, 400);
 
-echo "6. PUT /draft saves metadata and POST /submit still returns 501\n";
+echo "6. PUT /draft saves metadata and POST /submit returns receipt\n";
 $draft = new WP_REST_Request('PUT', '/rfq/v1/sessions/' . $session_id . '/draft');
 $draft->set_header('Authorization', 'Bearer ' . $new_token);
 $draft->set_header('Content-Type', 'application/json');
@@ -207,7 +207,63 @@ $assert_status('draft autosave', rest_do_request($draft), 200);
 
 $submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
 $submit->set_header('Authorization', 'Bearer ' . $new_token);
-$assert_status('submit not implemented', rest_do_request($submit), 501);
+$assert_status('submit rejects missing body', rest_do_request($submit), 400);
+
+$part_id = '22222222-2222-4222-8222-222222222222';
+$part_file_key = 'intake/' . $session_id . '/parts/' . $part_id . '_bracket.step';
+$drawing_key = 'intake/' . $session_id . '/drawings/' . $part_id . '_drawing.pdf';
+$mock->seed_object($part_file_key, 'application/octet-stream', 100);
+$mock->seed_object($drawing_key, 'application/pdf', 100);
+
+$submit_manifest = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
+$submit_manifest->set_header('Authorization', 'Bearer ' . $new_token);
+$submit_manifest->set_header('Content-Type', 'application/json');
+$submit_manifest->set_body(wp_json_encode([
+    'session_id' => $session_id,
+    'contact' => [
+        'first_name' => 'Jane',
+        'last_name' => 'Smith',
+        'email' => 'jane@example.com',
+        'company' => null,
+        'phone' => null,
+        'phone_country_code' => null,
+        'job_title' => null,
+    ],
+    'parts' => [
+        [
+            'part_id' => $part_id,
+            'part_file_key' => $part_file_key,
+            'drawing_file_keys' => [$drawing_key],
+            'material' => 'Aluminum 6061',
+            'tolerance' => 'standard',
+            'tolerance_detail' => null,
+            'quantity' => 10,
+            'target_unit_price' => 12.5,
+            'notes' => null,
+        ],
+    ],
+    'global' => [
+        'required_delivery_date' => gmdate('Y-m-d'),
+        'lead_time_preference' => 'standard',
+        'shipping_destination' => [
+            'postal_code' => '90210',
+        ],
+        'po_number' => null,
+        'nda_required' => false,
+        'notes' => null,
+    ],
+]));
+$submit_response = rest_do_request($submit_manifest);
+$assert_status('submit returns receipt', $submit_response, 200);
+
+$submit_data = $submit_response->get_data();
+if (is_array($submit_data) && is_string($submit_data['receipt_number'] ?? null) && $submit_data['receipt_number'] !== '') {
+    echo "  ok  submit payload includes receipt_number\n";
+    $pass++;
+} else {
+    fwrite(STDERR, "  FAIL  submit response missing receipt_number\n");
+    $fail++;
+}
 
 echo "7. Rate limit (11 creates from test IP)\n";
 $_SERVER['REMOTE_ADDR'] = '198.51.100.201';
