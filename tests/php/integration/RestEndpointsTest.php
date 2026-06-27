@@ -349,7 +349,6 @@ class RestEndpointsTest extends TestCase
 
         $request = new WP_REST_Request('PATCH', '/rfq/v1/sessions/' . $session_id . '/contact');
         $request->set_header('Authorization', 'Bearer ' . $token);
-        $request->set_header('Content-Type', 'application/json');
         $request->set_body('not-json');
 
         $response = rest_do_request($request);

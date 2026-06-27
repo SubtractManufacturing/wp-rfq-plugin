@@ -5,6 +5,9 @@
   "themes": [
     "WordPress/twentytwentyfour"
   ],
+  "plugins": [
+    "./rfq-intake"
+  ],
   "mappings": {
     "wp-content/rfq-plugin-root": "."
   }

@@ -44,13 +44,13 @@ class ActivatorTest extends TestCase
                 'contact_phone_country_code',
                 'contact_job_title',
                 'shipping_postal_code',
-                'draft_json',
                 'submitted_part_count',
                 'receipt_number',
                 's3_prefix',
                 'created_at',
                 'updated_at',
                 'submitted_at',
+                'draft_json',
             ],
             $this->get_session_column_names()
         );
