@@ -85,6 +85,67 @@ class ShortcodeTest extends TestCase
         $this->assertTrue( wp_script_is( 'rfq-form', 'enqueued' ) );
     }
 
+    public function test_enqueue_skipped_when_any_build_file_is_missing(): void
+    {
+        file_put_contents( $this->build_dir . '/rfq-form.js', 'window.rfqFormLoaded=true;' );
+
+        $post_id = wp_insert_post(
+            [
+                'post_title'   => 'RFQ',
+                'post_content' => '[rfq_form]',
+                'post_status'  => 'publish',
+            ],
+            true
+        );
+
+        $this->assertIsInt( $post_id );
+        $this->simulate_singular_post( (int) $post_id );
+
+        RFQ_Shortcode::maybe_enqueue_assets();
+
+        $this->assertFalse( wp_style_is( 'rfq-form', 'enqueued' ) );
+        $this->assertFalse( wp_script_is( 'rfq-form', 'enqueued' ) );
+    }
+
+    public function test_localized_config_attached_to_enqueued_script_without_secrets(): void
+    {
+        global $wp_scripts;
+
+        file_put_contents( $this->build_dir . '/rfq-form.js', 'window.rfqFormLoaded=true;' );
+        file_put_contents( $this->build_dir . '/rfq-form.css', '.rfq-form-root{}' );
+
+        RFQ_Secrets::set_secret( 'rfq_s3_secret_key', 'super-secret-s3-key' );
+        RFQ_Secrets::set_secret( 'rfq_jwt_secret', 'super-secret-jwt-key' );
+        RFQ_Secrets::set_secret( 'rfq_webhook_secret', 'super-secret-webhook-key' );
+
+        $post_id = wp_insert_post(
+            [
+                'post_title'   => 'RFQ',
+                'post_content' => '[rfq_form]',
+                'post_status'  => 'publish',
+            ],
+            true
+        );
+
+        $this->assertIsInt( $post_id );
+        $this->simulate_singular_post( (int) $post_id );
+
+        RFQ_Shortcode::maybe_enqueue_assets();
+
+        $data = $wp_scripts->get_data( 'rfq-form', 'data' );
+
+        $this->assertIsString( $data );
+        $this->assertStringContainsString( 'var rfqFormConfig = ', $data );
+        $this->assertStringContainsString( '"restBase"', $data );
+        $this->assertStringContainsString( '"materials"', $data );
+        $this->assertStringNotContainsString( 'super-secret-s3-key', $data );
+        $this->assertStringNotContainsString( 'super-secret-jwt-key', $data );
+        $this->assertStringNotContainsString( 'super-secret-webhook-key', $data );
+        $this->assertStringNotContainsString( 'rfq_s3_secret_key', $data );
+        $this->assertStringNotContainsString( 'rfq_jwt_secret', $data );
+        $this->assertStringNotContainsString( 'rfq_webhook_secret', $data );
+    }
+
     public function test_enqueue_skipped_on_pages_without_shortcode(): void
     {
         file_put_contents( $this->build_dir . '/rfq-form.js', 'window.rfqFormLoaded=true;' );

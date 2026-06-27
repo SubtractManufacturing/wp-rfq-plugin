@@ -71,6 +71,7 @@ Fork PRs from outside collaborators do not receive repository secrets.
 | `npm run qa:staging-m3` | TESTING.md §11 backend staging checks (submit + health) | M3 |
 | `npm run qa:webhook-e2e` | HTTP webhook E2E against `ci-webhook-mock.mjs` | M3 |
 | `npm run webhook:mock` | Start local ERP webhook mock receiver | M3 |
+| `bash scripts/qa-shortcode.sh` | `[rfq_form]` mount + scoped asset smoke against wp-env | Phase 5 |
 
 ---
 

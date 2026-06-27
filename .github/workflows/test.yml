@@ -41,7 +41,7 @@ jobs:
           php-version: "8.3"
           coverage: none
 
-      - name: Scoped M1–M3 backend AC coverage
+      - name: Scoped backend + Phase 5 embed AC coverage
         run: npm run test:acceptance-coverage
 
   contract:
@@ -76,6 +76,30 @@ jobs:
 
       - name: PHPUnit unit suite
         run: composer test
+
+  frontend-build:
+    name: frontend-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend bundle
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Verify WordPress bundle artifacts
+        run: |
+          test -f rfq-intake/build/rfq-form.js
+          test -f rfq-intake/build/rfq-form.css
 
   pre-merge:
     name: pre-merge

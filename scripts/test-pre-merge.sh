@@ -14,8 +14,14 @@ echo "==> PHP unit tests"
 composer test
 
 echo
-echo "==> Acceptance coverage (M1–M3 backend AC IDs)"
+echo "==> Acceptance coverage (M1–M3 backend + Phase 5 embed AC IDs)"
 npm run test:acceptance-coverage
+
+echo
+echo "==> Frontend build"
+(cd "$ROOT/frontend" && npm ci && npm run build)
+test -f "$ROOT/rfq-intake/build/rfq-form.js"
+test -f "$ROOT/rfq-intake/build/rfq-form.css"
 
 echo
 echo "==> PHP integration tests (wp-env tests-cli)"

@@ -10,6 +10,16 @@ use PHPUnit\Framework\TestCase;
 #[Group('AC-WP-023')]
 class ActivatorTest extends TestCase
 {
+    #[Group('AC-WP-025')]
+    public function test_activation_schedules_maintenance_cron(): void
+    {
+        wp_clear_scheduled_hook( RFQ_Intake_Maintenance::CRON_HOOK );
+
+        RFQ_Activator::activate();
+
+        $this->assertIsInt( wp_next_scheduled( RFQ_Intake_Maintenance::CRON_HOOK ) );
+    }
+
     public function test_double_activation_is_idempotent(): void
     {
         global $wpdb;
