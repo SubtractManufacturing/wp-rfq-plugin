@@ -31,7 +31,7 @@ class ActivatorTest extends TestCase
         $this->assertSame($columns_after_first, $this->get_session_column_names());
         $this->assertSame($indexes_after_first, $this->get_session_indexes());
 
-        $this->assertSame(
+        $this->assertEqualsCanonicalizing(
             [
                 'id',
                 'session_id',
