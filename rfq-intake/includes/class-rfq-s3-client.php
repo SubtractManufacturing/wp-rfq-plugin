@@ -119,13 +119,27 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
 
     public function head_object(string $key): bool|WP_Error
     {
+        $metadata = $this->head_object_metadata($key);
+
+        if ($metadata instanceof WP_Error) {
+            return $metadata;
+        }
+
+        return $metadata !== false;
+    }
+
+    public function head_object_metadata(string $key): array|false|WP_Error
+    {
         try {
-            $this->aws_client->headObject([
+            $result = $this->aws_client->headObject([
                 'Bucket' => $this->bucket,
                 'Key' => $key,
             ]);
 
-            return true;
+            return [
+                'content_length' => (int) ($result['ContentLength'] ?? 0),
+                'content_type' => (string) ($result['ContentType'] ?? 'application/octet-stream'),
+            ];
         } catch (AwsException $exception) {
             if ($exception->getStatusCode() === 404) {
                 return false;

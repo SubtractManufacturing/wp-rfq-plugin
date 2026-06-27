@@ -210,11 +210,6 @@ class RestEndpointsTest extends TestCase
         $response = rest_do_request($request);
 
         $this->assertSame(501, $response->get_status());
-
-        $submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
-        $submit->set_header('Authorization', 'Bearer ' . $token);
-
-        $this->assertSame(501, rest_do_request($submit)->get_status());
     }
 
     public function test_patch_contact_persists_valid_contact_and_keeps_draft_status(): void

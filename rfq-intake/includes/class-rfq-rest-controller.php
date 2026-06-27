@@ -53,7 +53,7 @@ class RFQ_REST_Controller
 
         register_rest_route(self::NAMESPACE, '/sessions/(?P<session_id>[a-f0-9-]{36})/submit', [
             'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [self::class, 'not_implemented'],
+            'callback' => [self::class, 'submit'],
             'permission_callback' => [self::class, 'jwt_permission'],
         ]);
     }
@@ -329,6 +329,26 @@ class RFQ_REST_Controller
         );
     }
 
+    public static function submit(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $session_id = (string) $request->get_param('session_id');
+        $params = $request->get_json_params();
+
+        if (! is_array($params)) {
+            return self::manifest_validation_error([
+                'body' => __('Request body must be a JSON object.', 'rfq-intake'),
+            ]);
+        }
+
+        $result = RFQ_Receipt_Service::submit($session_id, $params);
+
+        if ($result instanceof WP_Error) {
+            return $result;
+        }
+
+        return new WP_REST_Response($result, 200);
+    }
+
     public static function not_implemented(): WP_Error
     {
         return new WP_Error(
@@ -415,6 +435,21 @@ class RFQ_REST_Controller
             'phone_country_code' => $contact['phone_country_code'],
             'job_title' => $contact['job_title'],
         ];
+    }
+
+    /**
+     * @param array<string, string> $field_errors
+     */
+    private static function manifest_validation_error(array $field_errors): WP_Error
+    {
+        return new WP_Error(
+            'rfq_validation',
+            __('Invalid manifest.', 'rfq-intake'),
+            [
+                'status' => 422,
+                'fields' => $field_errors,
+            ]
+        );
     }
 
     /**

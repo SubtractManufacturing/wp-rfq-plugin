@@ -18,6 +18,10 @@ if (! defined('RFQ_MAX_UPLOAD_URLS_PER_SESSION')) {
     define('RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200);
 }
 
+if (! defined('RFQ_MAX_PARTS')) {
+    define('RFQ_MAX_PARTS', 20);
+}
+
 if (! isset($GLOBALS['rfq_test_options'])) {
     $GLOBALS['rfq_test_options'] = [];
 }
@@ -177,5 +181,44 @@ if (! function_exists('wp_json_encode')) {
     function wp_json_encode($data, $options = 0, $depth = 512)
     {
         return json_encode($data, $options, $depth);
+    }
+}
+
+if (! function_exists('current_time')) {
+    function current_time($type, $gmt = 0)
+    {
+        $timestamp = time();
+
+        if ($type === 'mysql') {
+            return $gmt ? gmdate('Y-m-d H:i:s', $timestamp) : date('Y-m-d H:i:s', $timestamp);
+        }
+
+        return (string) $timestamp;
+    }
+}
+
+if (! isset($GLOBALS['rfq_test_actions'])) {
+    $GLOBALS['rfq_test_actions'] = [];
+}
+
+if (! function_exists('do_action')) {
+    function do_action($hook_name, ...$args)
+    {
+        if (! isset($GLOBALS['rfq_test_actions'][$hook_name])) {
+            return;
+        }
+
+        foreach ($GLOBALS['rfq_test_actions'][$hook_name] as $callback) {
+            $callback(...$args);
+        }
+    }
+}
+
+if (! function_exists('add_action')) {
+    function add_action($hook_name, $callback, $priority = 10, $accepted_args = 1)
+    {
+        $GLOBALS['rfq_test_actions'][$hook_name][] = $callback;
+
+        return true;
     }
 }

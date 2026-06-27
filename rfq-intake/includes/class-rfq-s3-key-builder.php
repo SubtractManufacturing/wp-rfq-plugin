@@ -88,4 +88,19 @@ class RFQ_S3_Key_Builder
     {
         return $file_type === 'part' ? self::PART_MAX_BYTES : self::DRAWING_MAX_BYTES;
     }
+
+    public static function session_prefix(string $session_id): string
+    {
+        return sprintf('intake/%s/', $session_id);
+    }
+
+    public static function manifest_meta_key(string $session_id): string
+    {
+        return self::session_prefix($session_id) . 'meta/manifest.json';
+    }
+
+    public static function receipt_meta_key(string $session_id): string
+    {
+        return self::session_prefix($session_id) . 'meta/receipt.json';
+    }
 }
