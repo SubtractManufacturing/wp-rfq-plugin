@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RFQ Intake</title>
+    <script>
+      window.rfqFormConfig = {
+        restBase: "https://wp.test/wp-json/rfq/v1",
+        nonce: "",
+        airtableEmbedUrl: "https://airtable.com/embed/app",
+        internationalRfqEmail: "rfq@example.test",
+        salesContactEmail: "sales@example.test",
+        maxParts: 20,
+        materials: [
+          { id: "1018-steel", label: "1018 Steel", aliases: ["1018"], show_in_dropdown: true }
+        ]
+      };
+    </script>
+  </head>
+  <body>
+    <div id="rfq-form-root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
