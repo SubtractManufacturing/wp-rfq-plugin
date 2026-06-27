@@ -20,8 +20,25 @@ class S3ClientMockTest extends TestCase
         $result = $client->put_json($key, ['status' => 'draft']);
 
         $this->assertTrue($result);
-        $this->assertTrue($client->head_object($key));
+        $head = $client->head_object($key);
+        $this->assertIsArray($head);
+        $this->assertSame(strlen('{"status":"draft"}'), $head['content_length']);
+        $this->assertSame('application/json', $head['content_type']);
         $this->assertSame('{"status":"draft"}', $client->objects[$key]['body']);
+    }
+
+    public function test_mock_seed_object_exposes_metadata_for_head_object(): void
+    {
+        $client = new RFQ_S3_Client_Mock('mock-bucket');
+        $key = 'intake/session/parts/uuid_bracket.step';
+
+        $client->seed_object($key, 'application/octet-stream', 1024);
+
+        $head = $client->head_object($key);
+
+        $this->assertIsArray($head);
+        $this->assertSame(1024, $head['content_length']);
+        $this->assertSame('application/octet-stream', $head['content_type']);
     }
 
     public function test_mock_presigned_put_records_binding_metadata(): void
