@@ -18,11 +18,3 @@ if (! defined('ARRAY_A')) {
 }
 
 require_once __DIR__ . '/vendor/autoload.php';
-
-foreach (glob(__DIR__ . '/rfq-intake/includes/*.php') ?: [] as $file) {
-    require_once $file;
-}
-
-foreach (glob(__DIR__ . '/rfq-intake/admin/*.php') ?: [] as $file) {
-    require_once $file;
-}

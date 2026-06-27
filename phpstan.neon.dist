@@ -1,6 +1,8 @@
 parameters:
     level: 5
     treatPhpDocTypesAsCertain: false
+    parallel:
+        maximumNumberOfProcesses: 1
     paths:
         - rfq-intake/includes
         - rfq-intake/admin

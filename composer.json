@@ -21,7 +21,7 @@
     "test": "phpunit -c phpunit.unit.xml.dist",
     "test:integration": "npm run test:integration",
     "phpcs": "phpcs",
-    "phpstan": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=512M",
+    "phpstan": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G",
     "lint": [
       "@phpcs",
       "@phpstan"
