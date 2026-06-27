@@ -222,3 +222,34 @@ if (! function_exists('add_action')) {
         return true;
     }
 }
+
+if (! isset($GLOBALS['rfq_test_http_requests'])) {
+    $GLOBALS['rfq_test_http_requests'] = [];
+}
+
+if (! function_exists('is_wp_error')) {
+    function is_wp_error($thing)
+    {
+        return $thing instanceof WP_Error;
+    }
+}
+
+if (! function_exists('wp_remote_post')) {
+    /**
+     * @param array<string, mixed> $args
+     * @return array<string, mixed>|WP_Error
+     */
+    function wp_remote_post($url, $args = [])
+    {
+        $GLOBALS['rfq_test_http_requests'][] = [
+            'url' => $url,
+            'args' => $args,
+        ];
+
+        if (isset($GLOBALS['rfq_test_http_post_result'])) {
+            return $GLOBALS['rfq_test_http_post_result'];
+        }
+
+        return ['response' => ['code' => 200]];
+    }
+}
