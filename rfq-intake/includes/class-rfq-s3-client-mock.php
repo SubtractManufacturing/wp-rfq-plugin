@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
 
 class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
 {
-    /** @var array<string, array{body: string, content_type: string, metadata: array<string, string>}> */
+    /** @var array<string, array{body: string, content_type: string, size: int, metadata: array<string, string>}> */
     public array $objects = [];
 
     /** @var list<array{key: string, content_type: string, max_bytes: int, expires_seconds: int, url: string}> */
@@ -25,6 +25,20 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
 
     public function head_object(string $key): bool|WP_Error
     {
+        $metadata = $this->head_object_metadata($key);
+
+        if ($metadata instanceof WP_Error) {
+            return $metadata;
+        }
+
+        return $metadata !== false;
+    }
+
+    /**
+     * @return array{size: int, content_type: string|null}|false|WP_Error
+     */
+    public function head_object_metadata(string $key): array|false|WP_Error
+    {
         if ($this->should_fail) {
             return new WP_Error(
                 'rfq_s3_error',
@@ -33,7 +47,26 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
             );
         }
 
-        return isset($this->objects[$key]);
+        if (! isset($this->objects[$key])) {
+            return false;
+        }
+
+        $object = $this->objects[$key];
+
+        return [
+            'size' => $object['size'] ?? strlen($object['body']),
+            'content_type' => $object['content_type'] ?? null,
+        ];
+    }
+
+    public function seed_object(string $key, string $content_type, int $size, string $body = ''): void
+    {
+        $this->objects[$key] = [
+            'body' => $body,
+            'content_type' => $content_type,
+            'size' => $size,
+            'metadata' => [],
+        ];
     }
 
     /**
@@ -49,9 +82,12 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
             );
         }
 
+        $body = wp_json_encode($data, JSON_THROW_ON_ERROR);
+
         $this->objects[$key] = [
-            'body' => wp_json_encode($data, JSON_THROW_ON_ERROR),
+            'body' => $body,
             'content_type' => 'application/json',
+            'size' => strlen($body),
             'metadata' => [],
         ];
 
