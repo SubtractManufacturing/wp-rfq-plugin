@@ -49,6 +49,7 @@ npm run labels:create
 | `SANDCASTLE_REVIEW` | `codex`, `cursor` | `codex` |
 | `SANDCASTLE_REVIEW_MODEL` | e.g. `gpt-5.5` | `gpt-5.5` |
 | `SANDCASTLE_SANDBOX` | `host`, `docker` | `host` |
+| `SANDCASTLE_BASE_REF` | e.g. `origin/main` | `origin/main` (fetched before each run) |
 
 ## WSL setup
 
@@ -80,6 +81,19 @@ Or from PowerShell: `npm run sandcastle:wsl`.
 | Sandcastle exits immediately / cleanup keeps all worktrees | Run `gh auth status`; set `GH_TOKEN` in `.sandcastle/.env` |
 
 Logs: `.sandcastle/logs/`
+
+### Stale main / wrong PR base
+
+Sandcastle forks each iteration from **`origin/main`** (not host `HEAD`). Before each run it runs `git fetch origin main` and updates the local `main` ref without checking it out.
+
+If a PR was opened with the wrong base (e.g. stacked on another Sandcastle branch):
+
+```powershell
+gh pr edit <PR#> --base main
+# or rebase the branch onto main and force-push if needed
+```
+
+Implementer prompts require `gh pr create --base main --head <sandbox-branch>` and forbid `sandcastle/implementer/issue-*` branch names.
 
 ### Worktree and log cleanup
 

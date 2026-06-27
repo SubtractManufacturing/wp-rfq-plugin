@@ -20,6 +20,7 @@ import {
 } from "./agents.js";
 import { resolveSandboxMode, sandboxProvider } from "./sandbox.js";
 import { closeSandboxClean } from "./cleanup.js";
+import { syncSandcastleBaseRef } from "./git-sync.js";
 import { countOpenSandcastleIssues } from "./queue.js";
 import {
   ensureWindowsSh,
@@ -53,6 +54,8 @@ console.log(
   `Sandcastle: implement=${implementKind} sandbox=${sandboxMode} review=${reviewKind}\n`,
 );
 
+await syncSandcastleBaseRef();
+
 const hooks = {
   sandbox: {
     onSandboxReady: [{ command: "npm install", timeoutMs: 300_000 }],
@@ -81,9 +84,11 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   }
 
   const branch = `sandcastle/sequential-reviewer/${Date.now()}`;
+  const baseBranch = await syncSandcastleBaseRef();
 
   const agentSandbox = await sandcastle.createSandbox({
     branch,
+    baseBranch,
     sandbox: sandboxProvider(sandboxMode),
     hooks,
   });
@@ -94,6 +99,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       maxIterations: 1,
       agent: IMPLEMENT_AGENT,
       promptFile: "./.sandcastle/implement-prompt.md",
+      promptArgs: { BRANCH: branch, BASE_REF: baseBranch },
     });
 
     if (!implement.commits.length) {
@@ -131,6 +137,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       promptFile: "./.sandcastle/review-prompt.md",
       promptArgs: {
         BRANCH: branch,
+        BASE_REF: baseBranch,
       },
     });
 

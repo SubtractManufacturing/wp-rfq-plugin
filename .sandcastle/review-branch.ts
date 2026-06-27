@@ -9,6 +9,7 @@ import * as sandcastle from "@ai-hero/sandcastle";
 import { createReviewAgent } from "./agents.js";
 import { resolveSandboxMode, sandboxProvider } from "./sandbox.js";
 import { closeSandboxClean } from "./cleanup.js";
+import { syncSandcastleBaseRef } from "./git-sync.js";
 import { ensureWindowsSh, printCodexWindowsHelp } from "./win32-sh.js";
 
 const branch = process.argv[2];
@@ -25,8 +26,11 @@ if (sandboxMode === "host" && !ensureWindowsSh()) {
 
 console.log(`Review-only on branch: ${branch} (sandbox=${sandboxMode})\n`);
 
+const baseBranch = await syncSandcastleBaseRef();
+
 const agentSandbox = await sandcastle.createSandbox({
   branch,
+  baseBranch,
   sandbox: sandboxProvider(sandboxMode),
 });
 
@@ -36,7 +40,7 @@ try {
     maxIterations: 1,
     agent: createReviewAgent(),
     promptFile: "./.sandcastle/review-prompt.md",
-    promptArgs: { BRANCH: branch },
+    promptArgs: { BRANCH: branch, BASE_REF: baseBranch },
   });
   console.log("\nReview complete.");
 } finally {

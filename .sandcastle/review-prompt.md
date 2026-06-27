@@ -8,15 +8,15 @@ Review the code changes on branch `{{BRANCH}}` for the RFQ Intake WordPress plug
 
 The full diff is too large for the Cursor CLI command line on Windows. It is written to **`review-diff.patch`** in the repo root — read that file with your file tools.
 
-!`git diff {{TARGET_BRANCH}}...{{BRANCH}} > review-diff.patch && wc -l review-diff.patch`
+!`git diff {{BASE_REF}}...{{BRANCH}} > review-diff.patch && wc -l review-diff.patch`
 
 ## Diff summary
 
-!`git diff --stat {{TARGET_BRANCH}}...{{BRANCH}}`
+!`git diff --stat {{BASE_REF}}...{{BRANCH}}`
 
 ## Commits on this branch
 
-!`git log {{TARGET_BRANCH}}..{{BRANCH}} --oneline`
+!`git log {{BASE_REF}}..{{BRANCH}} --oneline`
 
 ## Linked issue (if any)
 
