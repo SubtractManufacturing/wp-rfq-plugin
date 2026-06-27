@@ -84,6 +84,7 @@ $repo_root = WP_CONTENT_DIR . '/rfq-plugin-root';
 $candidates = [
     getenv('RFQ_DEV_ENV_FILE') ?: '',
     $repo_root . '/config/dev.env.local',
+    $repo_root . '/config/.ci-s3-env.tmp',
     $repo_root . '/.env.local',
     $repo_root . '/.env',
 ];
