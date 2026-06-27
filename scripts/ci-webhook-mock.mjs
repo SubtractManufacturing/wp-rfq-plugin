@@ -11,7 +11,7 @@
 import { createServer } from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-const HOST = process.env.RFQ_WEBHOOK_MOCK_HOST ?? '127.0.0.1';
+const HOST = process.env.RFQ_WEBHOOK_MOCK_HOST ?? '0.0.0.0';
 const PORT = Number(process.env.RFQ_WEBHOOK_MOCK_PORT ?? '8765');
 const PATH = process.env.RFQ_WEBHOOK_MOCK_PATH ?? '/rfq/import';
 const SECRET = process.env.RFQ_ERP_WEBHOOK_SECRET ?? 'ci-webhook-secret';

@@ -102,5 +102,4 @@ jobs:
       - name: Webhook HTTP E2E (mock receiver, no real ERP)
         env:
           RFQ_ERP_WEBHOOK_SECRET: ci-webhook-secret
-          RFQ_ERP_WEBHOOK_URL: http://host.docker.internal:8765/rfq/import
         run: npm run qa:webhook-e2e
