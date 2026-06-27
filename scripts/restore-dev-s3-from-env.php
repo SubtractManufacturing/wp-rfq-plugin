@@ -69,6 +69,12 @@ function rfq_env_value(array $env, string ...$keys): ?string
         if (isset($env[$key]) && trim($env[$key]) !== '') {
             return trim($env[$key]);
         }
+
+        $from_process = getenv($key);
+
+        if (is_string($from_process) && trim($from_process) !== '') {
+            return trim($from_process);
+        }
     }
 
     return null;
@@ -78,30 +84,32 @@ $repo_root = WP_CONTENT_DIR . '/rfq-plugin-root';
 $candidates = [
     getenv('RFQ_DEV_ENV_FILE') ?: '',
     $repo_root . '/config/dev.env.local',
+    $repo_root . '/config/.ci-s3-env.tmp',
     $repo_root . '/.env.local',
     $repo_root . '/.env',
 ];
 
 $env_file = null;
+$env = [];
 
 foreach ($candidates as $candidate) {
     if ($candidate !== '' && is_readable($candidate)) {
         $env_file = $candidate;
+        $env = rfq_parse_dev_env_file($env_file);
         break;
     }
 }
 
-if ($env_file === null) {
-    echo "Dev S3 restore skipped (no env file found).\n";
-    exit(0);
-}
-
-$env = rfq_parse_dev_env_file($env_file);
 $endpoint = rfq_env_value($env, 'RFQ_S3_ENDPOINT', 'S3_Endpoint');
 $bucket = rfq_env_value($env, 'RFQ_S3_BUCKET', 'S3_Bucket_name', 'S3_Bucket');
 $access_key = rfq_env_value($env, 'RFQ_S3_ACCESS_KEY_ID', 'S3_Key_ID', 'S3_Access_Key_ID');
 $region = rfq_env_value($env, 'RFQ_S3_REGION', 'S3_region', 'S3_Region');
 $secret = rfq_env_value($env, 'RFQ_S3_SECRET_KEY', 'S3_Secret_Key');
+
+if ($env_file === null && ($endpoint === null || $bucket === null || $access_key === null || $region === null || $secret === null)) {
+    echo "Dev S3 restore skipped (no env file or RFQ_S3_* process env vars found).\n";
+    exit(0);
+}
 
 $missing = array_filter([
     'endpoint' => $endpoint,
@@ -123,7 +131,8 @@ update_option('rfq_s3_access_key_id', $access_key, false);
 update_option('rfq_s3_region', $region, false);
 RFQ_Secrets::set_secret('rfq_s3_secret_key', $secret);
 
-echo 'Dev S3 settings restored from ' . basename($env_file) . ".\n";
+$source = $env_file !== null ? basename($env_file) : 'process environment';
+echo 'Dev S3 settings restored from ' . $source . ".\n";
 
 if (RFQ_S3_Client::verify_connectivity()) {
     echo "S3 connectivity check: ok\n";

@@ -19,6 +19,7 @@ vendor/
 .env
 .env.local
 config/dev.env.local
+config/.ci-s3-env.tmp
 
 # IDE
 .idea/

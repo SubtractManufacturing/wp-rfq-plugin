@@ -32,7 +32,7 @@ jobs:
   pre-merge:
     name: pre-merge
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -54,5 +54,52 @@ jobs:
       - name: Start wp-env
         run: npx wp-env start
 
-      - name: Pre-merge gate (unit + integration + REST smoke)
+      - name: Pre-merge gate (unit + integration + REST smoke + optional S3 E2E)
+        env:
+          RFQ_S3_ENDPOINT: ${{ secrets.RFQ_S3_ENDPOINT || secrets.S3_ENDPOINT }}
+          RFQ_S3_BUCKET: ${{ secrets.RFQ_S3_BUCKET || secrets.S3_BUCKET_NAME }}
+          RFQ_S3_ACCESS_KEY_ID: ${{ secrets.RFQ_S3_ACCESS_KEY_ID || secrets.S3_KEY_ID }}
+          RFQ_S3_REGION: ${{ secrets.RFQ_S3_REGION || secrets.S3_REGION }}
+          RFQ_S3_SECRET_KEY: ${{ secrets.RFQ_S3_SECRET_KEY || secrets.S3_SECRET_KEY }}
         run: npm run test:pre-merge
+
+  webhook-e2e:
+    name: webhook-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          npm ci
+
+      - name: Start ERP webhook mock
+        env:
+          RFQ_ERP_WEBHOOK_SECRET: ci-webhook-secret
+        run: |
+          node scripts/ci-webhook-mock.mjs &
+          for i in $(seq 1 30); do
+            curl -sf "http://127.0.0.1:8765/health" >/dev/null && break
+            sleep 1
+          done
+          curl -sf "http://127.0.0.1:8765/health" >/dev/null
+
+      - name: Start wp-env
+        run: npx wp-env start
+
+      - name: Webhook HTTP E2E (mock receiver, no real ERP)
+        env:
+          RFQ_ERP_WEBHOOK_SECRET: ci-webhook-secret
+        run: npm run qa:webhook-e2e

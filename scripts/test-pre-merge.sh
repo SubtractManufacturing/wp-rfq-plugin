@@ -34,13 +34,18 @@ fi
 
 bash "$ROOT/scripts/restore-dev-s3-from-env.sh"
 
-if [[ -f "$ROOT/config/dev.env.local" ]]; then
+rfq_s3_e2e_configured() {
+  [[ -f "$ROOT/config/dev.env.local" ]] && return 0
+  [[ -n "${RFQ_S3_ENDPOINT:-}" && -n "${RFQ_S3_BUCKET:-}" && -n "${RFQ_S3_ACCESS_KEY_ID:-}" && -n "${RFQ_S3_REGION:-}" && -n "${RFQ_S3_SECRET_KEY:-}" ]]
+}
+
+if rfq_s3_e2e_configured; then
   echo
-  echo "==> S3 upload E2E (config/dev.env.local present)"
+  echo "==> S3 upload E2E (dev.env.local or RFQ_S3_* env vars present)"
   bash "$ROOT/scripts/qa-s3-upload.sh"
 else
   echo
-  echo "==> S3 upload E2E skipped (no config/dev.env.local)"
+  echo "==> S3 upload E2E skipped (no config/dev.env.local or RFQ_S3_* env vars)"
 fi
 
 echo

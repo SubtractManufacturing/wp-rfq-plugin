@@ -23,6 +23,8 @@
     "qa:upload-urls": "bash scripts/qa-upload-urls.sh",
     "qa:s3-upload": "bash scripts/qa-s3-upload.sh",
     "qa:staging-m3": "bash scripts/qa-staging-m3.sh",
+    "qa:webhook-e2e": "bash scripts/qa-webhook-e2e.sh",
+    "webhook:mock": "node scripts/ci-webhook-mock.mjs",
     "wp-env": "wp-env",
     "typecheck": "echo \"No TypeScript at repo root yet\" && exit 0"
   },
