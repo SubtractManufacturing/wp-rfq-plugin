@@ -17,6 +17,7 @@ Run **all** of these that exist for the current milestone — start with the pre
 3. `npm run qa:upload-urls` when `config/dev.env.local` exists
 4. `npm run qa:s3-upload` when `config/dev.env.local` exists (also run by pre-merge when configured)
 5. Mirror PR-tier CI jobs from `.github/workflows/` per `Planning/TESTING.md` §4
+6. CI `webhook-e2e` job — always runs (mock ERP, no secrets required)
 
 Re-run the same set after Bugbot fixes. Loop fix → re-run until green or blocked (max 3 cycles).
 
@@ -35,7 +36,19 @@ Re-run the same set after Bugbot fixes. Loop fix → re-run until green or block
 2. `npm run test:integration` — wp-env `tests-cli` integration suite
 3. `scripts/smoke-rest.sh` — host HTTP probe + `scripts/smoke-rest.php` via tests-cli
 4. `scripts/restore-dev-s3-from-env.sh` — restore S3 options from env
-5. `scripts/qa-s3-upload.sh` — when `config/dev.env.local` exists (uses `config/PlaceHolder.step`)
+5. `scripts/qa-s3-upload.sh` — when `config/dev.env.local` or all `RFQ_S3_*` env vars are set
+
+**GitHub Actions secrets for S3 E2E** (optional — job skips when unset):
+
+| Secret | Maps to |
+|--------|---------|
+| `RFQ_S3_ENDPOINT` | S3-compatible endpoint URL |
+| `RFQ_S3_BUCKET` | Bucket name |
+| `RFQ_S3_ACCESS_KEY_ID` | Access key |
+| `RFQ_S3_REGION` | Region |
+| `RFQ_S3_SECRET_KEY` | Secret key |
+
+Fork PRs from outside collaborators do not receive repository secrets.
 
 ---
 
@@ -51,6 +64,8 @@ Re-run the same set after Bugbot fixes. Loop fix → re-run until green or block
 | `npm run qa:upload-urls` | Upload-url REST QA | M2+ |
 | `npm run qa:s3-upload` | Presigned PUT E2E with `config/PlaceHolder.step` | M2+ |
 | `npm run qa:staging-m3` | TESTING.md §11 backend staging checks (submit + health) | M3 |
+| `npm run qa:webhook-e2e` | HTTP webhook E2E against `ci-webhook-mock.mjs` | M3 |
+| `npm run webhook:mock` | Start local ERP webhook mock receiver | M3 |
 
 ---
 
@@ -88,7 +103,7 @@ When `.github/workflows/test.yml` exists, mirror PR-tier jobs locally per `Plann
 |-----------|------------------|
 | M1 | lint, php-unit, php-integration, contract, acceptance-coverage |
 | M2 | M1 + upload-url integration, S3 unit/mock, S3 spike |
-| M3 | M2 + submit integration, receipt/idempotency/webhook |
+| M3 | M2 + submit integration, receipt/idempotency/webhook, webhook-e2e (mock ERP) |
 | M4–M5 | M3 + frontend-unit, e2e-mocked, a11y |
 
 List actual jobs:
