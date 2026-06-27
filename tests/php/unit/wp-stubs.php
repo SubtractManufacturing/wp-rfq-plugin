@@ -187,3 +187,70 @@ if (! function_exists('wp_json_encode')) {
         return json_encode($data, $options, $depth);
     }
 }
+
+if (! isset($GLOBALS['rfq_test_http_requests'])) {
+    $GLOBALS['rfq_test_http_requests'] = [];
+}
+
+if (! isset($GLOBALS['rfq_test_error_logs'])) {
+    $GLOBALS['rfq_test_error_logs'] = [];
+}
+
+if (! isset($GLOBALS['rfq_test_actions'])) {
+    $GLOBALS['rfq_test_actions'] = [];
+}
+
+if (! function_exists('error_log')) {
+    function error_log($message)
+    {
+        $GLOBALS['rfq_test_error_logs'][] = (string) $message;
+    }
+}
+
+if (! function_exists('is_wp_error')) {
+    function is_wp_error($thing)
+    {
+        return $thing instanceof WP_Error;
+    }
+}
+
+if (! function_exists('wp_remote_post')) {
+    /**
+     * @param array<string, mixed> $args
+     */
+    function wp_remote_post($url, $args = [])
+    {
+        $GLOBALS['rfq_test_http_requests'][] = [
+            'url' => $url,
+            'args' => $args,
+        ];
+
+        if (isset($GLOBALS['rfq_test_http_remote_post_result'])) {
+            return $GLOBALS['rfq_test_http_remote_post_result'];
+        }
+
+        return true;
+    }
+}
+
+if (! function_exists('add_action')) {
+    function add_action($hook_name, $callback, $priority = 10, $accepted_args = 1)
+    {
+        $GLOBALS['rfq_test_actions'][$hook_name][] = $callback;
+
+        return true;
+    }
+}
+
+if (! function_exists('do_action')) {
+    function do_action($hook_name, ...$args)
+    {
+        if (! isset($GLOBALS['rfq_test_actions'][$hook_name])) {
+            return;
+        }
+
+        foreach ($GLOBALS['rfq_test_actions'][$hook_name] as $callback) {
+            $callback(...$args);
+        }
+    }
+}
