@@ -198,16 +198,15 @@ class RestEndpointsTest extends TestCase
         $this->assertSame(['status' => 'ok'], $response->get_data());
     }
 
-    public function test_later_phase_routes_still_return_not_implemented(): void
+    public function test_submit_endpoint_requires_valid_jwt(): void
     {
         $create = rest_do_request(new WP_REST_Request('POST', '/rfq/v1/sessions'));
         $session_id = $create->get_data()['session_id'];
-        $token = $create->get_data()['token'];
 
         $submit = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id . '/submit');
-        $submit->set_header('Authorization', 'Bearer ' . $token);
+        $submit->set_header('Authorization', 'Bearer invalid-token');
 
-        $this->assertSame(501, rest_do_request($submit)->get_status());
+        $this->assertSame(401, rest_do_request($submit)->get_status());
     }
 
     public function test_patch_contact_persists_valid_contact_and_keeps_draft_status(): void
