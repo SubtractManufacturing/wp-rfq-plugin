@@ -15,7 +15,8 @@ Run **all** of these that exist for the current milestone — start with the pre
 1. `npm run test:pre-merge` — always
 2. Every lint/test script in `package.json` and `composer.json` not run by pre-merge
 3. `npm run qa:upload-urls` when `config/dev.env.local` exists
-4. Mirror PR-tier CI jobs from `.github/workflows/` per `Planning/TESTING.md` §4
+4. `npm run qa:s3-upload` when `config/dev.env.local` exists (also run by pre-merge when configured)
+5. Mirror PR-tier CI jobs from `.github/workflows/` per `Planning/TESTING.md` §4
 
 Re-run the same set after Bugbot fixes. Loop fix → re-run until green or blocked (max 3 cycles).
 
@@ -34,6 +35,7 @@ Re-run the same set after Bugbot fixes. Loop fix → re-run until green or block
 2. `npm run test:integration` — wp-env `tests-cli` integration suite
 3. `scripts/smoke-rest.sh` — host HTTP probe + `scripts/smoke-rest.php` via tests-cli
 4. `scripts/restore-dev-s3-from-env.sh` — restore S3 options from env
+5. `scripts/qa-s3-upload.sh` — when `config/dev.env.local` exists (uses `config/PlaceHolder.step`)
 
 ---
 
@@ -47,6 +49,7 @@ Re-run the same set after Bugbot fixes. Loop fix → re-run until green or block
 | `npm run wp-env start` | Start local WordPress | M1 |
 | `npm run dev:restore-s3` | Restore S3 admin settings from env | M2+ |
 | `npm run qa:upload-urls` | Upload-url REST QA | M2+ |
+| `npm run qa:s3-upload` | Presigned PUT E2E with `config/PlaceHolder.step` | M2+ |
 
 ---
 
