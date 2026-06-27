@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
 
 class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
 {
-    /** @var array<string, array{body: string, content_type: string, metadata: array<string, string>}> */
+    /** @var array<string, array{body: string, content_type: string, content_length: int, metadata: array<string, string>}> */
     public array $objects = [];
 
     /** @var list<array{key: string, content_type: string, max_bytes: int, expires_seconds: int, url: string}> */
@@ -23,7 +23,7 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
         return $this->bucket;
     }
 
-    public function head_object(string $key): bool|WP_Error
+    public function head_object(string $key): array|false|WP_Error
     {
         if ($this->should_fail) {
             return new WP_Error(
@@ -33,7 +33,26 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
             );
         }
 
-        return isset($this->objects[$key]);
+        if (! isset($this->objects[$key])) {
+            return false;
+        }
+
+        $object = $this->objects[$key];
+
+        return [
+            'content_length' => $object['content_length'],
+            'content_type' => $object['content_type'],
+        ];
+    }
+
+    public function seed_object(string $key, string $content_type, int $content_length): void
+    {
+        $this->objects[$key] = [
+            'body' => '',
+            'content_type' => $content_type,
+            'content_length' => $content_length,
+            'metadata' => [],
+        ];
     }
 
     /**
@@ -49,9 +68,12 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
             );
         }
 
+        $body = wp_json_encode($data, JSON_THROW_ON_ERROR);
+
         $this->objects[$key] = [
-            'body' => wp_json_encode($data, JSON_THROW_ON_ERROR),
+            'body' => $body,
             'content_type' => 'application/json',
+            'content_length' => strlen($body),
             'metadata' => [],
         ];
 

@@ -10,7 +10,10 @@ interface RFQ_S3_Client_Interface
 
     public function get_bucket_name(): string;
 
-    public function head_object(string $key): bool|WP_Error;
+    /**
+     * @return array{content_length: int, content_type: ?string}|false|WP_Error
+     */
+    public function head_object(string $key): array|false|WP_Error;
 
     /**
      * @param array<string, mixed> $data
