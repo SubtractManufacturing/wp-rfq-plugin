@@ -15,6 +15,9 @@ class WebhookSubmitTest extends TestCase
 {
     private RFQ_S3_Client_Mock $mock;
 
+    /** @var list<array{url: string, args: array<string, mixed>}> */
+    private array $webhookCaptured = [];
+
     private const WEBHOOK_URL = 'https://erp.example.com/rfq/import';
 
     protected function setUp(): void
@@ -63,13 +66,14 @@ class WebhookSubmitTest extends TestCase
     protected function tearDown(): void
     {
         remove_all_filters('pre_http_request');
+        $this->webhookCaptured = [];
 
         parent::tearDown();
     }
 
     public function test_submit_skips_webhook_when_url_blank(): void
     {
-        $captured = $this->capture_webhook_requests();
+        $this->capture_webhook_requests();
 
         [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();
         $this->seed_manifest_files($session_id, $manifest);
@@ -77,7 +81,7 @@ class WebhookSubmitTest extends TestCase
         $response = $this->request_submit($session_id, $token, $manifest);
 
         $this->assertSame(200, $response->get_status());
-        $this->assertSame([], $captured);
+        $this->assertSame([], $this->webhookCaptured);
     }
 
     public function test_submit_dispatches_signed_webhook_after_durable_receipt(): void
@@ -85,7 +89,7 @@ class WebhookSubmitTest extends TestCase
         update_option('rfq_erp_webhook_url', self::WEBHOOK_URL);
         RFQ_Secrets::set_secret('rfq_erp_webhook_secret', 'integration-secret');
 
-        $captured = $this->capture_webhook_requests();
+        $this->capture_webhook_requests();
 
         [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();
         $this->seed_manifest_files($session_id, $manifest);
@@ -97,19 +101,19 @@ class WebhookSubmitTest extends TestCase
         $receipt_number = $response->get_data()['receipt_number'];
         $receipt_key = 'intake/' . $session_id . '/meta/receipt.json';
 
-        $this->assertCount(1, $captured);
-        $this->assertSame(self::WEBHOOK_URL, $captured[0]['url']);
-        $this->assertFalse($captured[0]['args']['blocking']);
+        $this->assertCount(1, $this->webhookCaptured);
+        $this->assertSame(self::WEBHOOK_URL, $this->webhookCaptured[0]['url']);
+        $this->assertFalse($this->webhookCaptured[0]['args']['blocking']);
 
         $expected_body = wp_json_encode([
             'receipt_number' => $receipt_number,
             'session_id' => $session_id,
             'receipt_key' => $receipt_key,
         ]);
-        $this->assertSame($expected_body, $captured[0]['args']['body']);
+        $this->assertSame($expected_body, $this->webhookCaptured[0]['args']['body']);
         $this->assertSame(
             hash_hmac('sha256', (string) $expected_body, 'integration-secret'),
-            $captured[0]['args']['headers']['X-RFQ-Signature']
+            $this->webhookCaptured[0]['args']['headers']['X-RFQ-Signature']
         );
     }
 
@@ -117,7 +121,7 @@ class WebhookSubmitTest extends TestCase
     {
         update_option('rfq_erp_webhook_url', self::WEBHOOK_URL);
 
-        $captured = $this->capture_webhook_requests();
+        $this->capture_webhook_requests();
 
         [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();
         $this->seed_manifest_files($session_id, $manifest);
@@ -125,7 +129,7 @@ class WebhookSubmitTest extends TestCase
         $response = $this->request_submit($session_id, $token, $manifest);
 
         $this->assertSame(200, $response->get_status());
-        $this->assertSame([], $captured);
+        $this->assertSame([], $this->webhookCaptured);
         $this->assertNotEmpty($response->get_data()['receipt_number']);
     }
 
@@ -170,7 +174,7 @@ class WebhookSubmitTest extends TestCase
         update_option('rfq_erp_webhook_url', self::WEBHOOK_URL);
         RFQ_Secrets::set_secret('rfq_erp_webhook_secret', 'integration-secret');
 
-        $captured = $this->capture_webhook_requests();
+        $this->capture_webhook_requests();
 
         [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();
         $this->seed_manifest_files($session_id, $manifest);
@@ -180,25 +184,24 @@ class WebhookSubmitTest extends TestCase
 
         $this->assertSame(200, $first->get_status());
         $this->assertSame(200, $second->get_status());
-        $this->assertCount(1, $captured);
+        $this->assertCount(1, $this->webhookCaptured);
     }
 
     /**
      * @param callable|null $preempt
-     * @return list<array{url: string, args: array<string, mixed>}>
      */
-    private function capture_webhook_requests(?callable $preempt = null): array
+    private function capture_webhook_requests(?callable $preempt = null): void
     {
-        $captured = [];
+        $this->webhookCaptured = [];
 
         add_filter(
             'pre_http_request',
-            static function ($pre, $parsed_args, $url) use (&$captured, $preempt) {
+            function ($pre, $parsed_args, $url) use ($preempt) {
                 if ($url !== self::WEBHOOK_URL) {
                     return $pre;
                 }
 
-                $captured[] = [
+                $this->webhookCaptured[] = [
                     'url' => $url,
                     'args' => $parsed_args,
                 ];
@@ -221,8 +224,6 @@ class WebhookSubmitTest extends TestCase
             10,
             3
         );
-
-        return $captured;
     }
 
     /**
