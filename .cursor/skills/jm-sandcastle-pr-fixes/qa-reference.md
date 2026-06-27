@@ -50,6 +50,7 @@ Re-run the same set after Bugbot fixes. Loop fix → re-run until green or block
 | `npm run dev:restore-s3` | Restore S3 admin settings from env | M2+ |
 | `npm run qa:upload-urls` | Upload-url REST QA | M2+ |
 | `npm run qa:s3-upload` | Presigned PUT E2E with `config/PlaceHolder.step` | M2+ |
+| `npm run qa:staging-m3` | TESTING.md §11 backend staging checks (submit + health) | M3 |
 
 ---
 
