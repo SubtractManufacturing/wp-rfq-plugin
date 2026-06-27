@@ -61,6 +61,16 @@ class RFQ_Receipt_Service
             return $file_validation;
         }
 
+        $existing_receipt = self::resolve_existing_receipt($session_id, $manifest, $s3_client);
+
+        if ($existing_receipt instanceof WP_REST_Response) {
+            return $existing_receipt;
+        }
+
+        if ($existing_receipt instanceof WP_Error) {
+            return $existing_receipt;
+        }
+
         $manifest_key = 'intake/' . $session_id . '/meta/manifest.json';
         $manifest_write = $s3_client->put_json($manifest_key, $manifest);
 
@@ -113,15 +123,43 @@ class RFQ_Receipt_Service
                 'submitted_part_count' => $part_count,
                 'updated_at' => $now,
             ],
-            ['session_id' => $session_id],
+            [
+                'session_id' => $session_id,
+                'status' => 'draft',
+            ],
             ['%s', '%s', '%s', '%s', '%d', '%s'],
-            ['%s']
+            ['%s', '%s']
         );
 
         if ($updated === false) {
             error_log(
                 sprintf(
                     'RFQ submit partial write: receipt written to S3 without WP index row for session %s',
+                    $session_id
+                )
+            );
+
+            return new WP_Error(
+                'rfq_submit_index_failed',
+                __('Unable to index the receipt.', 'rfq-intake'),
+                ['status' => 500]
+            );
+        }
+
+        if ($updated === 0) {
+            $existing_receipt = self::resolve_existing_receipt($session_id, $manifest, $s3_client);
+
+            if ($existing_receipt instanceof WP_REST_Response) {
+                return $existing_receipt;
+            }
+
+            if ($existing_receipt instanceof WP_Error) {
+                return $existing_receipt;
+            }
+
+            error_log(
+                sprintf(
+                    'RFQ submit index race: receipt written to S3 but WP row was not updated for session %s',
                     $session_id
                 )
             );
@@ -345,6 +383,83 @@ class RFQ_Receipt_Service
         }
 
         return RFQ_Postal_Code::normalize($postal_code);
+    }
+
+    /**
+     * @param array<string, mixed> $manifest
+     */
+    private static function resolve_existing_receipt(
+        string $session_id,
+        array $manifest,
+        RFQ_S3_Client_Interface $s3_client
+    ): WP_REST_Response|WP_Error|null {
+        $session = self::get_session_row($session_id);
+
+        if ($session !== null && $session['status'] === 'submitted') {
+            $receipt_number = $session['receipt_number'] ?? null;
+
+            if (! is_string($receipt_number) || $receipt_number === '') {
+                return new WP_Error(
+                    'rfq_submit_inconsistent',
+                    __('Submitted session is missing a receipt number.', 'rfq-intake'),
+                    ['status' => 500]
+                );
+            }
+
+            return new WP_REST_Response(['receipt_number' => $receipt_number], 200);
+        }
+
+        $receipt_key = 'intake/' . $session_id . '/meta/receipt.json';
+        $stored_receipt = $s3_client->get_json($receipt_key);
+
+        if ($stored_receipt === false) {
+            return null;
+        }
+
+        if ($stored_receipt instanceof WP_Error) {
+            return $stored_receipt;
+        }
+
+        $receipt_number = $stored_receipt['receipt_number'] ?? null;
+
+        if (! is_string($receipt_number) || $receipt_number === '') {
+            return null;
+        }
+
+        self::backfill_submitted_index($session_id, $receipt_number, $manifest);
+
+        return new WP_REST_Response(['receipt_number' => $receipt_number], 200);
+    }
+
+    /**
+     * @param array<string, mixed> $manifest
+     */
+    private static function backfill_submitted_index(
+        string $session_id,
+        string $receipt_number,
+        array $manifest
+    ): void {
+        global $wpdb;
+
+        $now = current_time('mysql', true);
+
+        $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            [
+                'status' => 'submitted',
+                'receipt_number' => $receipt_number,
+                'submitted_at' => $now,
+                'shipping_postal_code' => self::extract_postal_code($manifest),
+                'submitted_part_count' => count($manifest['parts']),
+                'updated_at' => $now,
+            ],
+            [
+                'session_id' => $session_id,
+                'status' => 'draft',
+            ],
+            ['%s', '%s', '%s', '%s', '%d', '%s'],
+            ['%s', '%s']
+        );
     }
 
     /**

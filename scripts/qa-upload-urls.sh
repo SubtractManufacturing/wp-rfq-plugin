@@ -188,7 +188,7 @@ npx wp-env run cli --env-cwd=wp-content/rfq-plugin-root wp db query \
 assert_status "submitted session rejected" "403" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 
-echo "9. Regression — refresh, draft autosave, and submit stub"
+echo "9. Regression — refresh, draft autosave, and submit validation"
 refresh="$(api_post "/sessions/${OTHER_SID}/refresh" -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 assert_status "refresh still works" "200" "$refresh"
 draft="$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
@@ -197,7 +197,7 @@ draft="$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
   -d "{\"session_id\":\"${OTHER_SID}\",\"contact\":{\"first_name\":\"Jane\",\"last_name\":\"Smith\",\"email\":\"jane@example.com\"},\"parts\":[],\"global\":{\"nda_required\":false}}" \
   -w "\n__HTTP__:%{http_code}")"
 assert_status "draft autosave" "200" "$draft"
-assert_status "submit still 501" "501" "$(api_post "/sessions/${OTHER_SID}/submit" \
+assert_status "submit rejects missing body" "400" "$(api_post "/sessions/${OTHER_SID}/submit" \
   -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 
 if [[ -n "$DO_PUT" ]]; then

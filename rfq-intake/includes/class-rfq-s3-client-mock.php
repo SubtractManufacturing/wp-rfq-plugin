@@ -56,6 +56,28 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
     }
 
     /**
+     * @return array<string, mixed>|false|WP_Error
+     */
+    public function get_json(string $key): array|false|WP_Error
+    {
+        if ($this->should_fail) {
+            return new WP_Error(
+                'rfq_s3_error',
+                __('S3 operation failed.', 'rfq-intake'),
+                ['status' => 502]
+            );
+        }
+
+        if (! isset($this->objects[$key])) {
+            return false;
+        }
+
+        $decoded = json_decode($this->objects[$key]['body'], true);
+
+        return is_array($decoded) ? $decoded : false;
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public function put_json(string $key, array $data): true|WP_Error
