@@ -72,6 +72,9 @@ Fork PRs from outside collaborators do not receive repository secrets.
 | `npm run qa:webhook-e2e` | HTTP webhook E2E against `ci-webhook-mock.mjs` | M3 |
 | `npm run webhook:mock` | Start local ERP webhook mock receiver | M3 |
 | `bash scripts/qa-shortcode.sh` | `[rfq_form]` mount + scoped asset smoke against wp-env | Phase 5 |
+| `npm run test:frontend` | Frontend lint + Vitest unit/component tests | M4–M5 |
+| `npm run test:e2e` | Playwright mocked RFQ form happy path and fallback checks | M4–M5 |
+| `npm run test:a11y` | Playwright + axe accessibility smoke | M5 |
 
 ---
 
@@ -81,8 +84,6 @@ From `Planning/TESTING.md` §9 — run if present in `package.json`:
 
 | Command | Purpose | Milestone |
 |---------|---------|-----------|
-| `npm run test` (Vitest) | React unit tests | M4–M5 |
-| `npm run test:e2e` | Playwright E2E (mocked S3) | M4–M5 |
 | `npm run test:e2e:localstack` | LocalStack E2E | Pre-release |
 | `npm run test:e2e:supabase` | Supabase E2E | Pre-release |
 
