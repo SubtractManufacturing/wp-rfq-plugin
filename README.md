@@ -22,6 +22,24 @@ npm run sandcastle                                      # implement → review l
 
 Label GitHub issues with **`Sandcastle`** for the agent to pick up. Full guide: [`docs/agents/sandcastle.md`](docs/agents/sandcastle.md). Agent rules: [`AGENTS.md`](AGENTS.md).
 
+## Local development
+
+Build the frontend bundle before loading a page with `[rfq_form]`; WordPress only enqueues `rfq-intake/build/rfq-form.js` and `rfq-intake/build/rfq-form.css` when those artifacts exist.
+
+```bash
+composer install
+npm install
+npm --prefix frontend ci
+npm --prefix frontend run build
+npm run wp-env start
+```
+
+Add `[rfq_form]` to a WordPress page in wp-env. For a focused shortcode smoke check, run:
+
+```bash
+bash scripts/qa-shortcode.sh
+```
+
 ## Documentation
 
 | File | Purpose |

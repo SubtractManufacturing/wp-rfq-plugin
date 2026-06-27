@@ -32,7 +32,7 @@ class RFQ_Shortcode {
         $script_path = RFQ_INTAKE_PLUGIN_DIR . 'build/rfq-form.js';
         $style_path  = RFQ_INTAKE_PLUGIN_DIR . 'build/rfq-form.css';
 
-        if ( ! is_readable( $script_path ) ) {
+        if ( ! is_readable( $script_path ) || ! is_readable( $style_path ) ) {
             return;
         }
 

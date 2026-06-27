@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- * Scoped M1–M3 backend acceptance-coverage gate.
+ * Scoped M1–M3 backend + Phase 5 embed acceptance-coverage gate.
  *
  * Parses PHPUnit test files for #[Group('AC-WP-xxx')] and @covers AC-WP-xxx tags.
  */
@@ -16,6 +16,7 @@ $required_ids = [
     'AC-WP-001',
     'AC-WP-005',
     'AC-WP-006',
+    'AC-WP-009',
     'AC-WP-010',
     'AC-WP-011',
     'AC-WP-012',
@@ -87,7 +88,7 @@ foreach ($required_ids as $id) {
 }
 
 if ($missing !== []) {
-    fwrite(STDERR, "Acceptance coverage failed — missing mappings for M1–M3 backend AC IDs:\n");
+    fwrite(STDERR, "Acceptance coverage failed — missing mappings for scoped backend + Phase 5 embed AC IDs:\n");
 
     foreach ($missing as $id) {
         fwrite(STDERR, "  - {$id}\n");
@@ -100,7 +101,7 @@ $covered_count = count(array_intersect($required_ids, array_keys($covered)));
 $spike_note    = is_file($root . '/Planning/S3-SPIKE-REPORT.md') ? ' + S3 spike report' : '';
 
 echo sprintf(
-    "Acceptance coverage OK: %d/%d scoped backend AC IDs mapped in tests%s.\n",
+    "Acceptance coverage OK: %d/%d scoped backend + Phase 5 embed AC IDs mapped in tests%s.\n",
     count($required_ids),
     count($required_ids),
     $spike_note
