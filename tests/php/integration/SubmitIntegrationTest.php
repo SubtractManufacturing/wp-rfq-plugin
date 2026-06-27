@@ -200,6 +200,43 @@ class SubmitIntegrationTest extends TestCase
         $this->assertSame($expected_prefix . '000001', $response->get_data()['receipt_number']);
     }
 
+    public function test_partial_write_after_manifest_logs_and_fires_action(): void
+    {
+        [$session_id, $token, $manifest] = $this->prepare_submittable_session();
+        $this->seed_manifest_files($session_id, $manifest);
+
+        $this->mock->fail_put_keys = [RFQ_S3_Key_Builder::receipt_meta_key($session_id)];
+
+        $logged = false;
+
+        add_action(
+            'rfq_partial_submit_write',
+            static function (string $logged_session_id, string $manifest_key, string $reason) use (&$logged, $session_id): void {
+                $logged = $logged_session_id === $session_id
+                    && $manifest_key === RFQ_S3_Key_Builder::manifest_meta_key($session_id)
+                    && $reason === 'receipt_json_write_failed';
+            }
+        );
+
+        $response = $this->request_submit($session_id, $token, $manifest);
+
+        $this->assertGreaterThanOrEqual(400, $response->get_status());
+        $this->assertTrue($logged);
+        $this->assertArrayHasKey(RFQ_S3_Key_Builder::manifest_meta_key($session_id), $this->mock->objects);
+        $this->assertArrayNotHasKey(RFQ_S3_Key_Builder::receipt_meta_key($session_id), $this->mock->objects);
+
+        global $wpdb;
+
+        $status = $wpdb->get_var(
+            $wpdb->prepare(
+                'SELECT status FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                $session_id
+            )
+        );
+
+        $this->assertSame('draft', $status);
+    }
+
     public function test_submit_fires_receipt_durable_action_without_webhook(): void
     {
         $fired = false;

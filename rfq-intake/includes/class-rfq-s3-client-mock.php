@@ -6,8 +6,11 @@ if (!defined('ABSPATH')) {
 
 class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
 {
-    /** @var array<string, array{body: string, content_type: string, content_length: int, metadata: array<string, string>}> */
+    /** @var array<string, array{body: string, content_type: string, content_length: int, metadata: array<string, string>, last_modified: int}> */
     public array $objects = [];
+
+    /** @var list<string> */
+    public array $fail_put_keys = [];
 
     /** @var list<array{key: string, content_type: string, max_bytes: int, expires_seconds: int, url: string}> */
     public array $presigned_puts = [];
@@ -51,17 +54,54 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
         return [
             'content_length' => $this->objects[$key]['content_length'],
             'content_type' => $this->objects[$key]['content_type'],
+            'last_modified' => $this->objects[$key]['last_modified'],
         ];
     }
 
-    public function seed_object(string $key, int $content_length, string $content_type, string $body = ''): void
-    {
+    public function seed_object(
+        string $key,
+        int $content_length,
+        string $content_type,
+        string $body = '',
+        ?int $last_modified = null
+    ): void {
         $this->objects[$key] = [
             'body' => $body,
             'content_type' => $content_type,
             'content_length' => $content_length,
             'metadata' => [],
+            'last_modified' => $last_modified ?? time(),
         ];
+    }
+
+    public function list_intake_session_ids(): array
+    {
+        $session_ids = [];
+
+        foreach (array_keys($this->objects) as $key) {
+            if (preg_match('#^intake/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/#', $key, $matches) === 1) {
+                $session_ids[$matches[1]] = true;
+            }
+        }
+
+        return array_keys($session_ids);
+    }
+
+    public function get_prefix_oldest_modified(string $session_id): int|false
+    {
+        $prefix = RFQ_S3_Key_Builder::session_prefix($session_id);
+        $oldest = null;
+
+        foreach ($this->objects as $key => $object) {
+            if (! str_starts_with($key, $prefix)) {
+                continue;
+            }
+
+            $timestamp = $object['last_modified'];
+            $oldest = $oldest === null ? $timestamp : min($oldest, $timestamp);
+        }
+
+        return $oldest ?? false;
     }
 
     /**
@@ -69,7 +109,7 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
      */
     public function put_json(string $key, array $data): true|WP_Error
     {
-        if ($this->should_fail) {
+        if ($this->should_fail || in_array($key, $this->fail_put_keys, true)) {
             return new WP_Error(
                 'rfq_s3_error',
                 __('S3 operation failed.', 'rfq-intake'),
@@ -84,6 +124,7 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface
             'content_type' => 'application/json',
             'content_length' => strlen($body),
             'metadata' => [],
+            'last_modified' => time(),
         ];
 
         return true;

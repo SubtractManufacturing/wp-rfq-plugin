@@ -10,6 +10,7 @@ class RFQ_Activator
     {
         self::create_tables();
         self::bootstrap_secrets();
+        RFQ_Intake_Monitor::schedule_cron();
     }
 
     public static function bootstrap_secrets(): void

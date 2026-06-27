@@ -50,6 +50,7 @@ require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-postal-code.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-manifest-validator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-receipt-service.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-webhook.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-intake-monitor.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';

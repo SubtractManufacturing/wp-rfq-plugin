@@ -342,6 +342,15 @@ class RFQ_Receipt_Service
 
     private static function log_partial_write(string $session_id, string $manifest_key, string $reason): void
     {
+        /**
+         * Fires when submit wrote manifest.json but failed before a durable receipt existed.
+         *
+         * @param string $session_id
+         * @param string $manifest_key
+         * @param string $reason
+         */
+        do_action('rfq_partial_submit_write', $session_id, $manifest_key, $reason);
+
         error_log(
             sprintf(
                 'RFQ Intake partial submit write for session %s (%s): manifest at %s without durable receipt.',

@@ -53,4 +53,25 @@ class S3ClientMockTest extends TestCase
         $this->assertInstanceOf(WP_Error::class, $error);
         $this->assertSame('rfq_s3_error', $error->get_error_code());
     }
+
+    public function test_mock_lists_intake_session_ids_from_object_keys(): void
+    {
+        $client = new RFQ_S3_Client_Mock();
+        $session_id = '550e8400-e29b-41d4-a716-446655440099';
+
+        $client->seed_object('intake/' . $session_id . '/meta/draft.json', 10, 'application/json');
+
+        $this->assertSame([$session_id], $client->list_intake_session_ids());
+    }
+
+    public function test_mock_prefix_oldest_modified_uses_object_timestamps(): void
+    {
+        $client = new RFQ_S3_Client_Mock();
+        $session_id = '550e8400-e29b-41d4-a716-446655440098';
+
+        $client->seed_object('intake/' . $session_id . '/meta/draft.json', 10, 'application/json', '{}', 100);
+        $client->seed_object('intake/' . $session_id . '/parts/uuid_part.step', 20, 'application/octet-stream', '', 50);
+
+        $this->assertSame(50, $client->get_prefix_oldest_modified($session_id));
+    }
 }

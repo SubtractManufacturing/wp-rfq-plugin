@@ -10,6 +10,7 @@ class RFQ_Plugin
     {
         RFQ_REST_Controller::init();
         RFQ_Webhook::init();
+        RFQ_Intake_Monitor::init();
 
         require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-settings.php';
         require_once RFQ_INTAKE_PLUGIN_DIR . 'admin/class-rfq-admin-intake-list.php';

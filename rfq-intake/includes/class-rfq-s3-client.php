@@ -139,6 +139,7 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
             return [
                 'content_length' => (int) ($result['ContentLength'] ?? 0),
                 'content_type' => (string) ($result['ContentType'] ?? 'application/octet-stream'),
+                'last_modified' => self::parse_last_modified($result['LastModified'] ?? null),
             ];
         } catch (AwsException $exception) {
             if ($exception->getStatusCode() === 404) {
@@ -165,6 +166,91 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
             ]);
 
             return true;
+        } catch (Throwable $exception) {
+            return self::map_exception($exception);
+        }
+    }
+
+    public function list_intake_session_ids(): array|WP_Error
+    {
+        try {
+            $session_ids = [];
+            $continuation_token = null;
+
+            do {
+                $params = [
+                    'Bucket' => $this->bucket,
+                    'Prefix' => 'intake/',
+                    'Delimiter' => '/',
+                ];
+
+                if ($continuation_token !== null) {
+                    $params['ContinuationToken'] = $continuation_token;
+                }
+
+                $result = $this->aws_client->listObjectsV2($params);
+
+                foreach ($result['CommonPrefixes'] ?? [] as $prefix_entry) {
+                    $prefix = (string) ($prefix_entry['Prefix'] ?? '');
+
+                    if (
+                        preg_match(
+                            '#^intake/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/$#',
+                            $prefix,
+                            $matches
+                        ) === 1
+                    ) {
+                        $session_ids[] = $matches[1];
+                    }
+                }
+
+                $continuation_token = $result['IsTruncated'] ? ($result['NextContinuationToken'] ?? null) : null;
+            } while ($continuation_token !== null);
+
+            return $session_ids;
+        } catch (Throwable $exception) {
+            return self::map_exception($exception);
+        }
+    }
+
+    public function get_prefix_oldest_modified(string $session_id): int|false|WP_Error
+    {
+        if (! RFQ_S3_Key_Builder::is_uuid($session_id)) {
+            return false;
+        }
+
+        $prefix = RFQ_S3_Key_Builder::session_prefix($session_id);
+
+        try {
+            $oldest = null;
+            $continuation_token = null;
+
+            do {
+                $params = [
+                    'Bucket' => $this->bucket,
+                    'Prefix' => $prefix,
+                ];
+
+                if ($continuation_token !== null) {
+                    $params['ContinuationToken'] = $continuation_token;
+                }
+
+                $result = $this->aws_client->listObjectsV2($params);
+
+                foreach ($result['Contents'] ?? [] as $object) {
+                    $timestamp = self::parse_last_modified($object['LastModified'] ?? null);
+
+                    if ($timestamp === 0) {
+                        continue;
+                    }
+
+                    $oldest = $oldest === null ? $timestamp : min($oldest, $timestamp);
+                }
+
+                $continuation_token = $result['IsTruncated'] ? ($result['NextContinuationToken'] ?? null) : null;
+            } while ($continuation_token !== null);
+
+            return $oldest ?? false;
         } catch (Throwable $exception) {
             return self::map_exception($exception);
         }
@@ -266,5 +352,20 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface
         }
 
         return $message;
+    }
+
+    private static function parse_last_modified(mixed $value): int
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+
+        if (is_string($value) && $value !== '') {
+            $timestamp = strtotime($value);
+
+            return $timestamp === false ? 0 : $timestamp;
+        }
+
+        return 0;
     }
 }

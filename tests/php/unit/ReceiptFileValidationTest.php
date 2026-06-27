@@ -20,6 +20,7 @@ class ReceiptFileValidationTest extends TestCase
         $this->assertIsArray($metadata);
         $this->assertSame(2048, $metadata['content_length']);
         $this->assertSame('application/octet-stream', $metadata['content_type']);
+        $this->assertArrayHasKey('last_modified', $metadata);
     }
 
     public function test_head_object_metadata_returns_false_for_missing_object(): void

@@ -25,3 +25,4 @@ require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-postal-code.p
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-manifest-validator.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-receipt-service.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-webhook.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-intake-monitor.php';

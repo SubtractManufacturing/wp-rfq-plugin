@@ -10,6 +10,10 @@ if (! defined('DAY_IN_SECONDS')) {
     define('DAY_IN_SECONDS', 86400);
 }
 
+if (! defined('MINUTE_IN_SECONDS')) {
+    define('MINUTE_IN_SECONDS', 60);
+}
+
 if (! defined('RFQ_SESSION_RATE_LIMIT')) {
     define('RFQ_SESSION_RATE_LIMIT', 10);
 }
@@ -251,5 +255,50 @@ if (! function_exists('wp_remote_post')) {
         }
 
         return ['response' => ['code' => 200]];
+    }
+}
+
+if (! isset($GLOBALS['rfq_test_cron_events'])) {
+    $GLOBALS['rfq_test_cron_events'] = [];
+}
+
+if (! function_exists('wp_next_scheduled')) {
+    function wp_next_scheduled($hook, $args = [])
+    {
+        foreach ($GLOBALS['rfq_test_cron_events'] as $event) {
+            if ($event['hook'] === $hook) {
+                return $event['timestamp'];
+            }
+        }
+
+        return false;
+    }
+}
+
+if (! function_exists('wp_schedule_event')) {
+    function wp_schedule_event($timestamp, $recurrence, $hook, $args = [])
+    {
+        $GLOBALS['rfq_test_cron_events'][] = [
+            'timestamp' => $timestamp,
+            'recurrence' => $recurrence,
+            'hook' => $hook,
+            'args' => $args,
+        ];
+
+        return true;
+    }
+}
+
+if (! function_exists('current_user_can')) {
+    function current_user_can($capability)
+    {
+        return (bool) ($GLOBALS['rfq_test_current_user_can'] ?? false);
+    }
+}
+
+if (! function_exists('esc_html')) {
+    function esc_html($text)
+    {
+        return htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
     }
 }
