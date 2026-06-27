@@ -32,7 +32,7 @@ jobs:
   pre-merge:
     name: pre-merge
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -51,8 +51,8 @@ jobs:
           composer install --no-interaction --prefer-dist --optimize-autoloader
           npm ci
 
-      - name: Pre-merge gate (unit + integration + REST smoke)
-        run: npm run test:pre-merge:automated
+      - name: Start wp-env
+        run: npx wp-env start
 
-      - name: REST smoke (host probe + tests-cli dispatch)
-        run: npm run test:smoke
+      - name: Pre-merge gate (unit + integration + REST smoke)
+        run: npm run test:pre-merge
