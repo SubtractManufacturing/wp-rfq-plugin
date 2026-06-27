@@ -35,7 +35,7 @@ class RFQ_REST_Controller
 
         register_rest_route(self::NAMESPACE, '/sessions/(?P<session_id>[a-f0-9-]{36})/contact', [
             'methods' => 'PATCH',
-            'callback' => [self::class, 'not_implemented'],
+            'callback' => [self::class, 'patch_contact'],
             'permission_callback' => [self::class, 'jwt_permission'],
         ]);
 
@@ -47,7 +47,7 @@ class RFQ_REST_Controller
 
         register_rest_route(self::NAMESPACE, '/sessions/(?P<session_id>[a-f0-9-]{36})/draft', [
             'methods' => 'PUT',
-            'callback' => [self::class, 'not_implemented'],
+            'callback' => [self::class, 'put_draft'],
             'permission_callback' => [self::class, 'jwt_permission'],
         ]);
 
@@ -169,6 +169,74 @@ class RFQ_REST_Controller
         return new WP_REST_Response(['token' => $token], 200);
     }
 
+    public static function patch_contact(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $session_id = (string) $request->get_param('session_id');
+        $session = self::get_session_row($session_id);
+
+        if ($session === null) {
+            return new WP_Error(
+                'rfq_session_not_found',
+                __('Intake session not found.', 'rfq-intake'),
+                ['status' => 404]
+            );
+        }
+
+        if ($session['status'] === 'submitted') {
+            return new WP_Error(
+                'rfq_session_submitted',
+                __('Submitted sessions cannot update contact information.', 'rfq-intake'),
+                ['status' => 403]
+            );
+        }
+
+        $params = $request->get_json_params();
+
+        if (! is_array($params)) {
+            return self::field_validation_error([
+                'body' => __('Request body must be a JSON object.', 'rfq-intake'),
+            ]);
+        }
+
+        $validation = RFQ_Contact_Validator::normalize_and_validate($params);
+
+        if ($validation['errors'] !== []) {
+            return self::field_validation_error($validation['errors']);
+        }
+
+        $contact = $validation['normalized'];
+        $now = current_time('mysql', true);
+
+        global $wpdb;
+
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            [
+                'contact_first_name' => $contact['first_name'],
+                'contact_last_name' => $contact['last_name'],
+                'contact_email' => $contact['email'],
+                'contact_company' => $contact['company'],
+                'contact_phone' => $contact['phone'],
+                'contact_phone_country_code' => $contact['phone_country_code'],
+                'contact_job_title' => $contact['job_title'],
+                'updated_at' => $now,
+            ],
+            ['session_id' => $session_id],
+            ['%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'],
+            ['%s']
+        );
+
+        if ($updated === false) {
+            return new WP_Error(
+                'rfq_contact_update_failed',
+                __('Unable to update contact information.', 'rfq-intake'),
+                ['status' => 500]
+            );
+        }
+
+        return new WP_REST_Response(self::contact_response($contact), 200);
+    }
+
     public static function upload_urls(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         $session_id = (string) $request->get_param('session_id');
@@ -186,6 +254,14 @@ class RFQ_REST_Controller
             return new WP_Error(
                 'rfq_session_submitted',
                 __('Submitted sessions cannot request upload URLs.', 'rfq-intake'),
+                ['status' => 403]
+            );
+        }
+
+        if (! self::session_has_required_contact($session)) {
+            return new WP_Error(
+                'rfq_contact_required',
+                __('Complete contact information before requesting upload URLs.', 'rfq-intake'),
                 ['status' => 403]
             );
         }
@@ -253,6 +329,91 @@ class RFQ_REST_Controller
         );
     }
 
+    public static function put_draft(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $session_id = (string) $request->get_param('session_id');
+        $session = self::get_session_row($session_id);
+
+        if ($session === null) {
+            return new WP_Error(
+                'rfq_session_not_found',
+                __('Intake session not found.', 'rfq-intake'),
+                ['status' => 404]
+            );
+        }
+
+        if ($session['status'] === 'submitted') {
+            return new WP_Error(
+                'rfq_session_submitted',
+                __('Submitted sessions cannot update draft metadata.', 'rfq-intake'),
+                ['status' => 403]
+            );
+        }
+
+        $params = $request->get_json_params();
+
+        if (! is_array($params)) {
+            return self::field_validation_error([
+                'body' => __('Request body must be a JSON object.', 'rfq-intake'),
+            ]);
+        }
+
+        $sanitized = self::sanitize_draft_payload($params, $session_id);
+
+        if ($sanitized instanceof WP_Error) {
+            return $sanitized;
+        }
+
+        $draft_json = wp_json_encode($sanitized, JSON_THROW_ON_ERROR);
+        $now = current_time('mysql', true);
+
+        $update_data = [
+            'draft_json' => $draft_json,
+            'updated_at' => $now,
+        ];
+        $update_formats = ['%s', '%s'];
+
+        $postal_code = self::extract_postal_code($sanitized);
+
+        if ($postal_code !== null && RFQ_Postal_Code::is_valid($postal_code)) {
+            $update_data['shipping_postal_code'] = RFQ_Postal_Code::normalize($postal_code);
+            $update_formats[] = '%s';
+        }
+
+        global $wpdb;
+
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'rfq_sessions',
+            $update_data,
+            ['session_id' => $session_id],
+            $update_formats,
+            ['%s']
+        );
+
+        if ($updated === false) {
+            return new WP_Error(
+                'rfq_draft_update_failed',
+                __('Unable to persist draft metadata.', 'rfq-intake'),
+                ['status' => 500]
+            );
+        }
+
+        $s3_client = RFQ_S3_Client::resolve();
+
+        if ($s3_client instanceof WP_Error) {
+            return $s3_client;
+        }
+
+        $s3_key = 'intake/' . $session_id . '/meta/draft.json';
+        $s3_result = $s3_client->put_json($s3_key, $sanitized);
+
+        if ($s3_result instanceof WP_Error) {
+            return $s3_result;
+        }
+
+        return new WP_REST_Response(['status' => 'saved'], 200);
+    }
+
     public static function not_implemented(): WP_Error
     {
         return new WP_Error(
@@ -309,6 +470,138 @@ class RFQ_REST_Controller
     }
 
     /**
+     * @param array<string, mixed> $session
+     */
+    private static function session_has_required_contact(array $session): bool
+    {
+        foreach (['contact_first_name', 'contact_last_name', 'contact_email'] as $field) {
+            $value = $session[$field] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>|WP_Error
+     */
+    private static function sanitize_draft_payload(array $params, string $session_id): array|WP_Error
+    {
+        $blob_fields = ['file_data', 'file_content', 'blob', 'content_base64', 'bytes'];
+        $errors = [];
+
+        foreach ($blob_fields as $field) {
+            if (array_key_exists($field, $params)) {
+                $errors[$field] = __('File blobs are not accepted in draft autosave.', 'rfq-intake');
+            }
+        }
+
+        if ($errors !== []) {
+            return self::field_validation_error($errors);
+        }
+
+        if (isset($params['contact']) && ! is_array($params['contact'])) {
+            $errors['contact'] = __('contact must be an object.', 'rfq-intake');
+        }
+
+        if (isset($params['global']) && ! is_array($params['global'])) {
+            $errors['global'] = __('global must be an object.', 'rfq-intake');
+        }
+
+        if (isset($params['parts']) && ! is_array($params['parts'])) {
+            $errors['parts'] = __('parts must be an array.', 'rfq-intake');
+        }
+
+        if ($errors !== []) {
+            return self::field_validation_error($errors);
+        }
+
+        $draft = $params;
+        $draft['session_id'] = $session_id;
+
+        if (isset($draft['parts']) && is_array($draft['parts'])) {
+            $sanitized_parts = [];
+
+            foreach ($draft['parts'] as $index => $part) {
+                if (! is_array($part)) {
+                    $errors['parts.' . $index] = __('Each part entry must be an object.', 'rfq-intake');
+
+                    continue;
+                }
+
+                foreach ($blob_fields as $field) {
+                    if (array_key_exists($field, $part)) {
+                        $errors['parts.' . $index . '.' . $field] = __(
+                            'File blobs are not accepted in draft autosave.',
+                            'rfq-intake'
+                        );
+                    }
+                }
+
+                unset($part['upload_url']);
+                $sanitized_parts[] = $part;
+            }
+
+            if ($errors !== []) {
+                return self::field_validation_error($errors);
+            }
+
+            $draft['parts'] = $sanitized_parts;
+        }
+
+        return $draft;
+    }
+
+    /**
+     * @param array<string, mixed> $draft
+     */
+    private static function extract_postal_code(array $draft): ?string
+    {
+        $global = $draft['global'] ?? null;
+
+        if (! is_array($global)) {
+            return null;
+        }
+
+        $destination = $global['shipping_destination'] ?? null;
+
+        if (! is_array($destination)) {
+            return null;
+        }
+
+        $postal_code = $destination['postal_code'] ?? null;
+
+        if (! is_string($postal_code)) {
+            return null;
+        }
+
+        $trimmed = trim($postal_code);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @param array<string, string|null> $contact
+     * @return array<string, string|null>
+     */
+    private static function contact_response(array $contact): array
+    {
+        return [
+            'first_name' => $contact['first_name'],
+            'last_name' => $contact['last_name'],
+            'email' => $contact['email'],
+            'company' => $contact['company'],
+            'phone' => $contact['phone'],
+            'phone_country_code' => $contact['phone_country_code'],
+            'job_title' => $contact['job_title'],
+        ];
+    }
+
+    /**
      * @param array<string, string> $field_errors
      */
     private static function field_validation_error(array $field_errors): WP_Error
@@ -358,7 +651,8 @@ class RFQ_REST_Controller
 
         $row = $wpdb->get_row(
             $wpdb->prepare(
-                'SELECT session_id, status FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
+                'SELECT session_id, status, contact_first_name, contact_last_name, contact_email
+                 FROM ' . $wpdb->prefix . 'rfq_sessions WHERE session_id = %s',
                 $session_id
             ),
             ARRAY_A

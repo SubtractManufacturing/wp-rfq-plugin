@@ -74,7 +74,11 @@ api_post() {
 echo "QA upload-urls (HTTP via ${BASE_URL})"
 echo
 
-echo "0. Health check"
+echo "0. Clear rate-limit transients (deterministic QA)"
+npx wp-env run cli --env-cwd=wp-content/rfq-plugin-root wp db query \
+  "DELETE FROM wp_options WHERE option_name LIKE '_transient_rfq_sessions_%' OR option_name LIKE '_transient_timeout_rfq_sessions_%';" >/dev/null
+
+echo "1. Health check"
 health="$(curl -sS "${REST}/health" -w "\n__HTTP__:%{http_code}")"
 assert_status "health ok" "200" "$health"
 health_body="$(body_only "$health")"
@@ -83,7 +87,7 @@ if [[ "$(json_field "$health_body" status)" != "ok" ]]; then
   fail=$((fail + 1))
 fi
 
-echo "1. Create session"
+echo "2. Create session"
 create="$(api_post "/sessions")"
 assert_status "create session" "201" "$create"
 CREATE_BODY="$(body_only "$create")"
@@ -97,7 +101,12 @@ fi
 
 auth=(-H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json")
 
-echo "2. Happy path — part upload URL"
+echo "2b. Patch contact (required before upload-urls)"
+contact="$(curl -sS -X PATCH "${REST}/sessions/${SID}/contact" "${auth[@]}" \
+  -d '{"first_name":"Jane","last_name":"Smith","email":"jane@example.com"}' -w "\n__HTTP__:%{http_code}")"
+assert_status "patch contact" "200" "$contact"
+
+echo "3. Happy path — part upload URL"
 part="$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"22222222-2222-4222-8222-222222222222","file_type":"part","filename":"bracket.step","content_type":"application/octet-stream"}')"
 assert_status "part upload-url" "200" "$part"
@@ -113,7 +122,7 @@ else
   fail=$((fail + 1))
 fi
 
-echo "3. Happy path — drawing upload URL"
+echo "4. Happy path — drawing upload URL"
 drawing="$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"33333333-3333-4333-8333-333333333333","file_type":"drawing","filename":"drawing.pdf","content_type":"application/pdf"}')"
 assert_status "drawing upload-url" "200" "$drawing"
@@ -126,7 +135,7 @@ else
   fail=$((fail + 1))
 fi
 
-echo "4. Filename sanitization"
+echo "5. Filename sanitization"
 sanitize="$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"44444444-4444-4444-8444-444444444444","file_type":"part","filename":"my bracket (rev 2).step","content_type":"application/octet-stream"}')"
 assert_status "sanitized filename" "200" "$sanitize"
@@ -139,7 +148,7 @@ else
   fail=$((fail + 1))
 fi
 
-echo "5. Validation (expect 400)"
+echo "6. Validation (expect 400)"
 assert_status "invalid part_id" "400" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"not-a-uuid","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 assert_status "invalid file_type" "400" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
@@ -152,7 +161,7 @@ assert_status "drawing unsupported content_type" "400" "$(api_post "/sessions/${
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"drawing","filename":"a.gif","content_type":"image/gif"}')"
 assert_status "non-json body" "400" "$(api_post "/sessions/${SID}/upload-urls" -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: text/plain" -d 'not json')"
 
-echo "6. Auth and session state"
+echo "7. Auth and session state"
 assert_status "no bearer token" "401" "$(api_post "/sessions/${SID}/upload-urls" -H "Content-Type: application/json" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 assert_status "invalid jwt" "401" "$(api_post "/sessions/${SID}/upload-urls" -H "Authorization: Bearer bad-token" -H "Content-Type: application/json" \
@@ -173,17 +182,21 @@ assert_status "deleted session not found" "404" "$(api_post "/sessions/${GHOST_S
   -H "Authorization: Bearer ${GHOST_TOKEN}" -H "Content-Type: application/json" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 
-echo "7. Submitted session (403 via wp-cli DB update)"
+echo "8. Submitted session (403 via wp-cli DB update)"
 npx wp-env run cli --env-cwd=wp-content/rfq-plugin-root wp db query \
   "UPDATE wp_rfq_sessions SET status='submitted' WHERE session_id='${SID}';" >/dev/null
 assert_status "submitted session rejected" "403" "$(api_post "/sessions/${SID}/upload-urls" "${auth[@]}" \
   -d '{"part_id":"55555555-5555-4555-8555-555555555555","file_type":"part","filename":"a.step","content_type":"application/octet-stream"}')"
 
-echo "8. Regression — refresh + unimplemented routes"
+echo "9. Regression — refresh, draft autosave, and submit stub"
 refresh="$(api_post "/sessions/${OTHER_SID}/refresh" -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 assert_status "refresh still works" "200" "$refresh"
-assert_status "draft still 501" "501" "$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
-  -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)" -w "\n__HTTP__:%{http_code}")"
+draft="$(curl -sS -X PUT "${REST}/sessions/${OTHER_SID}/draft" \
+  -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)" \
+  -H "Content-Type: application/json" \
+  -d "{\"session_id\":\"${OTHER_SID}\",\"contact\":{\"first_name\":\"Jane\",\"last_name\":\"Smith\",\"email\":\"jane@example.com\"},\"parts\":[],\"global\":{\"nda_required\":false}}" \
+  -w "\n__HTTP__:%{http_code}")"
+assert_status "draft autosave" "200" "$draft"
 assert_status "submit still 501" "501" "$(api_post "/sessions/${OTHER_SID}/submit" \
   -H "Authorization: Bearer $(json_field "$(body_only "$OTHER")" token)")"
 

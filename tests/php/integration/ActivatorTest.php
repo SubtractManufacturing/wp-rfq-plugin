@@ -50,6 +50,7 @@ class ActivatorTest extends TestCase
                 'created_at',
                 'updated_at',
                 'submitted_at',
+                'draft_json',
             ],
             $this->get_session_column_names()
         );
