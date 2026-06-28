@@ -26,7 +26,20 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
   await page.route("https://wp.test/wp-json/rfq/v1/sessions/session-1/upload-urls", (route) =>
     route.fulfill({ status: 200, body: JSON.stringify({ upload_url: "https://s3.test/part", file_key: "intake/session-1/parts/file.step" }) }),
   );
-  await page.route("https://s3.test/part", (route) => route.fulfill({ status: 200, body: "" }));
+  await page.route("https://s3.test/part", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "PUT, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+      return;
+    }
+    await route.fulfill({ status: 200, body: "" });
+  });
   await page.route("https://wp.test/wp-json/rfq/v1/sessions/session-1/draft", (route) =>
     route.fulfill({ status: 200, body: JSON.stringify({ saved: true }) }),
   );
@@ -44,7 +57,7 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
     mimeType: "application/octet-stream",
     buffer: Buffer.from("cad"),
   });
-  await expect(page.getByText("Uploaded: part.step")).toBeVisible();
+  await expect(page.getByText(/Uploaded: part\.step/i)).toBeVisible();
   await page.getByRole("button", { name: "Continue to part details" }).click();
   await page.getByLabel("Material").fill("1018 Steel");
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
