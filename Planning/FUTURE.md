@@ -22,10 +22,6 @@ Enable collection of `job_title` in Step 1 UI. Schema and API already accept the
 
 Generate, send, or collect e-signatures for NDAs when the customer checks "Treat as NDA".
 
-## International phone numbers
-
-Full E.164 collection in UI (country selector, variable length). V1 schema already includes `phone_country_code` for migration path.
-
 ## Email verification (magic links)
 
 Require email verification via magic link before submit or file upload if bot abuse becomes a problem.

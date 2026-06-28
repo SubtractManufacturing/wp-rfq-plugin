@@ -5,7 +5,7 @@ Public-facing Request for Quote submission on the company WordPress site. Custom
 ## Language
 
 **Intake Session**:
-An anonymous, in-browser working period for one RFQ attempt, identified by a `session_id` and scoped JWT. It exists from form load until the customer submits, abandons, or refreshes the page.
+An anonymous, in-browser working period for one RFQ attempt, identified by a `session_id` and scoped JWT after the customer completes Step 1 and session creation succeeds. Before that, contact fields exist only in React state. The session ends when the customer submits, abandons, or refreshes the page.
 _Avoid_: Draft, visit, form session
 
 **Autosave Draft**:
@@ -17,7 +17,7 @@ An Intake Session known to no longer be active and not expected to produce a Rec
 _Avoid_: Failed submission, deleted RFQ, expired receipt
 
 **Warm Lead**:
-Business shorthand for contact information captured when the customer completes Step 1 but does not submit the RFQ. This is not a CRM object or workflow state; it is simply evidence that someone entered contact information while starting a quote attempt. Required: first name, last name, email. Optional: company, phone (10-digit US/CA national number with country code metadata). Same field set as manifest `contact`.
+Business shorthand for contact information captured when the customer completes Step 1 but does not submit the RFQ. This is not a CRM object or workflow state; it is simply evidence that someone entered contact information while starting a quote attempt. Required: first name, last name, email. Optional: company, phone (international — national digits plus country calling code, validated with libphonenumber). Same field set as manifest `contact`.
 _Avoid_: CRM lead, sales pipeline stage, lead status
 
 **Contact**:

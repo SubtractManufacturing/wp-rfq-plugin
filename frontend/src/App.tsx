@@ -12,13 +12,9 @@ import { StepGlobal } from "./steps/StepGlobal";
 import { StepPartMeta } from "./steps/StepPartMeta";
 import { StepReview } from "./steps/StepReview";
 import { StepUploads } from "./steps/StepUploads";
-import type { SessionResponse } from "./types/api";
 import type { RfqFormConfig } from "./types/config";
 
-type StartupState =
-  | { status: "loading" }
-  | { status: "fallback" }
-  | { status: "ready"; sessionId: string; token: string };
+type StartupState = { status: "loading" } | { status: "fallback" } | { status: "ready" };
 
 export function App({
   config,
@@ -41,12 +37,7 @@ export function App({
           fetchImpl,
           signal: controller.signal,
         });
-        const session = await apiFetch<SessionResponse>("/sessions", {
-          method: "POST",
-          restBase: config.restBase,
-          fetchImpl,
-        });
-        setStartup({ status: "ready", sessionId: session.session_id, token: session.token });
+        setStartup({ status: "ready" });
       } catch {
         setStartup({ status: "fallback" });
       } finally {
@@ -70,13 +61,13 @@ export function App({
   }
 
   return (
-    <FormProvider config={config} sessionId={startup.sessionId} token={startup.token}>
+    <FormProvider config={config}>
       <FormShell fetchImpl={fetchImpl} />
     </FormProvider>
   );
 }
 
-function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
+export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
   const { receiptNumber, setToken, setTokenWarning, token, sessionId, step } = useForm();
   useJwtRefresh({ token, sessionId, onToken: setToken, onWarning: setTokenWarning });
   useAutosave({ fetchImpl });

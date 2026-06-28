@@ -11,12 +11,16 @@ export function useJwtRefresh({
   onToken,
   onWarning,
 }: {
-  token: string;
-  sessionId: string;
+  token: string | null;
+  sessionId: string | null;
   onToken: (token: string) => void;
   onWarning: (warning: boolean) => void;
 }) {
   useEffect(() => {
+    if (!token || !sessionId) {
+      return undefined;
+    }
+
     const exp = getJwtExpiration(token);
     if (!exp) {
       return undefined;

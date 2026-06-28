@@ -1,23 +1,81 @@
-export function digitsOnly(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 10);
+import {
+  AsYouType,
+  type CountryCode,
+  getCountries,
+  getCountryCallingCode,
+  isValidPhoneNumber,
+  parsePhoneNumberFromString,
+} from "libphonenumber-js";
+
+export type { CountryCode };
+
+export interface CountryOption {
+  code: CountryCode;
+  label: string;
+  callingCode: string;
 }
 
-export function formatPhone(value: string): string {
-  const digits = digitsOnly(value);
-  if (digits.length <= 3) {
-    return digits;
-  }
-  if (digits.length <= 6) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  }
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+const regionDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+export function getCountryOptions(): CountryOption[] {
+  return getCountries()
+    .map((code) => ({
+      code,
+      label: regionDisplayNames.of(code) ?? code,
+      callingCode: getCountryCallingCode(code),
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
 }
 
-export function normalizePhone(value: string): { phone: string | null; phone_country_code: "1" | null } {
-  const rawDigits = value.replace(/\D/g, "");
-  const digits = rawDigits.length === 11 && rawDigits.startsWith("1") ? rawDigits.slice(1) : digitsOnly(value);
-  if (digits === "") {
+export function formatPhoneDisplay(value: string, country: CountryCode): string {
+  if (value.trim() === "") {
+    return "";
+  }
+
+  return new AsYouType(country).input(value);
+}
+
+export function getPhoneValidationError(display: string, country: CountryCode): string | null {
+  if (display.trim() === "") {
+    return null;
+  }
+
+  const parsed = parsePhoneNumberFromString(display, country);
+  if (!parsed || !isValidPhoneNumber(parsed.number, country)) {
+    return "Enter a valid phone number for the selected country.";
+  }
+
+  return null;
+}
+
+export function normalizePhone(
+  display: string,
+  country: CountryCode,
+): { phone: string | null; phone_country_code: string | null } {
+  if (display.trim() === "") {
     return { phone: null, phone_country_code: null };
   }
-  return { phone: digits, phone_country_code: "1" };
+
+  const parsed = parsePhoneNumberFromString(display, country);
+  if (!parsed || !isValidPhoneNumber(parsed.number, country)) {
+    return { phone: null, phone_country_code: null };
+  }
+
+  return {
+    phone: parsed.nationalNumber,
+    phone_country_code: String(parsed.countryCallingCode),
+  };
+}
+
+export function formatPhoneSummary(display: string, country: CountryCode): string {
+  const normalized = normalizePhone(display, country);
+  if (!normalized.phone || !normalized.phone_country_code) {
+    return display;
+  }
+
+  if (normalized.phone_country_code === "1" && normalized.phone.length === 10) {
+    return `+1 (${normalized.phone.slice(0, 3)}) ${normalized.phone.slice(3, 6)}-${normalized.phone.slice(6)}`;
+  }
+
+  return `+${normalized.phone_country_code} ${normalized.phone}`;
 }

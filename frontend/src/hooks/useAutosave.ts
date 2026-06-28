@@ -20,6 +20,10 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
   const previousStepRef = useRef<string | null>(null);
 
   const saveDraft = useCallback(async () => {
+    if (!sessionId || !token) {
+      return;
+    }
+
     setDraftStatus("saving");
     try {
       await apiFetch(`/sessions/${sessionId}/draft`, {
@@ -45,7 +49,7 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
   }, [contact, fetchImpl, global, parts, sessionId, setDraftStatus, token]);
 
   useEffect(() => {
-    if (tokenWarning) {
+    if (!sessionId || !token || tokenWarning) {
       return undefined;
     }
 
@@ -62,5 +66,5 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
     }, AUTOSAVE_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [contact, global, parts, saveDraft, step, tokenWarning]);
+  }, [contact, global, parts, saveDraft, sessionId, step, token, tokenWarning]);
 }

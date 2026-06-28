@@ -1,8 +1,13 @@
 import type { ContactState, GlobalState, LeadTimePreference, PartRow, RfqManifest } from "../types/manifest";
-import { normalizePhone } from "./phone";
+import { getPhoneValidationError, normalizePhone } from "./phone";
 
 export function buildManifest(sessionId: string, contact: ContactState, parts: PartRow[], global: GlobalState): RfqManifest {
-  const phone = normalizePhone(contact.phone);
+  const phoneError = getPhoneValidationError(contact.phone, contact.phone_country);
+  const normalizedPhone =
+    phoneError === null && contact.phone.trim() !== ""
+      ? normalizePhone(contact.phone, contact.phone_country)
+      : { phone: null, phone_country_code: null };
+
   return {
     session_id: sessionId,
     contact: {
@@ -10,8 +15,8 @@ export function buildManifest(sessionId: string, contact: ContactState, parts: P
       last_name: contact.last_name,
       email: contact.email,
       company: contact.company.trim() === "" ? null : contact.company,
-      phone: phone.phone,
-      phone_country_code: phone.phone_country_code,
+      phone: normalizedPhone.phone,
+      phone_country_code: normalizedPhone.phone_country_code,
       job_title: null,
     },
     parts: parts

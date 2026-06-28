@@ -37,7 +37,7 @@ class RFQ_Activator {
             contact_last_name varchar(255) DEFAULT NULL,
             contact_email varchar(255) DEFAULT NULL,
             contact_company varchar(255) DEFAULT NULL,
-            contact_phone char(10) DEFAULT NULL,
+            contact_phone varchar(15) DEFAULT NULL,
             contact_phone_country_code varchar(4) DEFAULT NULL,
             contact_job_title varchar(255) DEFAULT NULL,
             shipping_postal_code varchar(16) DEFAULT NULL,

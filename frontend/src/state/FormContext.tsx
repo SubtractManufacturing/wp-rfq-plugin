@@ -10,8 +10,8 @@ import {
 } from "../types/manifest";
 
 export interface FormState {
-  token: string;
-  sessionId: string;
+  token: string | null;
+  sessionId: string | null;
   step: StepId;
   contact: ContactState;
   contactSaved: boolean;
@@ -26,6 +26,7 @@ export interface FormState {
 interface FormContextValue extends FormState {
   config: RfqFormConfig;
   setToken: (token: string) => void;
+  setSession: (sessionId: string, token: string) => void;
   setStep: (step: StepId) => void;
   setContact: (contact: ContactState) => void;
   setContactSaved: (saved: boolean) => void;
@@ -42,15 +43,16 @@ const FormContext = createContext<FormContextValue | null>(null);
 export function FormProvider({
   children,
   config,
-  sessionId,
-  token,
+  sessionId: initialSessionId = null,
+  token: initialToken = null,
 }: {
   children: ReactNode;
   config: RfqFormConfig;
-  sessionId: string;
-  token: string;
+  sessionId?: string | null;
+  token?: string | null;
 }) {
-  const [currentToken, setToken] = useState(token);
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
+  const [currentToken, setToken] = useState<string | null>(initialToken);
   const [step, setStep] = useState<StepId>("contact");
   const [contact, setContact] = useState<ContactState>(emptyContact);
   const [contactSaved, setContactSaved] = useState(false);
@@ -60,6 +62,11 @@ export function FormProvider({
   const [tokenWarning, setTokenWarning] = useState(false);
   const [draftStatus, setDraftStatus] = useState<FormState["draftStatus"]>("idle");
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
+
+  const setSession = (nextSessionId: string, nextToken: string) => {
+    setSessionId(nextSessionId);
+    setToken(nextToken);
+  };
 
   const value = useMemo<FormContextValue>(
     () => ({
@@ -76,6 +83,7 @@ export function FormProvider({
       draftStatus,
       receiptNumber,
       setToken,
+      setSession,
       setStep,
       setContact,
       setContactSaved,

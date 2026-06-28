@@ -1,32 +1,60 @@
 import { useState } from "react";
 import { apiFetch } from "../api/client";
+import { PhoneField } from "../components/PhoneField";
 import { FieldError } from "../components/FieldError";
-import { formatPhone, normalizePhone } from "../lib/phone";
+import { getPhoneValidationError, normalizePhone } from "../lib/phone";
+import { ensureSession } from "../lib/session";
 import { useForm } from "../state/FormContext";
 
 export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) {
-  const { contact, setContact, setContactSaved, setStep, sessionId, token } = useForm();
+  const {
+    config,
+    contact,
+    setContact,
+    setContactSaved,
+    setSession,
+    setStep,
+    sessionId,
+    token,
+  } = useForm();
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSaving, setContactSaving] = useState(false);
+  const [startingSession, setStartingSession] = useState(false);
 
   const update = (field: keyof typeof contact, value: string) => {
     setContact({
       ...contact,
-      [field]: field === "phone" ? formatPhone(value) : value,
+      [field]: value,
     });
     setContactSaved(false);
     setContactError(null);
   };
 
   const saveContact = async ({ advance }: { advance: boolean }) => {
-    const normalizedPhone = normalizePhone(contact.phone);
+    const phoneError = getPhoneValidationError(contact.phone, contact.phone_country);
+    if (phoneError) {
+      setContactError(phoneError);
+      return;
+    }
+
+    const normalizedPhone = normalizePhone(contact.phone, contact.phone_country);
+    const needsSession = !sessionId || !token;
     setContactSaving(true);
+    setStartingSession(needsSession);
     setContactError(null);
 
     try {
-      await apiFetch(`/sessions/${sessionId}/contact`, {
-        method: "PATCH",
+      const activeSession = await ensureSession({
+        restBase: config.restBase,
+        fetchImpl,
+        sessionId,
         token,
+        setSession,
+      });
+
+      await apiFetch(`/sessions/${activeSession.sessionId}/contact`, {
+        method: "PATCH",
+        token: activeSession.token,
         fetchImpl,
         body: {
           first_name: contact.first_name,
@@ -46,10 +74,18 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
       setContactError(error instanceof Error ? error.message : "Could not save contact information.");
     } finally {
       setContactSaving(false);
+      setStartingSession(false);
     }
   };
 
-  const requiredMissing = contact.first_name.trim() === "" || contact.last_name.trim() === "" || contact.email.trim() === "";
+  const requiredMissing =
+    contact.first_name.trim() === "" || contact.last_name.trim() === "" || contact.email.trim() === "";
+
+  const continueLabel = contactSaving
+    ? startingSession
+      ? "Starting..."
+      : "Saving..."
+    : "Continue to uploads";
 
   return (
     <section className="space-y-4">
@@ -80,11 +116,6 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
           Email
           <input
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            onBlur={() => {
-              if (!requiredMissing) {
-                void saveContact({ advance: false });
-              }
-            }}
             onChange={(event) => update("email", event.target.value)}
             required
             type="email"
@@ -99,16 +130,21 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
             value={contact.company}
           />
         </label>
-        <label className="block text-sm font-medium text-slate-800">
+        <label className="block text-sm font-medium text-slate-800 sm:col-span-2">
           Phone
-          <span className="mt-1 flex items-center gap-2">
-            <span className="text-sm text-slate-500">+1</span>
-            <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
-              onChange={(event) => update("phone", event.target.value)}
-              value={contact.phone}
-            />
-          </span>
+          <PhoneField
+            onChange={({ phone, phoneCountry }) => {
+              setContact({
+                ...contact,
+                phone,
+                phone_country: phoneCountry,
+              });
+              setContactSaved(false);
+              setContactError(null);
+            }}
+            phone={contact.phone}
+            phoneCountry={contact.phone_country}
+          />
         </label>
       </div>
       <FieldError message={requiredMissing ? "First name, last name, and email are required." : contactError} />
@@ -133,7 +169,7 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
         }}
         type="button"
       >
-        {contactSaving ? "Saving..." : "Continue to uploads"}
+        {continueLabel}
       </button>
     </section>
   );

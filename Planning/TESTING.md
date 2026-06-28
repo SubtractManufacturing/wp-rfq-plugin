@@ -292,7 +292,7 @@ Once M1 scaffold exists, target these classes under `tests/php/`:
 |------------|-------|--------|
 | `ManifestValidatorTest` | Valid manifest; missing email; custom tolerance without detail; qty 0; 21 parts; past delivery date; invalid postal code | AC-WP-016, AC-WP-017 |
 | `PostalCodeTest` | US 5/9 digit; CA format; rejects garbage | AC-WP-017 |
-| `PhoneValidatorTest` | 10 digits pass; 9 fail; phone requires country code 1 | AC-WP-017 |
+| `ContactValidatorTest` | Valid US/UK numbers; invalid digits; phone requires country code; blank phone clears code; libphonenumber rejects invalid combinations | AC-WP-017 |
 | `ReceiptNumberTest` | Format `RFQ-YYYYMMDD-000001`; daily rollover | AC-WP-022 |
 | `JwtServiceTest` | Sign/verify; expiry; session_id claim; wrong session rejected | AC-WP-006 area |
 | `S3KeyBuilderTest` | Sanitization; prefix; UUID suffix; rejects client-supplied keys | AC-WP-024 |

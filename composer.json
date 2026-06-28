@@ -6,7 +6,8 @@
   "require": {
     "php": ">=8.3",
     "aws/aws-sdk-php": "^3.386",
-    "firebase/php-jwt": "^7.1"
+    "firebase/php-jwt": "^7.1",
+    "giggsey/libphonenumber-for-php": "^9.0"
   },
   "require-dev": {
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
