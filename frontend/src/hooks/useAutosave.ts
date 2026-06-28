@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { apiFetch } from "../api/client";
 import { buildDraftPayload } from "../lib/draft";
 import { useForm } from "../state/FormContext";
@@ -17,19 +17,9 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
     tokenWarning,
   } = useForm();
 
-  useEffect(() => {
-    if (tokenWarning) {
-      return undefined;
-    }
+  const previousStepRef = useRef<string | null>(null);
 
-    const timer = window.setTimeout(() => {
-      void saveDraft();
-    }, AUTOSAVE_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [contact, global, parts, step, tokenWarning]);
-
-  async function saveDraft() {
+  const saveDraft = useCallback(async () => {
     setDraftStatus("saving");
     try {
       await apiFetch(`/sessions/${sessionId}/draft`, {
@@ -52,5 +42,25 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
         setDraftStatus("error");
       }
     }
-  }
+  }, [contact, fetchImpl, global, parts, sessionId, setDraftStatus, token]);
+
+  useEffect(() => {
+    if (tokenWarning) {
+      return undefined;
+    }
+
+    if (previousStepRef.current !== null && previousStepRef.current !== step) {
+      previousStepRef.current = step;
+      void saveDraft();
+      return undefined;
+    }
+
+    previousStepRef.current = step;
+
+    const timer = window.setTimeout(() => {
+      void saveDraft();
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [contact, global, parts, saveDraft, step, tokenWarning]);
 }
