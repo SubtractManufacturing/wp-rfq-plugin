@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { apiFetch } from "../api/client";
 import { FieldError } from "../components/FieldError";
 import { formatPhone, normalizePhone } from "../lib/phone";
@@ -5,6 +6,8 @@ import { useForm } from "../state/FormContext";
 
 export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) {
   const { contact, setContact, setContactSaved, setStep, sessionId, token } = useForm();
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactSaving, setContactSaving] = useState(false);
 
   const update = (field: keyof typeof contact, value: string) => {
     setContact({
@@ -12,26 +15,38 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
       [field]: field === "phone" ? formatPhone(value) : value,
     });
     setContactSaved(false);
+    setContactError(null);
   };
 
-  const saveContact = async () => {
+  const saveContact = async ({ advance }: { advance: boolean }) => {
     const normalizedPhone = normalizePhone(contact.phone);
-    await apiFetch(`/sessions/${sessionId}/contact`, {
-      method: "PATCH",
-      token,
-      fetchImpl,
-      body: {
-        first_name: contact.first_name,
-        last_name: contact.last_name,
-        email: contact.email,
-        company: contact.company.trim() === "" ? null : contact.company,
-        phone: normalizedPhone.phone,
-        phone_country_code: normalizedPhone.phone_country_code,
-        job_title: null,
-      },
-    });
-    setContactSaved(true);
-    setStep("uploads");
+    setContactSaving(true);
+    setContactError(null);
+
+    try {
+      await apiFetch(`/sessions/${sessionId}/contact`, {
+        method: "PATCH",
+        token,
+        fetchImpl,
+        body: {
+          first_name: contact.first_name,
+          last_name: contact.last_name,
+          email: contact.email,
+          company: contact.company.trim() === "" ? null : contact.company,
+          phone: normalizedPhone.phone,
+          phone_country_code: normalizedPhone.phone_country_code,
+          job_title: null,
+        },
+      });
+      setContactSaved(true);
+      if (advance) {
+        setStep("uploads");
+      }
+    } catch (error) {
+      setContactError(error instanceof Error ? error.message : "Could not save contact information.");
+    } finally {
+      setContactSaving(false);
+    }
   };
 
   const requiredMissing = contact.first_name.trim() === "" || contact.last_name.trim() === "" || contact.email.trim() === "";
@@ -67,7 +82,7 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
             onBlur={() => {
               if (!requiredMissing) {
-                void saveContact();
+                void saveContact({ advance: false });
               }
             }}
             onChange={(event) => update("email", event.target.value)}
@@ -96,16 +111,29 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
           </span>
         </label>
       </div>
-      <FieldError message={requiredMissing ? "First name, last name, and email are required." : null} />
+      <FieldError message={requiredMissing ? "First name, last name, and email are required." : contactError} />
+      {contactError ? (
+        <button
+          className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700"
+          disabled={contactSaving || requiredMissing}
+          onClick={() => {
+            void saveContact({ advance: false });
+          }}
+          type="button"
+        >
+          Retry save
+        </button>
+      ) : null}
       <button
         className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
-        disabled={requiredMissing}
+        disabled={requiredMissing || contactSaving}
+        onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
-          void saveContact();
+          void saveContact({ advance: true });
         }}
         type="button"
       >
-        Continue to uploads
+        {contactSaving ? "Saving..." : "Continue to uploads"}
       </button>
     </section>
   );
