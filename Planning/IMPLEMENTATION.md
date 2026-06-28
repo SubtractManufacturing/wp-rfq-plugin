@@ -672,3 +672,5 @@ Manual staging checklists and pre-production smoke tests: [TESTING.md §11](TEST
 | Pre-release | — | Staging sign-off | Full suite + Supabase/LocalStack E2E | All AC-WP-* |
 
 Ship M3 to staging before investing in React polish — proves durability story early. See [TESTING.md §4](TESTING.md) for gate details.
+
+**Pre-release follow-up** (ops, CI, polish after Phase 6 UI): [PRE-RELEASE-BACKLOG.md](PRE-RELEASE-BACKLOG.md).

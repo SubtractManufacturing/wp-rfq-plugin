@@ -44,13 +44,19 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
     mimeType: "application/octet-stream",
     buffer: Buffer.from("cad"),
   });
-  await expect(page.getByText("Uploaded")).toBeVisible();
+  await expect(page.getByText("Uploaded: part.step")).toBeVisible();
   await page.getByRole("button", { name: "Continue to part details" }).click();
   await page.getByLabel("Material").fill("1018 Steel");
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
   await page.getByLabel("Required delivery date").fill("2026-08-01");
   await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByLabel("Shipping ZIP or postal code").fill("90210");
+  await page.getByRole("button", { name: "Continue to review" }).click();
+  await page.getByRole("button", { name: "Edit" }).first().click();
+  await expect(page.getByRole("heading", { name: "Contact information" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue to uploads" }).click();
+  await page.getByRole("button", { name: "Continue to part details" }).click();
+  await page.getByRole("button", { name: "Continue to RFQ details" }).click();
   await page.getByRole("button", { name: "Continue to review" }).click();
   await page.getByRole("button", { name: "Submit RFQ" }).click();
 
