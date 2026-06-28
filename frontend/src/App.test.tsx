@@ -16,6 +16,14 @@ const config: RfqFormConfig = {
 };
 
 describe("App startup", () => {
+  it("shows a loading message while the health check is in flight", () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => undefined));
+
+    render(<App config={config} fetchImpl={fetchMock} />);
+
+    expect(screen.getByText(/loading rfq form/i)).toBeInTheDocument();
+  });
+
   // @covers AC-WP-009
   it("renders the contact step after a healthy backend without creating a session", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ status: "ok" })));
@@ -47,11 +55,25 @@ describe("App startup", () => {
 
   it("aborts the health check when the app unmounts during startup", () => {
     const abortSpy = vi.spyOn(AbortController.prototype, "abort");
+    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
     const fetchMock = vi.fn(() => new Promise<Response>(() => undefined));
     const { unmount } = render(<App config={config} fetchImpl={fetchMock} />);
     unmount();
     expect(abortSpy).toHaveBeenCalled();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
     abortSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("clears the health-check timeout after the request completes", async () => {
+    const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "ok" })));
+
+    render(<App config={config} fetchImpl={fetchMock} />);
+
+    await screen.findByRole("heading", { name: /contact information/i });
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
   });
 
   it("re-runs startup when the REST base changes", async () => {

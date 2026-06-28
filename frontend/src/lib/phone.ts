@@ -15,9 +15,11 @@ export interface CountryOption {
   callingCode: string;
 }
 
-const regionDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
+const defaultRegionDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
 
-export function getCountryOptions(): CountryOption[] {
+export function createCountryOptions(
+  regionDisplayNames: Pick<Intl.DisplayNames, "of"> = defaultRegionDisplayNames,
+): CountryOption[] {
   return getCountries()
     .map((code) => ({
       code,
@@ -25,6 +27,10 @@ export function getCountryOptions(): CountryOption[] {
       callingCode: getCountryCallingCode(code),
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
+}
+
+export function getCountryOptions(): CountryOption[] {
+  return createCountryOptions();
 }
 
 export function formatPhoneDisplay(value: string, country: CountryCode): string {

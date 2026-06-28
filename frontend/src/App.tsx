@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import { SuccessView } from "./SuccessView";
-import { apiFetch } from "./api/client";
 import { AirtableFallback } from "./components/AirtableFallback";
 import { DraftSaveIndicator } from "./components/DraftSaveIndicator";
 import { Stepper } from "./components/Stepper";
+import { useAppHealthStartup } from "./hooks/useAppHealthStartup";
 import { useAutosave } from "./hooks/useAutosave";
 import { useJwtRefresh } from "./hooks/useJwtRefresh";
 import { FormProvider, useForm } from "./state/FormContext";
@@ -14,8 +13,6 @@ import { StepReview } from "./steps/StepReview";
 import { StepUploads } from "./steps/StepUploads";
 import type { RfqFormConfig } from "./types/config";
 
-type StartupState = { status: "loading" } | { status: "fallback" } | { status: "ready" };
-
 export function App({
   config,
   fetchImpl = fetch,
@@ -23,34 +20,7 @@ export function App({
   config: RfqFormConfig;
   fetchImpl?: typeof fetch;
 }) {
-  const [startup, setStartup] = useState<StartupState>({ status: "loading" });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 3000);
-
-    async function start() {
-      try {
-        await apiFetch<{ status: string }>("/health", {
-          method: "GET",
-          restBase: config.restBase,
-          fetchImpl,
-          signal: controller.signal,
-        });
-        setStartup({ status: "ready" });
-      } catch {
-        setStartup({ status: "fallback" });
-      } finally {
-        window.clearTimeout(timer);
-      }
-    }
-
-    void start();
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [config.restBase, fetchImpl]);
+  const startup = useAppHealthStartup({ restBase: config.restBase, fetchImpl });
 
   if (startup.status === "fallback") {
     return <AirtableFallback src={config.airtableEmbedUrl} />;

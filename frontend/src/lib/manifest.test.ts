@@ -107,4 +107,21 @@ describe("buildManifest", () => {
     );
     expect(customOnly.parts[0]?.tolerance_detail).toBe("±0.001 in");
   });
+
+  it("defaults missing part file keys to an empty string in the manifest", () => {
+    const partWithoutKey: PartRow = {
+      ...confirmedPart,
+      partFile: {
+        filename: "file.step",
+        content_type: "application/octet-stream",
+        status: "confirmed",
+        progress: 100,
+      } as PartRow["partFile"],
+    };
+
+    const manifest = buildManifest("session", emptyContact, [partWithoutKey], emptyGlobal);
+
+    expect(manifest.parts).toHaveLength(1);
+    expect(manifest.parts[0]?.part_file_key).toBe("");
+  });
 });

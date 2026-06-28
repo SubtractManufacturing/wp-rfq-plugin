@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createCountryOptions,
   formatPhoneDisplay,
   formatPhoneSummary,
   getCountryOptions,
@@ -56,6 +57,14 @@ describe("phone helpers", () => {
     expect(options.some((option) => option.code === "US" && option.callingCode === "1")).toBe(true);
     expect(options.some((option) => option.code === "GB" && option.callingCode === "44")).toBe(true);
     expect(options[0]?.label.localeCompare(options[1]?.label ?? "") ?? 0).toBeLessThanOrEqual(0);
+  });
+
+  it("falls back to the ISO code when a region label is unavailable", () => {
+    const options = createCountryOptions({
+      of: () => undefined,
+    });
+
+    expect(options.some((option) => option.code === "US" && option.label === "US")).toBe(true);
   });
 
   it("rejects invalid phone numbers without a parsed value", () => {

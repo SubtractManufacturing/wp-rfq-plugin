@@ -52,6 +52,7 @@ describe("StepContact", () => {
     await user.type(screen.getByLabelText(/first name/i), "Jane");
     await user.type(screen.getByLabelText(/last name/i), "Smith");
     await user.type(screen.getByLabelText(/email/i), "jane@example.com");
+    await user.type(screen.getByLabelText(/company/i), "Acme Corp");
     await user.selectOptions(screen.getByRole("combobox", { name: "Country code" }), "GB");
     await user.type(screen.getByRole("textbox", { name: "Phone" }), "07911123456");
     await user.click(screen.getByRole("button", { name: /continue to uploads/i }));
@@ -63,6 +64,7 @@ describe("StepContact", () => {
     const contactCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/contact"));
     expect(contactCall?.[1]?.body).toContain("7911123456");
     expect(contactCall?.[1]?.body).toContain('"phone_country_code":"44"');
+    expect(contactCall?.[1]?.body).toContain('"company":"Acme Corp"');
   });
 
   it("sends null company values for blank optional input", async () => {
