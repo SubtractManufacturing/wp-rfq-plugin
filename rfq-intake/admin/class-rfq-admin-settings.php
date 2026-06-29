@@ -157,13 +157,6 @@ class RFQ_Admin_Settings {
     }
 
     public static function register_defaults_settings(): void {
-        add_settings_section(
-            'rfq_intake_catalog',
-            __( 'Material catalog', 'rfq-intake' ),
-            [ self::class, 'render_catalog_section' ],
-            self::DEFAULTS_PAGE_SLUG
-        );
-
         register_setting(
             self::SETTINGS_GROUP,
             'rfq_material_overrides',
@@ -171,14 +164,6 @@ class RFQ_Admin_Settings {
 				'type'              => 'string',
 				'sanitize_callback' => [ self::class, 'sanitize_material_overrides' ],
 			]
-        );
-        add_settings_field(
-            'rfq_material_overrides',
-            __( 'Overrides JSON', 'rfq-intake' ),
-            [ self::class, 'render_material_overrides_field' ],
-            self::DEFAULTS_PAGE_SLUG,
-            'rfq_intake_catalog',
-            [ 'option' => 'rfq_material_overrides' ]
         );
     }
 
@@ -366,40 +351,11 @@ class RFQ_Admin_Settings {
     }
 
     public static function render_catalog_section(): void {
+        echo '<h2>' . esc_html__( 'Material catalog', 'rfq-intake' ) . '</h2>';
         echo '<p>' . esc_html__(
             'Customize material suggestions shown in the RFQ form. Changes apply without redeploying the plugin.',
             'rfq-intake'
         ) . '</p>';
-    }
-
-    /**
-     * @param array{option: string} $args
-     */
-    public static function render_material_overrides_field( array $args ): void {
-        $option = $args['option'];
-        $value  = get_option( $option, '' );
-
-        if ( is_string( $value ) && $value !== '' ) {
-            $decoded = json_decode( $value, true );
-
-            if ( is_array( $decoded ) ) {
-                $value = RFQ_Material_Catalog::encode_overrides( $decoded );
-            }
-        }
-
-        printf(
-            '<textarea class="large-text code rfq-catalog-overrides-json" rows="10" id="%1$s" name="%1$s">%2$s</textarea>',
-            esc_attr( $option ),
-            esc_textarea( is_string( $value ) ? $value : '' )
-        );
-        echo '<p class="description">' . esc_html__(
-            'Advanced overrides JSON. Editing this field updates the table above automatically, and vice versa.',
-            'rfq-intake'
-        ) . '</p>';
-        echo '<p class="rfq-catalog-json-error notice notice-error hidden"><strong>' . esc_html__(
-            'Invalid JSON',
-            'rfq-intake'
-        ) . '</strong> <span></span></p>';
     }
 
     /**
