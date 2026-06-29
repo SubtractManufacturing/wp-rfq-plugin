@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { dropdownMaterials, searchMaterials } from "../lib/materials";
+import { MaterialField } from "../components/MaterialField";
 import { useForm } from "../state/FormContext";
 import type { PartRow, Tolerance } from "../types/manifest";
 
@@ -60,25 +60,16 @@ export function StepPartMeta() {
         <h1 className="text-2xl font-semibold text-slate-950">Part details</h1>
         <p className="mt-2 text-sm text-slate-600">Add material, tolerance, and quantity for each uploaded part.</p>
       </div>
-      {parts.map((part, index) => {
-        const suggestions = searchMaterials(part.material, config.materials);
-        return (
+      {parts.map((part, index) => (
           <div className="rounded-lg border border-slate-200 p-4" key={part.part_id}>
             <h2 className="font-medium text-slate-900">Part {index + 1}</h2>
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Material
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                list={`materials-${part.part_id}`}
-                onChange={(event) => updatePart(part.part_id, { material: event.target.value })}
-                value={part.material}
-              />
-              <datalist id={`materials-${part.part_id}`}>
-                {[...dropdownMaterials(config.materials), ...suggestions].map((label) => (
-                  <option key={label} value={label} />
-                ))}
-              </datalist>
-            </label>
+            <MaterialField
+              id={`material-${part.part_id}`}
+              label="Material"
+              materials={config.materials}
+              onChange={(material) => updatePart(part.part_id, { material })}
+              value={part.material}
+            />
             <label className="mt-3 block text-sm font-medium text-slate-800">
               Tolerance
               <select
@@ -143,8 +134,7 @@ export function StepPartMeta() {
               />
             </label>
           </div>
-        );
-      })}
+      ))}
       <button
         className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
         disabled={!canContinue}

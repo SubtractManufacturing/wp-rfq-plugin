@@ -17,3 +17,9 @@ export function searchMaterials(query: string, materials: MaterialOption[]): str
     })
     .map((material) => material.label);
 }
+
+export function materialSuggestions(query: string, materials: MaterialOption[]): string[] {
+  const labels = query.trim() === "" ? dropdownMaterials(materials) : searchMaterials(query, materials);
+
+  return [...new Set(labels)];
+}
