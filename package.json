@@ -24,7 +24,7 @@
     "test:frontend": "npm --prefix frontend ci && npm --prefix frontend run lint && npm --prefix frontend run test",
     "test:e2e": "playwright test tests/e2e/specs/rfq-form.spec.ts",
     "test:a11y": "playwright test tests/e2e/specs/a11y.spec.ts",
-    "dev:restore-s3": "bash scripts/restore-dev-s3-from-env.sh",
+    "dev:ui": "npm --prefix frontend run dev",
     "qa:upload-urls": "bash scripts/qa-upload-urls.sh",
     "qa:s3-upload": "bash scripts/qa-s3-upload.sh",
     "qa:s3-spike": "bash scripts/qa-s3-spike.sh",
