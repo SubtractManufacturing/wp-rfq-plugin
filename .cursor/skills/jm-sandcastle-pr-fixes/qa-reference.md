@@ -73,7 +73,7 @@ Fork PRs from outside collaborators do not receive repository secrets.
 | `npm run webhook:mock` | Start local ERP webhook mock receiver | M3 |
 | `bash scripts/qa-shortcode.sh` | `[rfq_form]` mount + scoped asset smoke against wp-env | Phase 5 |
 | `npm run test:frontend` | Frontend lint + Vitest unit/component tests | M4–M5 |
-| `npm run dev:ui` | Vite dev server with MSW-mocked REST (no WordPress) | M4–M5 |
+| `npm run dev:ui` | Vite dev server with MSW mocks and preloaded fixture data (no WordPress) | M4–M5 |
 | `npm run test:e2e` | Playwright mocked RFQ form happy path and fallback checks | M4–M5 |
 | `npm run test:a11y` | Playwright + axe accessibility smoke | M5 |
 

@@ -1,10 +1,13 @@
 import { SuccessView } from "./SuccessView";
 import { AirtableFallback } from "./components/AirtableFallback";
+import { DevModeBanner } from "./components/DevModeBanner";
 import { DraftSaveIndicator } from "./components/DraftSaveIndicator";
 import { Stepper } from "./components/Stepper";
 import { useAppHealthStartup } from "./hooks/useAppHealthStartup";
 import { useAutosave } from "./hooks/useAutosave";
 import { useJwtRefresh } from "./hooks/useJwtRefresh";
+import { isDevFixtureMode } from "./mocks/devConfig";
+import { getDevFormBootstrap } from "./mocks/devFixture";
 import { FormProvider, useForm } from "./state/FormContext";
 import { StepContact } from "./steps/StepContact";
 import { StepGlobal } from "./steps/StepGlobal";
@@ -31,7 +34,7 @@ export function App({
   }
 
   return (
-    <FormProvider config={config}>
+    <FormProvider bootstrap={isDevFixtureMode() ? getDevFormBootstrap() : undefined} config={config}>
       <FormShell fetchImpl={fetchImpl} />
     </FormProvider>
   );
@@ -48,6 +51,7 @@ export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
 
   return (
     <div className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <DevModeBanner />
       <Stepper />
       <DraftSaveIndicator />
       {step === "contact" ? <StepContact fetchImpl={fetchImpl} /> : null}

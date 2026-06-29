@@ -1,8 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { DEV_REST_BASE } from "./devConfig";
-
-const DEV_SESSION_ID = "dev-session-1";
-const DEV_TOKEN = "dev.jwt.mock";
+import { DEV_REST_BASE, DEV_SESSION_ID, DEV_TOKEN } from "./devConfig";
 const S3_ORIGIN = "https://s3.test";
 
 function apiPath(suffix: string): string {

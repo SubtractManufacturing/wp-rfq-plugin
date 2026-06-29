@@ -2,6 +2,14 @@ import type { RfqFormConfig } from "../types/config";
 
 export const DEV_REST_BASE = "https://wp.test/wp-json/rfq/v1";
 
+export const DEV_SESSION_ID = "dev-session-1";
+
+export const DEV_TOKEN = "dev.jwt.mock";
+
+export function isDevFixtureMode(): boolean {
+  return import.meta.env.VITE_DEV_FIXTURES === "true";
+}
+
 export const devFormConfig: RfqFormConfig = {
   restBase: DEV_REST_BASE,
   nonce: "",

@@ -9,6 +9,15 @@ import {
   type StepId,
 } from "../types/manifest";
 
+interface FormBootstrap {
+  sessionId: string;
+  token: string;
+  contact: ContactState;
+  contactSaved: boolean;
+  parts: PartRow[];
+  global: GlobalState;
+}
+
 export interface FormState {
   token: string | null;
   sessionId: string | null;
@@ -43,21 +52,23 @@ const FormContext = createContext<FormContextValue | null>(null);
 export function FormProvider({
   children,
   config,
-  sessionId: initialSessionId = null,
-  token: initialToken = null,
+  bootstrap,
+  sessionId: initialSessionId = bootstrap?.sessionId ?? null,
+  token: initialToken = bootstrap?.token ?? null,
 }: {
   children: ReactNode;
   config: RfqFormConfig;
+  bootstrap?: FormBootstrap;
   sessionId?: string | null;
   token?: string | null;
 }) {
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
   const [currentToken, setToken] = useState<string | null>(initialToken);
   const [step, setStep] = useState<StepId>("contact");
-  const [contact, setContact] = useState<ContactState>(emptyContact);
-  const [contactSaved, setContactSaved] = useState(false);
-  const [parts, setParts] = useState<PartRow[]>([]);
-  const [global, setGlobal] = useState<GlobalState>(emptyGlobal);
+  const [contact, setContact] = useState<ContactState>(bootstrap?.contact ?? emptyContact);
+  const [contactSaved, setContactSaved] = useState(bootstrap?.contactSaved ?? false);
+  const [parts, setParts] = useState<PartRow[]>(bootstrap?.parts ?? []);
+  const [global, setGlobal] = useState<GlobalState>(bootstrap?.global ?? emptyGlobal);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [tokenWarning, setTokenWarning] = useState(false);
   const [draftStatus, setDraftStatus] = useState<FormState["draftStatus"]>("idle");

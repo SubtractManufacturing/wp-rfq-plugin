@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:ui": "VITE_DEV_FIXTURES=true vite",
     "build": "tsc && vite build",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run",
