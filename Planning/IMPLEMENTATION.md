@@ -124,28 +124,31 @@ Encrypt: `rfq_s3_secret_key`, `rfq_jwt_secret`, `rfq_webhook_secret`.
 
 **Step 1.3** `admin/class-rfq-admin-settings.php` + `admin/views/settings-page.php`:
 
-Register settings group `rfq_intake_settings` with fields from PRD §5.2:
+Register settings group `rfq_intake_settings` with fields from PRD §5.2. Split the settings screen into **General** and **Form defaults** tabs (`?tab=general` default, `?tab=defaults` for catalog):
 
 | Option key | Type | Notes |
 |------------|------|-------|
-| `rfq_s3_endpoint` | text | |
-| `rfq_s3_bucket` | text | |
-| `rfq_s3_access_key_id` | text | |
-| `rfq_s3_secret_key` | secret | write-only |
-| `rfq_s3_region` | text | optional |
-| `rfq_jwt_secret` | secret | write-only; auto-generate on first activation if empty |
-| `rfq_airtable_embed_url` | url | |
-| `rfq_international_rfq_email` | email | |
-| `rfq_sales_contact_email` | email | |
-| `rfq_erp_webhook_url` | url | optional |
-| `rfq_erp_webhook_secret` | secret | write-only |
-| `rfq_material_overrides` | json | optional admin JSON for catalog overrides |
+| `rfq_s3_endpoint` | text | General tab |
+| `rfq_s3_bucket` | text | General tab |
+| `rfq_s3_access_key_id` | text | General tab |
+| `rfq_s3_secret_key` | secret | write-only; General tab |
+| `rfq_s3_region` | text | optional; General tab |
+| `rfq_jwt_secret` | secret | write-only; auto-generate on first activation if empty; General tab |
+| `rfq_airtable_embed_url` | url | General tab |
+| `rfq_international_rfq_email` | email | General tab |
+| `rfq_sales_contact_email` | email | General tab |
+| `rfq_erp_webhook_url` | url | optional; General tab |
+| `rfq_erp_webhook_secret` | secret | write-only; General tab |
+| `rfq_material_overrides` | json | Form defaults tab — visual catalog editor + synced overrides JSON |
+
+Form defaults tab (`admin/views/settings-defaults-tab.php` + `admin/assets/catalog-editor.js`): table editor for shipped/custom materials (enable, rename label, add custom entries), customer-facing preview, and advanced overrides JSON kept in sync client-side. Shipped defaults: rename/disable only; custom entries: full alias/dropdown control.
 
 **Step 1.4** `includes/class-rfq-material-catalog.php`:
 
 - Load `assets/materials/default.json`
 - Merge admin overrides (disable by id, rename label, append new entries)
 - Expose `get_effective_catalog(): array` for REST bootstrap config
+- Expose `get_editor_rows()`, `build_overrides_from_rows()`, and `encode_overrides()` for the admin catalog editor
 
 Ship `default.json` with at least: 1018 Steel, 6061 Aluminum, 7075 Aluminum, 304 Stainless — include `aliases` and `show_in_dropdown` flags per PRD §3.1.7.
 
@@ -541,7 +544,10 @@ HTTP 401
 | `rfq-intake/includes/class-rfq-shortcode.php` | Create |
 | `rfq-intake/admin/class-rfq-admin-settings.php` | Create |
 | `rfq-intake/admin/class-rfq-admin-intake-list.php` | Create — read-only intake ledger |
-| `rfq-intake/admin/views/settings-page.php` | Create |
+| `rfq-intake/admin/views/settings-page.php` | Create — tabbed General + Form defaults |
+| `rfq-intake/admin/views/settings-defaults-tab.php` | Create — material catalog editor |
+| `rfq-intake/admin/assets/catalog-editor.js` | Create — UI ↔ JSON sync |
+| `rfq-intake/admin/assets/catalog-editor.css` | Create — catalog editor styles |
 | `rfq-intake/admin/views/intake-list-page.php` | Create — rows from `rfq_sessions` with raw DB status |
 | `rfq-intake/assets/materials/default.json` | Create |
 | `frontend/package.json` | Create — React, TypeScript, Vite, Tailwind |

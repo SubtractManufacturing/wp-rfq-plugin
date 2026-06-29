@@ -90,6 +90,73 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('{"disabled":[]}', $sanitized);
     }
 
+    public function test_valid_material_override_json_is_persisted(): void
+    {
+        $payload = json_encode([
+            'disabled' => ['1018-steel'],
+            'renamed' => ['6061-aluminum' => '6061-T6 Aluminum'],
+            'added' => [
+                [
+                    'id' => 'brass-360',
+                    'label' => '360 Brass',
+                    'aliases' => ['c360'],
+                    'show_in_dropdown' => true,
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $sanitized = RFQ_Admin_Settings::sanitize_material_overrides($payload);
+        update_option('rfq_material_overrides', $sanitized);
+
+        $this->assertSame($payload, get_option('rfq_material_overrides'));
+
+        $labels = array_column(RFQ_Material_Catalog::get_effective_catalog(), 'label');
+
+        $this->assertNotContains('1018 Steel', $labels);
+        $this->assertContains('6061-T6 Aluminum', $labels);
+        $this->assertContains('360 Brass', $labels);
+    }
+
+    public function test_editor_state_round_trip_produces_same_effective_catalog(): void
+    {
+        update_option(
+            'rfq_material_overrides',
+            json_encode([
+                'renamed' => ['304-stainless' => '304 SS'],
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        $rows = RFQ_Material_Catalog::get_editor_rows();
+        $overrides = RFQ_Material_Catalog::build_overrides_from_rows($rows);
+
+        $this->assertNotNull($overrides);
+
+        $encoded = RFQ_Material_Catalog::encode_overrides($overrides);
+        $sanitized = RFQ_Admin_Settings::sanitize_material_overrides($encoded);
+        update_option('rfq_material_overrides', $sanitized);
+
+        $labels = array_column(RFQ_Material_Catalog::get_effective_catalog(), 'label');
+
+        $this->assertContains('304 SS', $labels);
+        $this->assertNotContains('304 Stainless', $labels);
+    }
+
+    public function test_get_current_tab_defaults_to_general(): void
+    {
+        unset($_GET['tab']);
+
+        $this->assertSame(RFQ_Admin_Settings::TAB_GENERAL, RFQ_Admin_Settings::get_current_tab());
+    }
+
+    public function test_get_current_tab_returns_defaults_for_defaults_query(): void
+    {
+        $_GET['tab'] = RFQ_Admin_Settings::TAB_DEFAULTS;
+
+        $this->assertSame(RFQ_Admin_Settings::TAB_DEFAULTS, RFQ_Admin_Settings::get_current_tab());
+
+        unset($_GET['tab']);
+    }
+
     public function test_activation_bootstraps_encryption_key_and_jwt_secret(): void
     {
         delete_option('rfq_encryption_key');

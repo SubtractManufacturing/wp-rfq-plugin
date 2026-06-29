@@ -724,7 +724,7 @@ WordPress runs on managed hosting without direct access to server environment va
 | Airtable fallback embed URL | Yes (for fallback) | Used when health check fails. Not hardcoded. |
 | International RFQ email | Yes | Shown in form helper text for customers outside US/Canada (e.g. "Email your RFQ to …"). Does not send mail — display only. |
 | Sales contact email | Yes | Shown when "Treat as NDA" is checked — for customers who need a formal signed NDA before sharing IP. Does not send mail — display only. |
-| Material catalog overrides | No | Add, disable, or rename entries from the shipped default JSON. Blank = defaults only. |
+| Material catalog overrides | No | **Form defaults** tab: visual editor to add, disable, or rename shipped materials and add custom entries; overrides JSON panel stays in sync. Blank = defaults only. |
 | ERP import webhook URL | No | Full URL to the ERP receipt webhook. **May be left blank** — webhook is skipped; ERP S3 poll handles import. |
 | ERP webhook shared secret | When URL is set | Write-only; encrypted at rest; must match target ERP environment. Leave blank if webhook URL is blank. |
 
