@@ -119,7 +119,7 @@ class ManifestValidatorTest extends TestCase
     {
         $manifest = $this->validManifest([
             'contact' => [
-                'phone' => '5555550100',
+                'phone' => '2025550105',
                 'phone_country_code' => '44',
             ],
         ]);
@@ -127,7 +127,19 @@ class ManifestValidatorTest extends TestCase
         $result = RFQ_Manifest_Validator::validate($manifest);
 
         $this->assertInstanceOf(WP_Error::class, $result);
-        $this->assertArrayHasKey('contact.phone_country_code', $this->fieldErrors($result));
+        $this->assertArrayHasKey('contact.phone', $this->fieldErrors($result));
+    }
+
+    public function test_valid_international_phone_passes_validation(): void
+    {
+        $manifest = $this->validManifest([
+            'contact' => [
+                'phone' => '7911123456',
+                'phone_country_code' => '44',
+            ],
+        ]);
+
+        $this->assertTrue(RFQ_Manifest_Validator::validate($manifest));
     }
 
     public function test_zero_parts_returns_field_error(): void

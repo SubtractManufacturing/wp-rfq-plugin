@@ -218,7 +218,8 @@ class RestEndpointsTest extends TestCase
             'last_name' => 'Smith',
             'email' => 'jane@example.com',
             'company' => 'Acme Corp',
-            'phone' => '5555550100',
+            'phone' => '2025550105',
+            'phone_country_code' => '1',
             'job_title' => null,
         ]);
 
@@ -229,7 +230,7 @@ class RestEndpointsTest extends TestCase
         $this->assertSame('Smith', $data['last_name']);
         $this->assertSame('jane@example.com', $data['email']);
         $this->assertSame('Acme Corp', $data['company']);
-        $this->assertSame('5555550100', $data['phone']);
+        $this->assertSame('2025550105', $data['phone']);
         $this->assertSame('1', $data['phone_country_code']);
         $this->assertNull($data['job_title']);
 
@@ -249,7 +250,7 @@ class RestEndpointsTest extends TestCase
         $this->assertSame('Smith', $row['contact_last_name']);
         $this->assertSame('jane@example.com', $row['contact_email']);
         $this->assertSame('Acme Corp', $row['contact_company']);
-        $this->assertSame('5555550100', $row['contact_phone']);
+        $this->assertSame('2025550105', $row['contact_phone']);
         $this->assertSame('1', $row['contact_phone_country_code']);
         $this->assertNull($row['contact_job_title']);
     }
@@ -277,12 +278,29 @@ class RestEndpointsTest extends TestCase
             'first_name' => 'Jane',
             'last_name' => 'Smith',
             'email' => 'jane@example.com',
-            'phone' => '5555550100',
+            'phone' => '2025550105',
             'phone_country_code' => '44',
         ]);
 
         $this->assertSame(400, $response->get_status());
-        $this->assertArrayHasKey('phone_country_code', $response->get_data()['data']['params']);
+        $this->assertArrayHasKey('phone', $response->get_data()['data']['params']);
+    }
+
+    public function test_patch_contact_persists_international_phone(): void
+    {
+        [$session_id, $token] = $this->create_authenticated_session();
+
+        $response = $this->request_contact_patch($session_id, $token, [
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane@example.com',
+            'phone' => '7911123456',
+            'phone_country_code' => '44',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+        $this->assertSame('7911123456', $response->get_data()['phone']);
+        $this->assertSame('44', $response->get_data()['phone_country_code']);
     }
 
     public function test_patch_contact_persists_blank_optional_fields_as_null(): void

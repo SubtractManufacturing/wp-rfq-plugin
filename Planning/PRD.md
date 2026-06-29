@@ -149,8 +149,8 @@ All endpoints are namespaced under `/wp-json/rfq/v1/`.
 | `contact_last_name` | `VARCHAR(255)` | Nullable until contact step; required for Step 1 completion |
 | `contact_email` | `VARCHAR(255)` | Nullable until contact step; required for Step 1 completion |
 | `contact_company` | `VARCHAR(255)` | Optional |
-| `contact_phone` | `CHAR(10)` | Optional; 10-digit US/CA national number, digits only |
-| `contact_phone_country_code` | `VARCHAR(4)` | Optional; defaults to `1` when `contact_phone` is set |
+| `contact_phone` | `VARCHAR(15)` | Optional; national significant digits only (no country code prefix) |
+| `contact_phone_country_code` | `VARCHAR(4)` | Optional; ITU country calling code when `contact_phone` is set |
 | `contact_job_title` | `VARCHAR(255)` | Optional; not collected in V1 UI (schema only) |
 | `shipping_postal_code` | `VARCHAR(16)` | Nullable before submit; optional admin-list summary from valid autosave data, required and persisted from final manifest at submit |
 | `submitted_part_count` | `INT UNSIGNED` | Nullable until submitted; number of manifest parts at successful submit |
@@ -177,16 +177,15 @@ Contact fields are **mirrored** across the Step 1 contact record (`PATCH /contac
 | `last_name` | Yes | Yes | |
 | `email` | Yes | Yes | |
 | `company` | No | Yes | |
-| `phone` | No | Yes | 10-digit US/CA national number; see [Phone normalization](#315-contact-fields) |
-| `phone_country_code` | No | Yes | Country calling code; `1` for US/CA in V1 UI. Schema supports future international numbers. |
+| `phone` | No | Yes | National significant digits for the selected country; see [Phone normalization](#315-contact-fields) |
+| `phone_country_code` | No | Yes | ITU country calling code (1–4 digits); required when `phone` is set |
 | `job_title` | No | No | Nullable in schema/API/manifest only; not collected in V1 UI |
 
-**Phone normalization (V1 — US/Canada):**
+**Phone normalization (international):**
 
-- **UI:** Optional masked input — display `(555) 555-5555` with implicit **+1** (show `+1` prefix, do not make users type formatting characters). User enters digits only via the mask.
-- **Storage:** Strip formatting before API/manifest persistence. `phone` = exactly **10 digits** (national number). `phone_country_code` = `"1"` when `phone` is set; `null` when `phone` is omitted.
-- **Validation:** If `phone` is provided, it must match `^[0-9]{10}$`. If `phone_country_code` is provided, it must be numeric (1–4 digits). Reject on client and server.
-- **International:** V1 UI does not collect non-US/CA numbers. `phone_country_code` exists so future international support can ship without a manifest migration. See `Planning/FUTURE.md`.
+- **UI:** Optional phone field with a country selector (ISO region for formatting) and a tel input formatted as the user types (`libphonenumber-js` on the client). Default country is United States (`+1`).
+- **Storage:** Strip formatting before API/manifest persistence. `phone` = national significant digits only (digits, up to 15). `phone_country_code` = ITU calling code as a string when `phone` is set; `null` when `phone` is omitted.
+- **Validation:** If `phone` is provided, `phone_country_code` is required and must match `^[0-9]{1,4}$`. Parse `+{phone_country_code}{phone}` with libphonenumber and reject unless `isValidNumber()` passes. Same rules on client (before API) and server (`giggsey/libphonenumber-for-php`).
 
 **`PATCH /sessions/{session_id}/contact` body:**
 
@@ -196,13 +195,13 @@ Contact fields are **mirrored** across the Step 1 contact record (`PATCH /contac
   "last_name": "Smith",
   "email": "jane@example.com",
   "company": "Acme Corp",
-  "phone": "5555550100",
+  "phone": "2025550105",
   "phone_country_code": "1",
   "job_title": null
 }
 ```
 
-Server validation: trim leading/trailing whitespace from `first_name`, `last_name`, `email`, `company`, `phone`, and `job_title` before validation/storage. Do not title-case names or lowercase email. After trimming, blank optional `company` and `job_title` values are stored as `null`. Blank phone is stored as `phone = null` and `phone_country_code = null`. Reject with field-level errors if `first_name`, `last_name`, or `email` is missing or invalid. `email` must pass standard format validation (single `@`, valid domain with TLD, no whitespace — use PHP `filter_var(FILTER_VALIDATE_EMAIL)` or equivalent). No MX lookup or disposable-domain blocking in V1. `company` and `job_title` are optional; omit or send `null`. If `phone` is provided, validate 10-digit format and set `phone_country_code` to `"1"` if omitted. If `phone` is null/omitted, `phone_country_code` must be null.
+Server validation: trim leading/trailing whitespace from `first_name`, `last_name`, `email`, `company`, `phone`, and `job_title` before validation/storage. Do not title-case names or lowercase email. After trimming, blank optional `company` and `job_title` values are stored as `null`. Blank phone is stored as `phone = null` and `phone_country_code = null`. Reject with field-level errors if `first_name`, `last_name`, or `email` is missing or invalid. `email` must pass standard format validation (single `@`, valid domain with TLD, no whitespace — use PHP `filter_var(FILTER_VALIDATE_EMAIL)` or equivalent). No MX lookup or disposable-domain blocking in V1. `company` and `job_title` are optional; omit or send `null`. If `phone` is provided, require `phone_country_code` and validate the combined number with libphonenumber; normalize stored `phone` and `phone_country_code` from the parsed result. If `phone` is null/omitted, `phone_country_code` must be null.
 
 **Manifest `contact` object** uses the same shape and values as the Step 1 contact record at submit time.
 
@@ -265,7 +264,7 @@ The list should include these columns:
 - Name (`first_name` + `last_name` displayed as one column).
 - Company name.
 - Email.
-- Phone number, displayed as `+1 (555) 555-0100` when a V1 US/CA phone is present.
+- Phone number, displayed as `+1 (555) 555-0100` when the stored country code is `1` and the national number is 10 digits; otherwise `+{code} {national}`.
 - Shipping postal code / ZIP code when captured.
 - Created date (`created_at`).
 - Status, displayed as the raw `rfq_sessions.status` database value (`draft`, `submitted`, or future `abandoned`).
@@ -331,17 +330,18 @@ This check runs once on mount. There is no polling after the form has loaded.
 
 The form is divided into the following steps. Customers cannot proceed past Step 2 until Step 1 is complete. All other steps can be navigated freely once a session exists.
 
-**Step 0 — Session Init (background, not visible to user)**
-- On form mount (after successful health check), call `POST /sessions`.
-- Store the returned JWT in React state. Begin the JWT refresh timer.
+**Step 0 — Health check (background, not visible to user)**
+- On form mount, call `GET /health` once. If healthy, render the form; otherwise show the Airtable fallback embed.
+- Do **not** call `POST /sessions` on mount. Session creation is deferred until Step 1 completes (see below).
 
 **Step 1 — Contact Information**
-- Fields: First name (required), Last name (required), Email (required, `type="email"` with standard format validation), Company name (optional), Phone (optional, US/Canada — masked `(555) 555-5555` with `+1` prefix shown in UI).
-- Phone UI uses an input mask so users enter digits only; formatting is applied automatically. On submit to API, send normalized `phone` (10 digits) and `phone_country_code` (`"1"`).
+- Fields: First name (required), Last name (required), Email (required, `type="email"` with standard format validation), Company name (optional), Phone (optional — country selector + formatted tel input; validated with libphonenumber).
+- Phone UI: country `<select>` (default United States) plus tel input formatted as the user types. On API write, send normalized national digits in `phone` and ITU calling code in `phone_country_code`.
 - Do not render a job title field in V1. The API and DB accept `job_title`; always send `null` from the client.
-- On blur from the email field (or on step advance), call `PATCH /sessions/{session_id}/contact` with all current contact values.
-- Step 1 is complete when required fields (`first_name`, `last_name`, `email`) are present and the contact write succeeds. Optional fields are included when provided.
-- This write must succeed before the user can advance to Step 2. Show an inline error and a retry button if it fails; do not silently drop the data.
+- When the customer clicks **Continue to uploads** (Step 1 advance): validate required fields and optional phone; call `POST /sessions`; store JWT; then call `PATCH /sessions/{session_id}/contact` with all current contact values. Do not PATCH contact on email blur.
+- Step 1 is complete when required fields are present, session creation succeeds, and the contact write succeeds. Optional fields are included when provided.
+- This write must succeed before the user can advance to Step 2. Show an inline error and a retry button if session creation or contact PATCH fails; do not silently drop the data.
+- After a successful contact write, begin the JWT refresh timer and enable autosave for later steps.
 - A successful contact write preserves a record that the customer entered contact information while starting a quote attempt. If they later submit successfully, the manifest/receipt and eventual ERP Quote supersede this incomplete-attempt record.
 
 **Step 2 — File Uploads (part-scoped)**
@@ -479,7 +479,7 @@ Server validation: `global.lead_time_preference` must be one of the values above
 
 #### 3.2.5 Page Refresh
 
-- A full page reload **invalidates the current intake session**. On load, the form creates a new session (`POST /sessions`) and the customer starts from Step 1 with empty state.
+- A full page reload **invalidates the current intake session**. On load, the form runs the health check only and the customer starts from Step 1 with empty local state. The next `POST /sessions` happens when they complete Step 1 and click **Continue to uploads**.
 - Do not persist form state, `session_id`, or JWT in `localStorage` or `sessionStorage`.
 - Uploaded files under the previous session's S3 prefix are not recoverable in the new session. Orphan prefixes are cleaned up per lifecycle rules (see 3.3.3).
 - If the customer completed Step 1 before refreshing, their contact info remains captured on the old `draft` session row in WP DB.
@@ -562,7 +562,7 @@ When `POST /sessions/{session_id}/submit` is called, the WordPress plugin must e
 
 1. **Validate JWT.** Verify signature, expiry, and that `session_id` in the JWT matches the URL parameter.
 2. **Validate session state.** Check the WP DB `rfq_sessions` row. If `status` is already `submitted`, return the existing `receipt_number` (idempotent re-submission is safe).
-3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, it must match `^[0-9]{10}$` and `contact.phone_country_code` must be present (V1: `"1"`). If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `no_rush`, `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required, ISO date format, and must not be before today (UTC).
+3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `no_rush`, `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required, ISO date format, and must not be before today (UTC).
 4. **Confirm S3 objects exist and match declared constraints.** For every `part_file_key` and `drawing_file_key` declared in the manifest, call S3 `HeadObject` or equivalent metadata lookup. If any declared key is missing, returns an error, exceeds the file-category size limit, or has available content-type metadata that conflicts with the declared file category, abort and return an error identifying which files failed validation. Objects in the session prefix that are **not** listed in the manifest are not validated and are not an error — they are ignored until ERP import cleanup.
 5. **Write `manifest.json` to S3** at `intake/{session_id}/meta/manifest.json`.
 6. **Generate receipt number** using the daily sequence.

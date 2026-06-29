@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { apiFetch } from "../api/client";
 import { FieldError } from "../components/FieldError";
 import { buildManifest } from "../lib/manifest";
-import { formatPhone } from "../lib/phone";
+import { formatPhoneSummary } from "../lib/phone";
 import { useForm } from "../state/FormContext";
 import type { SubmitResponse } from "../types/api";
 import type { LeadTimePreference, StepId } from "../types/manifest";
@@ -29,6 +29,11 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
   } = useForm();
 
   const submit = async () => {
+    if (!sessionId || !token) {
+      setSubmitError("Session expired. Return to contact and continue again.");
+      return;
+    }
+
     const manifest = buildManifest(sessionId, contact, parts, global);
     try {
       const response = await apiFetch<SubmitResponse>(`/sessions/${sessionId}/submit`, {
@@ -57,7 +62,7 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
         <p>{contact.first_name} {contact.last_name}</p>
         <p>{contact.email}</p>
         {contact.company ? <p>{contact.company}</p> : null}
-        {contact.phone ? <p>+1 {formatPhone(contact.phone)}</p> : null}
+        {contact.phone ? <p>{formatPhoneSummary(contact.phone, contact.phone_country)}</p> : null}
       </ReviewSection>
 
       <ReviewSection onEdit={edit("uploads")} title="Parts">

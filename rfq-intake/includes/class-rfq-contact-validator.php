@@ -4,9 +4,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class RFQ_Contact_Validator {
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumberUtil;
 
-    private const V1_COUNTRY_CODE = '1';
+class RFQ_Contact_Validator {
 
     /**
      * @param array<string, mixed> $params
@@ -134,22 +135,55 @@ class RFQ_Contact_Validator {
             return [ null, null ];
         }
 
-        if ( ! preg_match( '/^[0-9]{10}$/', $normalized_phone ) ) {
-            $errors['phone'] = __( 'Phone must be exactly 10 digits.', 'rfq-intake' );
+        if ( ! preg_match( '/^[0-9]+$/', $normalized_phone ) ) {
+            $errors['phone'] = __( 'Phone must contain digits only.', 'rfq-intake' );
+
+            return [ null, null ];
         }
 
         if ( $normalized_country_code === null ) {
-            $normalized_country_code = self::V1_COUNTRY_CODE;
-        } elseif (
-            ! preg_match( '/^[0-9]{1,4}$/', $normalized_country_code )
-            || $normalized_country_code !== self::V1_COUNTRY_CODE
-        ) {
             $errors['phone_country_code'] = __(
-                'phone_country_code must be 1 for US/Canada numbers in V1.',
+                'phone_country_code is required when phone is provided.',
                 'rfq-intake'
             );
+
+            return [ null, null ];
         }
 
-        return [ $normalized_phone, $normalized_country_code ];
+        if ( ! preg_match( '/^[0-9]{1,4}$/', $normalized_country_code ) ) {
+            $errors['phone_country_code'] = __(
+                'phone_country_code must be a numeric country calling code (1–4 digits).',
+                'rfq-intake'
+            );
+
+            return [ null, null ];
+        }
+
+        $phone_util = PhoneNumberUtil::getInstance();
+
+        try {
+            $parsed = $phone_util->parse( '+' . $normalized_country_code . $normalized_phone, null );
+        } catch ( NumberParseException $exception ) {
+            $errors['phone'] = __( 'Enter a valid phone number for the selected country.', 'rfq-intake' );
+
+            return [ null, null ];
+        }
+
+        if ( ! $phone_util->isValidNumber( $parsed ) ) {
+            $errors['phone'] = __( 'Enter a valid phone number for the selected country.', 'rfq-intake' );
+
+            return [ null, null ];
+        }
+
+        $national_number = (string) $parsed->getNationalNumber();
+        $calling_code    = (string) $parsed->getCountryCode();
+
+        if ( strlen( $national_number ) > 15 ) {
+            $errors['phone'] = __( 'Phone number is too long.', 'rfq-intake' );
+
+            return [ null, null ];
+        }
+
+        return [ $national_number, $calling_code ];
     }
 }

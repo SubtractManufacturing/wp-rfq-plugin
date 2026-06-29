@@ -94,21 +94,25 @@ class RFQ_Admin_Intake_List {
     }
 
     public static function format_phone( ?string $phone, ?string $country_code ): string {
-        if ( $phone === null || $phone === '' || strlen( $phone ) !== 10 || ! ctype_digit( $phone ) ) {
+        if ( $phone === null || $phone === '' || ! ctype_digit( $phone ) ) {
             return '';
         }
 
-        if ( $country_code === null || $country_code === '' ) {
-            $country_code = '1';
+        if ( $country_code === null || $country_code === '' || ! ctype_digit( $country_code ) ) {
+            return '';
         }
 
-        return sprintf(
-            '+%s (%s) %s-%s',
-            $country_code,
-            substr( $phone, 0, 3 ),
-            substr( $phone, 3, 3 ),
-            substr( $phone, 6, 4 )
-        );
+        if ( $country_code === '1' && strlen( $phone ) === 10 ) {
+            return sprintf(
+                '+%s (%s) %s-%s',
+                $country_code,
+                substr( $phone, 0, 3 ),
+                substr( $phone, 3, 3 ),
+                substr( $phone, 6, 4 )
+            );
+        }
+
+        return sprintf( '+%s %s', $country_code, $phone );
     }
 
     public static function format_part_count( string $status, mixed $count ): string {

@@ -1,3 +1,5 @@
+import type { CountryCode } from "../lib/phone";
+
 export type StepId = "contact" | "uploads" | "partMeta" | "global" | "review";
 export type Tolerance = "standard" | "precision" | "custom";
 export type LeadTimePreference = "no_rush" | "standard" | "target_date" | "expedited" | "economy";
@@ -9,7 +11,8 @@ export interface ContactState {
   email: string;
   company: string;
   phone: string;
-  phone_country_code: "1" | null;
+  phone_country: CountryCode;
+  phone_country_code: string | null;
   job_title: null;
 }
 
@@ -54,7 +57,7 @@ export interface RfqManifest {
     email: string;
     company: string | null;
     phone: string | null;
-    phone_country_code: "1" | null;
+    phone_country_code: string | null;
     job_title: null;
   };
   parts: Array<{
@@ -85,6 +88,7 @@ export const emptyContact: ContactState = {
   email: "",
   company: "",
   phone: "",
+  phone_country: "US",
   phone_country_code: null,
   job_title: null,
 };

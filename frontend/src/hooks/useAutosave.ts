@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { apiFetch } from "../api/client";
-import { buildDraftPayload } from "../lib/draft";
+import { persistSessionDraft } from "../lib/persistSessionDraft";
 import { useForm } from "../state/FormContext";
 
 const AUTOSAVE_DELAY_MS = 30_000;
@@ -20,32 +19,19 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
   const previousStepRef = useRef<string | null>(null);
 
   const saveDraft = useCallback(async () => {
-    setDraftStatus("saving");
-    try {
-      await apiFetch(`/sessions/${sessionId}/draft`, {
-        method: "PUT",
-        token,
-        fetchImpl,
-        body: buildDraftPayload(sessionId, contact, parts, global),
-      });
-      setDraftStatus("saved");
-    } catch {
-      try {
-        await apiFetch(`/sessions/${sessionId}/draft`, {
-          method: "PUT",
-          token,
-          fetchImpl,
-          body: buildDraftPayload(sessionId, contact, parts, global),
-        });
-        setDraftStatus("saved");
-      } catch {
-        setDraftStatus("error");
-      }
-    }
+    await persistSessionDraft({
+      sessionId,
+      token,
+      contact,
+      parts,
+      global,
+      fetchImpl,
+      setDraftStatus,
+    });
   }, [contact, fetchImpl, global, parts, sessionId, setDraftStatus, token]);
 
   useEffect(() => {
-    if (tokenWarning) {
+    if (!sessionId || !token || tokenWarning) {
       return undefined;
     }
 
@@ -62,5 +48,5 @@ export function useAutosave({ fetchImpl = fetch }: { fetchImpl?: typeof fetch } 
     }, AUTOSAVE_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [contact, global, parts, saveDraft, step, tokenWarning]);
+  }, [contact, global, parts, saveDraft, sessionId, step, token, tokenWarning]);
 }

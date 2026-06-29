@@ -57,8 +57,9 @@ class IntakeListTest extends TestCase
     {
         $this->assertSame('Jane Doe', RFQ_Admin_Intake_List::format_display_name('Jane', 'Doe'));
         $this->assertSame('', RFQ_Admin_Intake_List::format_display_name(null, null));
-        $this->assertSame('+1 (555) 555-0100', RFQ_Admin_Intake_List::format_phone('5555550100', '1'));
-        $this->assertSame('', RFQ_Admin_Intake_List::format_phone('12345', '1'));
+        $this->assertSame('+1 (202) 555-0105', RFQ_Admin_Intake_List::format_phone('2025550105', '1'));
+        $this->assertSame('+44 7911123456', RFQ_Admin_Intake_List::format_phone('7911123456', '44'));
+        $this->assertSame('+1 12345', RFQ_Admin_Intake_List::format_phone('12345', '1'));
         $this->assertSame('3', RFQ_Admin_Intake_List::format_part_count('submitted', 3));
         $this->assertSame('', RFQ_Admin_Intake_List::format_part_count('draft', 3));
     }

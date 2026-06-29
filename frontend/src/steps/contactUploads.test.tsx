@@ -21,7 +21,7 @@ function contactResponse() {
 describe("contact and upload flow", () => {
   // @covers AC-WP-003
   // @covers AC-WP-016
-  it("saves contact before uploads and allows a failed upload to retry", async () => {
+  it("creates a session on continue, saves contact, and allows a failed upload to retry", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
       .fn()
@@ -42,6 +42,8 @@ describe("contact and upload flow", () => {
     await user.click(screen.getByRole("button", { name: /continue to uploads/i }));
 
     expect(await screen.findByRole("heading", { name: /part uploads/i })).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("https://example.test/wp-json/rfq/v1/sessions");
+    expect(String(fetchMock.mock.calls[2]?.[0])).toContain("/contact");
     expect(screen.getAllByText(/large-rfq@example.test/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /add part/i })).toBeDisabled();
 
@@ -54,13 +56,9 @@ describe("contact and upload flow", () => {
     await waitFor(() => expect(screen.getByText(/uploaded:/i)).toBeInTheDocument());
   });
 
-  it("does not advance on email blur alone", async () => {
+  it("does not save contact on email blur alone", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "ok" })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ session_id: "session-1", token: "jwt" })))
-      .mockResolvedValueOnce(contactResponse());
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ status: "ok" })));
 
     render(<App config={config} fetchImpl={fetchMock} />);
 
@@ -71,7 +69,7 @@ describe("contact and upload flow", () => {
     await user.tab();
 
     await waitFor(() => {
-      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/contact"))).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
     expect(screen.getByRole("heading", { name: /contact information/i })).toBeInTheDocument();
   });
