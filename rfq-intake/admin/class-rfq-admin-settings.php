@@ -10,9 +10,16 @@ class RFQ_Admin_Settings {
 
     public const MENU_SLUG = 'rfq-intake-settings';
 
+    public const TAB_GENERAL = 'general';
+
+    public const TAB_DEFAULTS = 'defaults';
+
+    public const DEFAULTS_PAGE_SLUG = 'rfq-intake-settings-defaults';
+
     public static function init(): void {
         add_action( 'admin_menu', [ self::class, 'register_menu' ] );
         add_action( 'admin_init', [ self::class, 'register_settings' ] );
+        add_action( 'admin_enqueue_scripts', [ self::class, 'enqueue_admin_assets' ] );
     }
 
     public static function register_menu(): void {
@@ -28,6 +35,11 @@ class RFQ_Admin_Settings {
     }
 
     public static function register_settings(): void {
+        self::register_general_settings();
+        self::register_defaults_settings();
+    }
+
+    public static function register_general_settings(): void {
         add_settings_section(
             'rfq_intake_s3',
             __( 'S3 storage', 'rfq-intake' ),
@@ -50,12 +62,6 @@ class RFQ_Admin_Settings {
             'rfq_intake_erp',
             __( 'ERP webhook', 'rfq-intake' ),
             [ self::class, 'render_erp_section' ],
-            self::MENU_SLUG
-        );
-        add_settings_section(
-            'rfq_intake_catalog',
-            __( 'Material catalog', 'rfq-intake' ),
-            [ self::class, 'render_catalog_section' ],
             self::MENU_SLUG
         );
 
@@ -148,6 +154,15 @@ class RFQ_Admin_Settings {
             'rfq_intake_erp',
             [ 'option' => 'rfq_erp_webhook_url' ]
         );
+    }
+
+    public static function register_defaults_settings(): void {
+        add_settings_section(
+            'rfq_intake_catalog',
+            __( 'Material catalog', 'rfq-intake' ),
+            [ self::class, 'render_catalog_section' ],
+            self::DEFAULTS_PAGE_SLUG
+        );
 
         register_setting(
             self::SETTINGS_GROUP,
@@ -159,11 +174,79 @@ class RFQ_Admin_Settings {
         );
         add_settings_field(
             'rfq_material_overrides',
-            __( 'Material catalog overrides (JSON)', 'rfq-intake' ),
-            [ self::class, 'render_textarea_field' ],
-            self::MENU_SLUG,
+            __( 'Overrides JSON', 'rfq-intake' ),
+            [ self::class, 'render_material_overrides_field' ],
+            self::DEFAULTS_PAGE_SLUG,
             'rfq_intake_catalog',
             [ 'option' => 'rfq_material_overrides' ]
+        );
+    }
+
+    public static function get_current_tab(): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- tab navigation only; value is whitelisted.
+        $tab = isset( $_GET['tab'] ) ? sanitize_key( (string) $_GET['tab'] ) : self::TAB_GENERAL;
+
+        if ( $tab === self::TAB_DEFAULTS ) {
+            return self::TAB_DEFAULTS;
+        }
+
+        return self::TAB_GENERAL;
+    }
+
+    public static function get_tab_url( string $tab ): string {
+        $url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
+
+        if ( $tab === self::TAB_DEFAULTS ) {
+            return add_query_arg( 'tab', self::TAB_DEFAULTS, $url );
+        }
+
+        return $url;
+    }
+
+    public static function enqueue_admin_assets( string $hook ): void {
+        if ( $hook !== 'toplevel_page_' . self::MENU_SLUG ) {
+            return;
+        }
+
+        if ( self::get_current_tab() !== self::TAB_DEFAULTS ) {
+            return;
+        }
+
+        $asset_url = plugins_url( 'admin/assets/', RFQ_INTAKE_PLUGIN_FILE );
+        $version   = defined( 'RFQ_INTAKE_VERSION' ) ? RFQ_INTAKE_VERSION : '1.0.0';
+
+        wp_enqueue_style(
+            'rfq-catalog-editor',
+            $asset_url . 'catalog-editor.css',
+            [],
+            $version
+        );
+
+        wp_enqueue_script(
+            'rfq-catalog-editor',
+            $asset_url . 'catalog-editor.js',
+            [],
+            $version,
+            true
+        );
+
+        wp_localize_script(
+            'rfq-catalog-editor',
+            'rfqCatalogEditor',
+            [
+                'defaults'   => RFQ_Material_Catalog::get_default_catalog(),
+                'overrides'  => RFQ_Material_Catalog::get_overrides(),
+                'editorRows' => RFQ_Material_Catalog::get_editor_rows(),
+                'i18n'       => [
+                    'jsonError'   => __( 'Overrides JSON is invalid. Fix the JSON or revert your changes before saving.', 'rfq-intake' ),
+                    'duplicateId' => __( 'Material IDs must be unique.', 'rfq-intake' ),
+                    'invalidId'   => __( 'Material IDs must use lowercase letters, numbers, and hyphens only.', 'rfq-intake' ),
+                    'shipped'     => __( 'Shipped', 'rfq-intake' ),
+                    'custom'      => __( 'Custom', 'rfq-intake' ),
+                    'remove'      => __( 'Remove', 'rfq-intake' ),
+                    'addMaterial' => __( 'Add material', 'rfq-intake' ),
+                ],
+            ]
         );
     }
 
@@ -284,9 +367,39 @@ class RFQ_Admin_Settings {
 
     public static function render_catalog_section(): void {
         echo '<p>' . esc_html__(
-            'Optional JSON overrides for the shipped default material catalog. Leave blank to use defaults only.',
+            'Customize material suggestions shown in the RFQ form. Changes apply without redeploying the plugin.',
             'rfq-intake'
         ) . '</p>';
+    }
+
+    /**
+     * @param array{option: string} $args
+     */
+    public static function render_material_overrides_field( array $args ): void {
+        $option = $args['option'];
+        $value  = get_option( $option, '' );
+
+        if ( is_string( $value ) && $value !== '' ) {
+            $decoded = json_decode( $value, true );
+
+            if ( is_array( $decoded ) ) {
+                $value = RFQ_Material_Catalog::encode_overrides( $decoded );
+            }
+        }
+
+        printf(
+            '<textarea class="large-text code rfq-catalog-overrides-json" rows="10" id="%1$s" name="%1$s">%2$s</textarea>',
+            esc_attr( $option ),
+            esc_textarea( is_string( $value ) ? $value : '' )
+        );
+        echo '<p class="description">' . esc_html__(
+            'Advanced overrides JSON. Editing this field updates the table above automatically, and vice versa.',
+            'rfq-intake'
+        ) . '</p>';
+        echo '<p class="rfq-catalog-json-error notice notice-error hidden"><strong>' . esc_html__(
+            'Invalid JSON',
+            'rfq-intake'
+        ) . '</strong> <span></span></p>';
     }
 
     /**

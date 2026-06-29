@@ -74,21 +74,21 @@ class RFQ_Material_Catalog {
         $rows      = [];
 
         foreach ( $defaults as $entry ) {
-            $id             = $entry['id'];
-            $default_label  = $entry['label'];
-            $label          = $renamed[ $id ] ?? $default_label;
-            $rows[]         = [
-                'id'                 => $id,
-                'label'              => $label,
-                'default_label'      => $default_label,
-                'aliases'            => $entry['aliases'],
-                'show_in_dropdown'   => $entry['show_in_dropdown'],
-                'enabled'            => ! isset( $disabled[ $id ] ),
-                'source'             => 'shipped',
-                'is_renamed'         => $label !== $default_label,
-                'can_edit_aliases'   => false,
-                'can_edit_dropdown'  => false,
-                'can_remove'         => false,
+            $id            = $entry['id'];
+            $default_label = $entry['label'];
+            $label         = $renamed[ $id ] ?? $default_label;
+            $rows[]        = [
+                'id'                => $id,
+                'label'             => $label,
+                'default_label'     => $default_label,
+                'aliases'           => $entry['aliases'],
+                'show_in_dropdown'  => $entry['show_in_dropdown'],
+                'enabled'           => ! isset( $disabled[ $id ] ),
+                'source'            => 'shipped',
+                'is_renamed'        => $label !== $default_label,
+                'can_edit_aliases'  => false,
+                'can_edit_dropdown' => false,
+                'can_remove'        => false,
             ];
         }
 
@@ -132,9 +132,9 @@ class RFQ_Material_Catalog {
                 return null;
             }
 
-            $id     = isset( $row['id'] ) ? (string) $row['id'] : '';
-            $label  = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
-            $source = isset( $row['source'] ) ? (string) $row['source'] : '';
+            $id      = isset( $row['id'] ) ? (string) $row['id'] : '';
+            $label   = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+            $source  = isset( $row['source'] ) ? (string) $row['source'] : '';
             $enabled = ! empty( $row['enabled'] );
 
             if ( $id === '' || $label === '' ) {
