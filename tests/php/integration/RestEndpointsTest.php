@@ -486,6 +486,26 @@ class RestEndpointsTest extends TestCase
         $this->assertArrayHasKey('file_type', $response->get_data()['data']['params']);
     }
 
+    public function test_upload_urls_accepts_octet_stream_for_drawing(): void
+    {
+        $mock = new RFQ_S3_Client_Mock('rfq-test-bucket');
+        add_filter('rfq_s3_client', static fn (): RFQ_S3_Client_Mock => $mock);
+
+        [$session_id, $token] = $this->create_authenticated_session_with_contact();
+
+        $response = $this->request_upload_url($session_id, $token, [
+            'part_id' => '77777777-7777-4777-8777-777777777777',
+            'file_type' => 'drawing',
+            'filename' => 'drawing.dwg',
+            'content_type' => 'application/octet-stream',
+        ]);
+
+        $this->assertSame(200, $response->get_status());
+        $data = $response->get_data();
+        $this->assertStringContainsString('/drawings/', $data['file_key']);
+        $this->assertSame('application/octet-stream', $mock->presigned_puts[0]['content_type']);
+    }
+
     public function test_upload_urls_rejects_unsupported_content_type_for_drawing(): void
     {
         [$session_id, $token] = $this->create_authenticated_session_with_contact();

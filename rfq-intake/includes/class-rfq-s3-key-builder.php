@@ -22,6 +22,7 @@ class RFQ_S3_Key_Builder {
             'application/pdf',
             'image/png',
             'image/jpeg',
+            'application/octet-stream',
         ];
     }
 

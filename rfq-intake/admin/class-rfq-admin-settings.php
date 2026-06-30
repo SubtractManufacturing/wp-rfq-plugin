@@ -169,13 +169,13 @@ class RFQ_Admin_Settings {
 
     public static function get_current_tab(): string {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- tab navigation only; value is whitelisted.
-        $tab = isset( $_GET['tab'] ) ? sanitize_key( (string) $_GET['tab'] ) : self::TAB_GENERAL;
+        $tab = isset( $_GET['tab'] ) ? sanitize_key( (string) $_GET['tab'] ) : self::TAB_DEFAULTS;
 
-        if ( $tab === self::TAB_DEFAULTS ) {
-            return self::TAB_DEFAULTS;
+        if ( $tab === self::TAB_GENERAL ) {
+            return self::TAB_GENERAL;
         }
 
-        return self::TAB_GENERAL;
+        return self::TAB_DEFAULTS;
     }
 
     public static function get_tab_url( string $tab ): string {
@@ -185,7 +185,7 @@ class RFQ_Admin_Settings {
             return add_query_arg( 'tab', self::TAB_DEFAULTS, $url );
         }
 
-        return $url;
+        return add_query_arg( 'tab', self::TAB_GENERAL, $url );
     }
 
     public static function enqueue_admin_assets( string $hook ): void {

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { apiFetch } from "../api/client";
 import { FieldError } from "../components/FieldError";
 import { buildManifest } from "../lib/manifest";
+import { partDisplayName } from "../lib/partLabel";
 import { formatPhoneSummary } from "../lib/phone";
 import { useForm } from "../state/FormContext";
 import type { SubmitResponse } from "../types/api";
@@ -68,8 +69,7 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
       <ReviewSection onEdit={edit("uploads")} title="Parts">
         {parts.map((part, index) => (
           <div className="mt-3 border-t border-slate-100 pt-3 first:mt-0 first:border-t-0 first:pt-0" key={part.part_id}>
-            <p className="font-medium text-slate-900">Part {index + 1}</p>
-            <p>File: {part.partFile?.filename ?? "—"}</p>
+            <p className="font-medium text-slate-900">{partDisplayName(part, index)}</p>
             <p>Drawings: {part.drawings.filter((drawing) => drawing.status === "confirmed").map((drawing) => drawing.filename).join(", ") || "None"}</p>
             <p>Material: {part.material}</p>
             <p>Tolerance: {part.tolerance}{part.tolerance === "custom" && part.tolerance_detail ? ` (${part.tolerance_detail})` : ""}</p>

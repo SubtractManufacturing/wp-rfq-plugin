@@ -141,11 +141,20 @@ class AdminSettingsTest extends TestCase
         $this->assertNotContains('304 Stainless', $labels);
     }
 
-    public function test_get_current_tab_defaults_to_general(): void
+    public function test_get_current_tab_defaults_to_defaults(): void
     {
         unset($_GET['tab']);
 
+        $this->assertSame(RFQ_Admin_Settings::TAB_DEFAULTS, RFQ_Admin_Settings::get_current_tab());
+    }
+
+    public function test_get_current_tab_returns_general_for_general_query(): void
+    {
+        $_GET['tab'] = RFQ_Admin_Settings::TAB_GENERAL;
+
         $this->assertSame(RFQ_Admin_Settings::TAB_GENERAL, RFQ_Admin_Settings::get_current_tab());
+
+        unset($_GET['tab']);
     }
 
     public function test_get_current_tab_returns_defaults_for_defaults_query(): void
@@ -155,6 +164,13 @@ class AdminSettingsTest extends TestCase
         $this->assertSame(RFQ_Admin_Settings::TAB_DEFAULTS, RFQ_Admin_Settings::get_current_tab());
 
         unset($_GET['tab']);
+    }
+
+    public function test_get_tab_url_includes_explicit_tab_query_for_dev(): void
+    {
+        $dev_url = RFQ_Admin_Settings::get_tab_url(RFQ_Admin_Settings::TAB_GENERAL);
+
+        $this->assertStringContainsString('tab=general', $dev_url);
     }
 
     public function test_activation_bootstraps_encryption_key_and_jwt_secret(): void

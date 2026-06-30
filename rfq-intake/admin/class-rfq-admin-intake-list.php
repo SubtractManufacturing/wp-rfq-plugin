@@ -20,8 +20,8 @@ class RFQ_Admin_Intake_List {
     public static function register_menu(): void {
         add_submenu_page(
             RFQ_Admin_Settings::MENU_SLUG,
-            __( 'Intake Sessions', 'rfq-intake' ),
-            __( 'Intake Sessions', 'rfq-intake' ),
+            __( 'Sessions', 'rfq-intake' ),
+            __( 'Sessions', 'rfq-intake' ),
             'manage_options',
             self::MENU_SLUG,
             [ self::class, 'render_page' ]

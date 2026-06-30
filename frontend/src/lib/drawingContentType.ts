@@ -8,7 +8,7 @@ const DRAWING_EXTENSIONS: Record<string, string> = {
 export const PART_MAX_BYTES = 500 * 1024 * 1024;
 export const DRAWING_MAX_BYTES = 50 * 1024 * 1024;
 
-export function resolveDrawingContentType(file: File): string | null {
+export function resolveDrawingContentType(file: File): string {
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const fromExtension = DRAWING_EXTENSIONS[extension];
   if (fromExtension) {
@@ -19,5 +19,5 @@ export function resolveDrawingContentType(file: File): string | null {
     return file.type;
   }
 
-  return null;
+  return "application/octet-stream";
 }

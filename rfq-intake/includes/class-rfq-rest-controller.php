@@ -501,7 +501,7 @@ class RFQ_REST_Controller {
                 $file_type === 'drawing'
                 && ! in_array( $content_type, RFQ_S3_Key_Builder::allowed_drawing_content_types(), true )
             ) {
-                $errors['content_type'] = __( 'Drawing uploads must use application/pdf, image/png, or image/jpeg.', 'rfq-intake' );
+                $errors['content_type'] = __( 'Drawing uploads must use application/pdf, image/png, image/jpeg, or application/octet-stream.', 'rfq-intake' );
             }
         }
 

@@ -12,16 +12,16 @@ $current_tab = RFQ_Admin_Settings::get_current_tab();
 
     <nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Secondary menu', 'rfq-intake' ); ?>">
         <a
-            href="<?php echo esc_url( RFQ_Admin_Settings::get_tab_url( RFQ_Admin_Settings::TAB_GENERAL ) ); ?>"
-            class="nav-tab<?php echo $current_tab === RFQ_Admin_Settings::TAB_GENERAL ? ' nav-tab-active' : ''; ?>"
-        >
-            <?php esc_html_e( 'General', 'rfq-intake' ); ?>
-        </a>
-        <a
             href="<?php echo esc_url( RFQ_Admin_Settings::get_tab_url( RFQ_Admin_Settings::TAB_DEFAULTS ) ); ?>"
             class="nav-tab<?php echo $current_tab === RFQ_Admin_Settings::TAB_DEFAULTS ? ' nav-tab-active' : ''; ?>"
         >
             <?php esc_html_e( 'Form defaults', 'rfq-intake' ); ?>
+        </a>
+        <a
+            href="<?php echo esc_url( RFQ_Admin_Settings::get_tab_url( RFQ_Admin_Settings::TAB_GENERAL ) ); ?>"
+            class="nav-tab<?php echo $current_tab === RFQ_Admin_Settings::TAB_GENERAL ? ' nav-tab-active' : ''; ?>"
+        >
+            <?php esc_html_e( 'Dev', 'rfq-intake' ); ?>
         </a>
     </nav>
 

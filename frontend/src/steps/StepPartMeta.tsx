@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { MaterialField } from "../components/MaterialField";
+import { ToleranceField } from "../components/ToleranceField";
+import { partDisplayName } from "../lib/partLabel";
 import { useForm } from "../state/FormContext";
-import type { PartRow, Tolerance } from "../types/manifest";
+import type { PartRow } from "../types/manifest";
 
 function parseTargetUnitPrice(value: string): number | null {
   const trimmed = value.trim();
@@ -13,6 +15,15 @@ function parseTargetUnitPrice(value: string): number | null {
     return null;
   }
   return Math.round(parsed * 100) / 100;
+}
+
+function otherSectionOpen(part: PartRow): boolean {
+  return (
+    part.tolerance === "custom"
+    || (part.tolerance_detail?.trim() ?? "") !== ""
+    || (part.threads_features?.trim() ?? "") !== ""
+    || part.target_unit_price !== null
+  );
 }
 
 export function StepPartMeta() {
@@ -58,11 +69,13 @@ export function StepPartMeta() {
     <section className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold text-slate-950">Part details</h1>
-        <p className="mt-2 text-sm text-slate-600">Add material, tolerance, and quantity for each uploaded part.</p>
+        <p className="mt-2 text-sm text-slate-600">
+          Add material, tolerance, and quantity for each part. Notes are optional.
+        </p>
       </div>
       {parts.map((part, index) => (
           <div className="rounded-lg border border-slate-200 p-4" key={part.part_id}>
-            <h2 className="font-medium text-slate-900">Part {index + 1}</h2>
+            <h2 className="font-medium text-slate-900">{partDisplayName(part, index)}</h2>
             <MaterialField
               id={`material-${part.part_id}`}
               label="Material"
@@ -70,36 +83,12 @@ export function StepPartMeta() {
               onChange={(material) => updatePart(part.part_id, { material })}
               value={part.material}
             />
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Tolerance
-              <select
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                onChange={(event) => updatePart(part.part_id, { tolerance: event.target.value as Tolerance })}
-                value={part.tolerance}
-              >
-                <option value="standard">Standard</option>
-                <option value="precision">Precision</option>
-                <option value="custom">Custom</option>
-              </select>
-            </label>
-            {part.tolerance === "custom" ? (
-              <label className="mt-3 block text-sm font-medium text-slate-800">
-                Tolerance detail
-                <input
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                  onChange={(event) => updatePart(part.part_id, { tolerance_detail: event.target.value })}
-                  value={part.tolerance_detail ?? ""}
-                />
-              </label>
-            ) : null}
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Threads / features
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                onChange={(event) => updatePart(part.part_id, { threads_features: event.target.value || null })}
-                value={part.threads_features ?? ""}
-              />
-            </label>
+            <ToleranceField
+              id={`tolerance-${part.part_id}`}
+              label="Tolerance"
+              onChange={(tolerance) => updatePart(part.part_id, { tolerance })}
+              value={part.tolerance}
+            />
             <label className="mt-3 block text-sm font-medium text-slate-800">
               Quantity
               <input
@@ -111,21 +100,6 @@ export function StepPartMeta() {
               />
             </label>
             <label className="mt-3 block text-sm font-medium text-slate-800">
-              Target unit price (USD)
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                min={0}
-                onChange={(event) => updateTargetPrice(part.part_id, event.target.value)}
-                step="0.01"
-                type="number"
-                value={part.target_unit_price ?? ""}
-              />
-              <span className="mt-1 block text-xs text-slate-500">Optional — your target price per part in USD.</span>
-            </label>
-            {priceErrors[part.part_id] ? (
-              <p className="mt-1 text-sm text-red-700">{priceErrors[part.part_id]}</p>
-            ) : null}
-            <label className="mt-3 block text-sm font-medium text-slate-800">
               Notes
               <textarea
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
@@ -133,6 +107,46 @@ export function StepPartMeta() {
                 value={part.notes ?? ""}
               />
             </label>
+            <details
+              className="mt-3 rounded-md border border-slate-200 p-3"
+              key={`${part.part_id}-${otherSectionOpen(part)}`}
+              open={otherSectionOpen(part) ? true : undefined}
+            >
+              <summary className="cursor-pointer text-sm font-medium text-slate-800">Other</summary>
+              {part.tolerance === "custom" ? (
+                <label className="mt-3 block text-sm font-medium text-slate-800">
+                  Tolerance detail
+                  <input
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                    onChange={(event) => updatePart(part.part_id, { tolerance_detail: event.target.value })}
+                    value={part.tolerance_detail ?? ""}
+                  />
+                </label>
+              ) : null}
+              <label className="mt-3 block text-sm font-medium text-slate-800">
+                Threads / features
+                <input
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                  onChange={(event) => updatePart(part.part_id, { threads_features: event.target.value || null })}
+                  value={part.threads_features ?? ""}
+                />
+              </label>
+              <label className="mt-3 block text-sm font-medium text-slate-800">
+                Target unit price (USD)
+                <input
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                  min={0}
+                  onChange={(event) => updateTargetPrice(part.part_id, event.target.value)}
+                  step="0.01"
+                  type="number"
+                  value={part.target_unit_price ?? ""}
+                />
+                <span className="mt-1 block text-xs text-slate-500">Optional — your target price per part in USD.</span>
+              </label>
+              {priceErrors[part.part_id] ? (
+                <p className="mt-1 text-sm text-red-700">{priceErrors[part.part_id]}</p>
+              ) : null}
+            </details>
           </div>
       ))}
       <button

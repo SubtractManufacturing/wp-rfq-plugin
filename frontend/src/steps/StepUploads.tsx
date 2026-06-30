@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { apiFetch } from "../api/client";
 import { UploadProgress } from "../components/UploadProgress";
 import { DRAWING_MAX_BYTES, PART_MAX_BYTES, resolveDrawingContentType } from "../lib/drawingContentType";
+import { partDisplayName } from "../lib/partLabel";
 import { uploadFile } from "../lib/uploadFile";
 import { useForm } from "../state/FormContext";
 import type { UploadUrlResponse } from "../types/api";
@@ -98,17 +99,6 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
 
   const uploadDrawingFile = async (part: PartRow, file: File, drawingIndex?: number) => {
     const contentType = resolveDrawingContentType(file);
-    if (!contentType) {
-      const errorFile = failedFile(file, "Drawings must be PDF, PNG, or JPEG.");
-      if (drawingIndex === undefined) {
-        updatePart({ ...part, drawings: [...part.drawings, errorFile] });
-      } else {
-        const drawings = [...part.drawings];
-        drawings[drawingIndex] = errorFile;
-        updatePart({ ...part, drawings });
-      }
-      return;
-    }
 
     if (file.size > DRAWING_MAX_BYTES) {
       const errorFile = failedFile(file, "Drawing files must be 50 MB or smaller.");
@@ -149,7 +139,7 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
       {rows.map((part, index) => (
         <div className="rounded-lg border border-slate-200 p-4" key={part.part_id}>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-medium text-slate-900">Part {index + 1}</h2>
+            <h2 className="font-medium text-slate-900">{partDisplayName(part, index)}</h2>
             {rows.length > 1 ? (
               <button
                 className="text-sm text-red-700 underline"
@@ -209,7 +199,7 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
 
           <div className="mt-4 border-t border-slate-100 pt-4">
             <p className="text-sm font-medium text-slate-800">Supporting files (optional)</p>
-            <p className="mt-1 text-xs text-slate-500">PDF, PNG, or JPEG up to 50 MB each.</p>
+            <p className="mt-1 text-xs text-slate-500">Supporting files up to 50 MB each.</p>
             {part.drawings.map((drawing, drawingIndex) => (
               <div className="mt-3" key={`${part.part_id}-drawing-${drawingIndex}`}>
                 {drawing.status === "confirmed" ? (
@@ -231,7 +221,6 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
             <label className="mt-3 block text-sm font-medium text-slate-800">
               Add drawing
               <input
-                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                 className="mt-1 block w-full text-sm"
                 onChange={(event) => {
                   const file = event.target.files?.[0];

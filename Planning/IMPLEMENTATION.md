@@ -124,7 +124,7 @@ Encrypt: `rfq_s3_secret_key`, `rfq_jwt_secret`, `rfq_webhook_secret`.
 
 **Step 1.3** `admin/class-rfq-admin-settings.php` + `admin/views/settings-page.php`:
 
-Register settings group `rfq_intake_settings` with fields from PRD §5.2. Split the settings screen into **General** and **Form defaults** tabs (`?tab=general` default, `?tab=defaults` for catalog):
+Register settings group `rfq_intake_settings` with fields from PRD §5.2. Split the settings screen into **Form defaults** (default tab) and **Dev** tabs (`?tab=defaults` default, `?tab=general` for S3/security/ERP):
 
 | Option key | Type | Notes |
 |------------|------|-------|
@@ -544,7 +544,7 @@ HTTP 401
 | `rfq-intake/includes/class-rfq-shortcode.php` | Create |
 | `rfq-intake/admin/class-rfq-admin-settings.php` | Create |
 | `rfq-intake/admin/class-rfq-admin-intake-list.php` | Create — read-only intake ledger |
-| `rfq-intake/admin/views/settings-page.php` | Create — tabbed General + Form defaults |
+| `rfq-intake/admin/views/settings-page.php` | Create — tabbed Form defaults + Dev |
 | `rfq-intake/admin/views/settings-defaults-tab.php` | Create — material catalog editor |
 | `rfq-intake/admin/assets/catalog-editor.js` | Create — UI ↔ JSON sync |
 | `rfq-intake/admin/assets/catalog-editor.css` | Create — catalog editor styles |
