@@ -1,8 +1,8 @@
-import { devFormConfig } from "./devConfig";
+import { devFormConfig, isDevMockMode } from "./devConfig";
 import { devMockWorker } from "./browser";
 
 export async function startDevMocks(): Promise<void> {
-  if (import.meta.env.VITE_MOCK_API === "false") {
+  if (!isDevMockMode()) {
     return;
   }
 

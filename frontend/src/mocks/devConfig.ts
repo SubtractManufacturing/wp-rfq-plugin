@@ -6,8 +6,20 @@ export const DEV_SESSION_ID = "dev-session-1";
 
 export const DEV_TOKEN = "dev.jwt.mock";
 
+export function isDevMockMode(): boolean {
+  if (import.meta.env.VITEST) {
+    return false;
+  }
+
+  if (import.meta.env.VITE_MOCK_API === "false") {
+    return false;
+  }
+
+  return import.meta.env.DEV;
+}
+
 export function isDevFixtureMode(): boolean {
-  return import.meta.env.VITE_DEV_FIXTURES === "true";
+  return isDevMockMode();
 }
 
 export const devFormConfig: RfqFormConfig = {
