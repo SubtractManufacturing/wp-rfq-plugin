@@ -34,6 +34,14 @@ npm run sandcastle:fix-ci -- 42  # fix CI on PR #42 (Composer 2.5)
 
 Pick up issues labeled **`Sandcastle`**. Issue sizing and planning split: `docs/agents/issue-planning.md`. Sandcastle setup: `docs/agents/sandcastle.md`.
 
+## Git worktrees
+
+Feature checkouts go in `.worktrees/` so they stay inside the repo and are not committed. Sandcastle worktrees stay in `.sandcastle/worktrees/`. Full guide: [`docs/agents/worktrees.md`](docs/agents/worktrees.md).
+
+```powershell
+git worktree add .worktrees/<name>
+```
+
 ## Milestones (do not skip)
 
 | Milestone | Phases | Key gate |

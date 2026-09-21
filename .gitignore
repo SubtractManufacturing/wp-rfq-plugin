@@ -9,6 +9,9 @@ node_modules/
 review-diff.patch
 open-sandcastle-issues.json
 
+# Local git worktrees kept inside the repo (never committed)
+.worktrees/
+
 # Build outputs (added as code lands)
 rfq-intake/build/*
 !rfq-intake/build/.gitkeep

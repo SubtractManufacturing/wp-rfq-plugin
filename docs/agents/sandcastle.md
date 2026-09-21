@@ -97,6 +97,8 @@ Implementer prompts require `gh pr create --base main --head <sandbox-branch>` a
 
 ### Worktree and log cleanup
 
+Sandcastle worktrees live in `.sandcastle/worktrees/`. Manual feature worktrees live in `.worktrees/` — see [`worktrees.md`](worktrees.md).
+
 Sandcastle calls `close()` after each iteration, but **preserves worktrees when git sees uncommitted changes**. Our prompts write ephemeral files (`open-sandcastle-issues.json`, `review-diff.patch`) that count as dirty, so worktrees (and their `node_modules`) can linger.
 
 - **Prevention:** `main.ts` / `review-branch.ts` strip those files before `close()`.

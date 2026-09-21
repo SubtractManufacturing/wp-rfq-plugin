@@ -53,3 +53,4 @@ bash scripts/qa-shortcode.sh
 | `AGENTS.md` | Instructions for AI coding agents |
 | `.agents/planning.md` | Conventions for agents editing planning docs |
 | `docs/agents/sandcastle.md` | Sandcastle setup and runbook |
+| `docs/agents/worktrees.md` | In-repo git worktrees (`.worktrees/`) |
