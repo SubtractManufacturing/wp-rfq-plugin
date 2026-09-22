@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing numeric release tag to rebuild and attach
+        required: false
+        type: string
 
 permissions:
   actions: write
@@ -32,12 +38,18 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Run checks on the release pull request
-        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
         run: |
-          release_branch="$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)"
+          pr_number="$(jq -r '.number // empty' <<< "$PR_JSON")"
+          if [[ -z "$pr_number" ]]; then
+            echo "Release Please did not return a pull request number; skipping dispatch."
+            exit 0
+          fi
+
+          release_branch="$(gh pr view "$pr_number" --json headRefName --jq .headRefName)"
           gh workflow run test.yml --ref "$release_branch"
 
       - name: Resolve the release for packaging
@@ -47,8 +59,16 @@ jobs:
           RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
           RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
         run: |
-          if [[ "$RELEASE_CREATED" == "true" ]]; then
+          if [[ -n "$REQUESTED_TAG" ]]; then
+            if [[ ! "$REQUESTED_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::release_tag must be a numeric semver tag without a v prefix"
+              exit 1
+            fi
+            tag="$REQUESTED_TAG"
+            version="$REQUESTED_TAG"
+          elif [[ "$RELEASE_CREATED" == "true" ]]; then
             tag="$RELEASE_TAG"
             version="$RELEASE_VERSION"
           else
