@@ -154,4 +154,35 @@ describe("App startup", () => {
     await user.click(screen.getByRole("button", { name: /go review/i }));
     expect(await screen.findByRole("heading", { name: /review and submit/i })).toBeInTheDocument();
   });
+
+  it("keeps the uploads step visible when crypto.randomUUID is unavailable", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("crypto", {
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+      randomUUID: undefined,
+    });
+
+    function StepNavigator() {
+      const { setStep } = useForm();
+      return (
+        <button onClick={() => setStep("uploads")} type="button">
+          Go uploads
+        </button>
+      );
+    }
+
+    try {
+      render(
+        <FormProvider config={config} sessionId="session-1" token="jwt">
+          <StepNavigator />
+          <FormShell fetchImpl={vi.fn()} />
+        </FormProvider>,
+      );
+
+      await user.click(screen.getByRole("button", { name: /go uploads/i }));
+      expect(await screen.findByRole("heading", { name: /part uploads/i })).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
