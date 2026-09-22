@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.1.0...0.1.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* generate part ids without crypto.randomUUID ([#65](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/65)) ([7b9b5d7](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/7b9b5d7f5767d1734470c969b92fae62fc32e403))
+
 ## [0.1.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.0.1...0.1.0) (2026-09-22)
 
 
