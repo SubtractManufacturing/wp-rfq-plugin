@@ -292,6 +292,46 @@ V1 admin list behavior:
 - Do not show ERP import status; WordPress final customer-facing state remains `submitted`.
 - Do not implement CSV export in V1. See `Planning/FUTURE.md`.
 
+#### 3.1.9 In-app Plugin Updates
+
+The plugin must discover stable Plugin Releases from the public GitHub
+repository `SubtractManufacturing/wp-rfq-plugin` and offer a standard
+WordPress **Update now** action.
+
+- Use the bundled Plugin Update Checker library. Update checks require no
+  GitHub token and must not add a plugin setting or expose credentials.
+- Only published, non-prerelease GitHub Releases are eligible. The release tag,
+  plugin `Version:` header, and package filename version must agree.
+- The install URL must select the attached
+  `rfq-intake-<version>.zip` Plugin Package. Never install or fall back to a
+  GitHub-generated source archive.
+- If GitHub is unavailable or the exact package asset is missing, the installed
+  plugin keeps running and no update is offered.
+- Check at the normal WordPress/Plugin Update Checker cadence (approximately
+  every 12 hours) and honor Dashboard → Updates → Check again.
+- Installation is manual only. The plugin must reject automatic updates for
+  itself and replace the Plugins-screen auto-update control with a
+  “Manual updates only” indication. Administrators with the standard
+  `update_plugins` capability can still use **Update now**.
+- GitHub release notes provide the version-details text. No update website,
+  license server, telemetry endpoint, or WordPress.org listing is required.
+- The first Plugin Package containing the updater is a manual bootstrap
+  install. Earlier installations cannot discover it.
+
+Published Plugin Packages are immutable and retained indefinitely. A defective
+release is corrected with a higher patch release, never by replacing or
+deleting an existing package.
+
+Plugin Updates must preserve active RFQ attempts. Each backend release remains
+compatible with the immediately previous shipped frontend/API contract.
+
+WordPress does not run plugin activation hooks during an update. On normal
+startup, the plugin must compare a stored schema version with the code's target
+schema version and run idempotent, additive-only migrations under a lock.
+Record the target version only after success. A failed migration logs a
+non-secret error, shows an administrator notice, and makes `GET /health`
+unavailable so customers receive the Airtable fallback.
+
 ---
 
 ### 3.2 React RFQ Form
@@ -772,3 +812,7 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-006** — Session creation is rejected with HTTP 429 after 10 sessions from the same IP within one hour.
 - **AC-WP-007** — The customer-facing form is implemented in **TypeScript** (compiled to a JS bundle by Vite); there are no plain JavaScript source files in the form codebase.
 - **AC-WP-008** — All form UI styling uses **Tailwind CSS** utility classes; the shipped bundle includes a single compiled CSS file with no separate hand-written component stylesheets.
+- **AC-WP-029** — A newer stable GitHub Release is offered through WordPress only when its exact `rfq-intake-<version>.zip` Plugin Package is available; GitHub source archives are never used.
+- **AC-WP-030** — RFQ Intake can be updated with the standard manual **Update now** action, but WordPress automatic updates are always disabled for this plugin.
+- **AC-WP-031** — The installable Plugin Package contains Plugin Update Checker and performs public update checks without a GitHub token or live-GitHub test dependency.
+- **AC-WP-032** — Plugin Updates run idempotent additive schema migrations; a failed migration is not marked complete and makes plugin health unavailable until recovery.

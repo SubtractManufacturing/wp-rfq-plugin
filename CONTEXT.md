@@ -74,6 +74,10 @@ _Avoid_: Deploy, drop, build, V1
 The installable zip for one Plugin Release. It contains only what WordPress needs to run that version of the plugin.
 _Avoid_: Repo archive, source zip, build
 
+**Plugin Update**:
+The act of a WordPress site replacing its installed Plugin Package with a newer Plugin Release. Publishing a Plugin Release makes an update available; each site installs it separately.
+_Avoid_: Release, deploy, publication
+
 **Hotfix**:
 A fix merged to the main line after a Plugin Release is already in production. It becomes a Plugin Release only through the same release pull request as any other change.
 _Avoid_: Patch branch, emergency release

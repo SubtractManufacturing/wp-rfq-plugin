@@ -26,6 +26,14 @@ if (! defined('RFQ_MAX_PARTS')) {
     define('RFQ_MAX_PARTS', 20);
 }
 
+if (! defined('RFQ_INTAKE_SCHEMA_VERSION')) {
+    define('RFQ_INTAKE_SCHEMA_VERSION', 1);
+}
+
+if (! defined('RFQ_INTAKE_PLUGIN_FILE')) {
+    define('RFQ_INTAKE_PLUGIN_FILE', dirname(__DIR__, 3) . '/rfq-intake/rfq-intake.php');
+}
+
 if (! isset($GLOBALS['rfq_test_options'])) {
     $GLOBALS['rfq_test_options'] = [];
 }
@@ -44,6 +52,21 @@ if (! function_exists('get_option')) {
 if (! function_exists('update_option')) {
     function update_option($option, $value, $autoload = null)
     {
+        $GLOBALS['rfq_test_options'][$option] = $value;
+
+        return true;
+    }
+}
+
+if (! function_exists('add_option')) {
+    function add_option($option, $value = '', $deprecated = '', $autoload = 'yes')
+    {
+        unset($deprecated, $autoload);
+
+        if (array_key_exists($option, $GLOBALS['rfq_test_options'])) {
+            return false;
+        }
+
         $GLOBALS['rfq_test_options'][$option] = $value;
 
         return true;
@@ -178,6 +201,22 @@ if (! function_exists('__')) {
     function __($text, $domain = 'default')
     {
         return $text;
+    }
+}
+
+if (! function_exists('esc_html__')) {
+    function esc_html__($text, $domain = 'default')
+    {
+        unset($domain);
+
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+if (! function_exists('plugin_basename')) {
+    function plugin_basename($file)
+    {
+        return 'rfq-intake/' . basename($file);
     }
 }
 

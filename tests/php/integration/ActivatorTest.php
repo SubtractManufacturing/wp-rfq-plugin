@@ -8,8 +8,18 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(RFQ_Activator::class)]
 #[Group('AC-WP-023')]
+#[Group('AC-WP-032')]
 class ActivatorTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        delete_option(RFQ_Upgrade_Manager::VERSION_OPTION);
+        delete_option(RFQ_Upgrade_Manager::FAILURE_OPTION);
+        delete_option(RFQ_Upgrade_Manager::LOCK_OPTION);
+    }
+
     #[Group('AC-WP-025')]
     public function test_activation_schedules_maintenance_cron(): void
     {
@@ -31,6 +41,7 @@ class ActivatorTest extends TestCase
 
         $this->assertSame($sessions_table, $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $sessions_table)));
         $this->assertSame($sequences_table, $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $sequences_table)));
+        $this->assertSame(RFQ_INTAKE_SCHEMA_VERSION, (int) get_option(RFQ_Upgrade_Manager::VERSION_OPTION));
 
         $columns_after_first = $this->get_session_column_names();
         $indexes_after_first = $this->get_session_indexes();

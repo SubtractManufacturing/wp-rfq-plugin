@@ -2,6 +2,7 @@
 /**
  * Plugin Name: RFQ Intake
  * Plugin URI: https://github.com/SubtractManufacturing/wp-rfq-plugin
+ * Update URI: https://github.com/SubtractManufacturing/wp-rfq-plugin
  * Description: Custom RFQ intake form with durable S3-backed submission.
  * x-release-please-start-version
  * Version: 0.0.1
@@ -43,6 +44,7 @@ if ( empty( $rfq_intake_headers['version'] ) ) {
 }
 
 define( 'RFQ_INTAKE_VERSION', $rfq_intake_headers['version'] );
+define( 'RFQ_INTAKE_SCHEMA_VERSION', 1 );
 define( 'RFQ_MAX_PARTS', 20 );
 define( 'RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200 );
 /** Draft session retention in WP DB before archive/delete (PRD §10). */
@@ -80,9 +82,11 @@ require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-manifest-validator.php'
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-receipt-service.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-webhook.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-upgrade-manager.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-intake-maintenance.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-shortcode.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-update-checker.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-plugin.php';
 
 register_activation_hook( __FILE__, [ 'RFQ_Activator', 'activate' ] );

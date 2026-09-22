@@ -85,7 +85,11 @@ class RFQ_REST_Controller {
     }
 
     public static function health_check(): WP_REST_Response {
-        if ( ! RFQ_S3_Client::is_configured() || ! RFQ_S3_Client::verify_connectivity() ) {
+        if (
+            ! RFQ_Upgrade_Manager::is_ready()
+            || ! RFQ_S3_Client::is_configured()
+            || ! RFQ_S3_Client::verify_connectivity()
+        ) {
             return new WP_REST_Response(
                 [ 'status' => 'unavailable' ],
                 503

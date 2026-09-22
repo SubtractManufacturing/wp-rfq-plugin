@@ -108,6 +108,10 @@ A planned build artifact `scripts/check-acceptance-coverage.php` (introduced at 
 | AC-WP-026 | 30-day unreceipted intake prefix cleanup candidate detection | Plugin | M3 | Unit / cron logic | — |
 | AC-WP-027 | Accessibility smoke: labels, errors, retry buttons, keyboard nav across steps | Plugin | M5 | Playwright + axe | — |
 | AC-WP-028 | WordPress admin read-only intake list shows every session row with combined name, company, email, phone, ZIP/postal code, created date, raw DB status (`draft`, `submitted`, future `abandoned`), submitted part count for completed RFQs, and pagination defaulting to 25 rows with 50/75 row options | Plugin | M2–M3 | Integration | — |
+| AC-WP-029 | Stable GitHub Release requires exact versioned Plugin Package asset; source archive is never eligible | Plugin | Release | Unit + package inspection | `UpdateCheckerTest`, `test-plugin-package.mjs` |
+| AC-WP-030 | Standard manual update remains available while automatic updates are disabled | Plugin | Release | Unit + integration | `UpdateCheckerTest` |
+| AC-WP-031 | Plugin Package bundles update checker; public checks use no token or live API in tests | Plugin | Release | Unit + package inspection | `UpdateCheckerTest`, `test-plugin-package.mjs` |
+| AC-WP-032 | Additive migrations are idempotent; failure is not recorded and degrades health | Plugin | Release | Unit + integration | `UpgradeManagerTest`, `RestEndpointsTest` |
 
 ### ERP IMPLEMENTATION §7 checkboxes
 
@@ -228,6 +232,22 @@ Not a full WCAG audit. Automated smoke checks:
 - Validation errors are perceivable (visible text or `aria-live`).
 - Retry buttons are keyboard-focusable and activatable.
 - Step navigation works via keyboard.
+
+### 6.8 In-app updates and migrations (AC-WP-029–032)
+
+- Unit tests inspect updater configuration without contacting GitHub: public
+  repository URL, exact release-asset pattern, no authentication call, stable
+  release strategy, and manual-only auto-update filters.
+- Package inspection confirms the production Composer install includes Plugin
+  Update Checker and that the zip still has exactly one `rfq-intake/` top-level
+  directory.
+- Release workflow assertions confirm an existing asset cannot be overwritten
+  and tag/header/package versions remain aligned.
+- Upgrade tests cover first bootstrap, no-op at current schema version,
+  idempotent retries, lock behavior, failure persistence, administrator notice,
+  and `GET /health` returning 503 while an upgrade failure is recorded.
+- Tests mock local WordPress/PHP collaborators only. They do not call the live
+  GitHub API.
 
 ---
 

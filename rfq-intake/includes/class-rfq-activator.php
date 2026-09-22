@@ -9,6 +9,7 @@ class RFQ_Activator {
     public static function activate(): void {
         self::create_tables();
         self::bootstrap_secrets();
+        RFQ_Upgrade_Manager::maybe_upgrade();
         RFQ_Intake_Maintenance::schedule();
     }
 
@@ -62,5 +63,15 @@ class RFQ_Activator {
 
         dbDelta( $sql_sessions );
         dbDelta( $sql_sequences );
+
+        foreach ( [ $sessions_table, $sequences_table ] as $required_table ) {
+            $actual_table = $wpdb->get_var(
+                $wpdb->prepare( 'SHOW TABLES LIKE %s', $required_table )
+            );
+
+            if ( $actual_table !== $required_table ) {
+                throw new RuntimeException( 'RFQ Intake database table creation failed.' );
+            }
+        }
     }
 }

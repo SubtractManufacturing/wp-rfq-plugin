@@ -1,6 +1,7 @@
 {
   "name": "wp-rfq-plugin",
   "version": "1.0.0",
+  "private": true,
   "description": "Plugin to handle RFQ ingest for WP sites with Subtract Custom Software.",
   "main": "index.js",
   "scripts": {
@@ -43,7 +44,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "type": "module",
   "bugs": {
     "url": "https://github.com/SubtractManufacturing/wp-rfq-plugin/issues"
