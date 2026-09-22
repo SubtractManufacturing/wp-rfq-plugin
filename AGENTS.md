@@ -54,9 +54,14 @@ git worktree add .worktrees/<name>
 
 ## Commit conventions
 
-- Sandcastle commits: `sandcastle: <summary> (#issue)`
-- Review fixes: `sandcastle: review: <summary>`
-- CI fixes: `sandcastle: ci: <summary>`
+- Use Conventional Commit subjects. A scope such as `sandcastle`, `review`, or
+  `ci` is optional: `feat(sandcastle): add upload retry (#123)`.
+- `fix:` publishes a patch, `feat:` publishes a minor, and `!` or a
+  `BREAKING CHANGE:` footer publishes a major Plugin Release.
+- `chore:`, `docs:`, `test:`, `ci:`, `build:`, and other non-product changes
+  do not publish a Plugin Release by themselves.
+- Review and CI agents choose the type that describes the change; they do not
+  use a separate Sandcastle prefix.
 
 ## Testing & QA
 

@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Open or publish the Plugin Release
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Run checks on the release pull request
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+        run: |
+          release_branch="$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)"
+          gh workflow run test.yml --ref "$release_branch"
+
+      - name: Resolve the release for packaging
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          if [[ "$RELEASE_CREATED" == "true" ]]; then
+            tag="$RELEASE_TAG"
+            version="$RELEASE_VERSION"
+          else
+            git fetch --tags --force
+            tag="$(git tag --points-at "$GITHUB_SHA" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' | sort -V | tail -n 1)"
+            version="$tag"
+          fi
+
+          if [[ -n "$tag" ]] && gh release view "$tag" >/dev/null 2>&1; then
+            echo "release_ready=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out the released tag
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.package.outputs.tag }}
+
+      - name: Set up PHP
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Set up Node
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install package tooling
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        run: npm ci
+
+      - name: Build and verify the Plugin Package
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        run: npm run test:package
+
+      - name: Attach the Plugin Package
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.package.outputs.tag }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: gh release upload "$TAG_NAME" "dist/rfq-intake-$VERSION.zip" --clobber

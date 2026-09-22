@@ -40,6 +40,25 @@ Add `[rfq_form]` to a WordPress page in wp-env. For a focused shortcode smoke ch
 bash scripts/qa-shortcode.sh
 ```
 
+## Plugin packages and releases
+
+Build and inspect the same self-contained zip used by GitHub Releases:
+
+```bash
+npm run test:package
+```
+
+The artifact is written to `dist/rfq-intake-<version>.zip` and always
+unpacks to `rfq-intake/`. It includes the compiled form and production
+Composer packages, but excludes repository-only source and documentation.
+
+Plugin Releases are published only by merging the Release Please pull request.
+Conventional `fix:`, `feat:`, and breaking-change commits select patch, minor,
+and major versions. Other commit types do not publish a release by themselves.
+The merge creates the numeric git tag and published GitHub Release, then
+attaches the installable zip. Repository Actions settings must grant workflows
+read/write access and allow GitHub Actions to create pull requests.
+
 ## Documentation
 
 | File | Purpose |

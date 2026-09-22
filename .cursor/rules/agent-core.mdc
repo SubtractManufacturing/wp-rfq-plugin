@@ -33,7 +33,10 @@ Milestones: M1 (Phase 0–2) → M2 (Phase 3) → M3 (Phase 4) → M4–M5 (Phas
 ## Agent workflow
 
 - One GitHub issue per PR when using Sandcastle
-- Commit prefix: `sandcastle:`
+- Use Conventional Commit subjects; optional scopes such as `sandcastle`,
+  `review`, and `ci` do not change release semantics
+- `fix:` bumps patch, `feat:` bumps minor, and breaking changes bump major;
+  chores and other types do not publish by themselves
 - Label agent-ready work with `Sandcastle` on GitHub
 - Run tests applicable to the current milestone before committing
 - New or changed QA scripts → add a row to `qa-reference.md` in the same PR

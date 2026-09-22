@@ -63,3 +63,21 @@ _Avoid_: Priority, urgency level, SLA
 **Treat as NDA** (`nda_required`):
 When true, internal teams exclude the parts from social media and marketing use. Not a formal countersigned NDA workflow — customers needing that must email sales directly.
 _Avoid_: NDA flag, confidentiality toggle
+
+## Shipping
+
+**Plugin Release**:
+A semver version of the RFQ Intake WordPress plugin, published only when a person chooses to ship accumulated changes. The number is not a planning milestone.
+_Avoid_: Deploy, drop, build, V1
+
+**Plugin Package**:
+The installable zip for one Plugin Release. It contains only what WordPress needs to run that version of the plugin.
+_Avoid_: Repo archive, source zip, build
+
+**Hotfix**:
+A fix merged to the main line after a Plugin Release is already in production. It becomes a Plugin Release only through the same release pull request as any other change.
+_Avoid_: Patch branch, emergency release
+
+**Pre-release**:
+A planning checkpoint in the project docs. It does not assign a Plugin Release number.
+_Avoid_: Beta, release candidate, version

@@ -16,6 +16,7 @@ open-sandcastle-issues.json
 rfq-intake/build/*
 !rfq-intake/build/.gitkeep
 frontend/dist/
+dist/
 vendor/
 
 # Environment

@@ -18,7 +18,8 @@ User supplies a PR number, URL, or branch. Base branch is `main` unless they say
 3. Run the full QA suite from [qa-reference.md](qa-reference.md); fix failures until everything is green. Do not weaken or skip tests.
 4. Run the **review-bugbot** skill; triage and fix valid findings only.
 5. Re-run the full QA suite; fix anything new until green again.
-6. Commit (`sandcastle: review: …` per `AGENTS.md`), push to origin. Never commit secrets.
+6. Commit with a Conventional Commit subject matching the actual change
+   (`review` may be an optional scope), then push. Never commit secrets.
 
 ## Report
 

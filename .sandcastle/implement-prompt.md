@@ -29,7 +29,8 @@ If an issue is too large or vague, comment on the issue asking for a split — d
    - Frontend (M4+): `npm run test --prefix frontend`
    Skip commands that do not exist yet; do not invent failing tooling.
 5. **Commit** — one git commit on branch **`{{BRANCH}}`**. Message MUST:
-   - Start with `sandcastle:` prefix
+   - Use a Conventional Commit subject (`fix:`, `feat:`, or the natural
+     non-release type); `sandcastle` may be used as an optional scope
    - Reference the GitHub issue number and IMPLEMENTATION phase/step
    - List key decisions and files changed
 6. **Open PR** — push **only** `{{BRANCH}}` and open a pull request against **`main`** (not another feature branch):
@@ -75,9 +76,9 @@ Read **only** the files and sections listed in the issue's **Read first** block,
 | `AGENTS.md` | Commit/PR conventions |
 | `.agents/planning.md` | Only if editing planning docs (rare) |
 
-## Recent Sandcastle commits (last 10)
+## Recent commits (last 10)
 
-!`git log --oneline --grep="sandcastle:" -10`
+!`git log --oneline -10`
 
 ## Done
 

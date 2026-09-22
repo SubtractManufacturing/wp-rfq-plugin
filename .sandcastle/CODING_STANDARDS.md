@@ -36,7 +36,11 @@ Planning/            # Product docs — do not expand scope into FUTURE.md items
 
 ## Git & PRs
 
-- Commit prefix: `sandcastle:` for autonomous agent commits
+- Use Conventional Commit subjects. Optional scopes such as `sandcastle`,
+  `review`, and `ci` identify the agent context without changing the bump.
+- Product fixes use `fix:`, features use `feat:`, and breaking changes use
+  `!` or a `BREAKING CHANGE:` footer. Tooling-only work uses its natural
+  non-release type such as `chore:`, `test:`, `ci:`, or `build:`.
 - One issue per PR when possible
 - PR must reference issue and IMPLEMENTATION.md phase/step
 

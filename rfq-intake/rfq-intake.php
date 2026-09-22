@@ -3,7 +3,9 @@
  * Plugin Name: RFQ Intake
  * Plugin URI: https://github.com/SubtractManufacturing/wp-rfq-plugin
  * Description: Custom RFQ intake form with durable S3-backed submission.
- * Version: 0.1.0
+ * x-release-please-start-version
+ * Version: 0.0.0
+ * x-release-please-end
  * Requires at least: 6.4
  * Requires PHP: 8.3
  * Author: Subtract Manufacturing
@@ -28,17 +30,28 @@ if ( ! isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
     }
 }
 
-define( 'RFQ_INTAKE_VERSION', '0.1.0' );
+define( 'RFQ_INTAKE_PLUGIN_FILE', __FILE__ );
+define( 'RFQ_INTAKE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+
+$rfq_intake_headers = get_file_data(
+    RFQ_INTAKE_PLUGIN_FILE,
+    [ 'version' => 'Version' ]
+);
+
+if ( empty( $rfq_intake_headers['version'] ) ) {
+    throw new RuntimeException( 'RFQ Intake plugin header is missing its version.' );
+}
+
+define( 'RFQ_INTAKE_VERSION', $rfq_intake_headers['version'] );
 define( 'RFQ_MAX_PARTS', 20 );
 define( 'RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200 );
 /** Draft session retention in WP DB before archive/delete (PRD §10). */
 define( 'RFQ_DRAFT_SESSION_RETENTION_DAYS', 90 );
 /** Session creation rate limit: requests per hour per IP. */
 define( 'RFQ_SESSION_RATE_LIMIT', 10 );
-define( 'RFQ_INTAKE_PLUGIN_FILE', __FILE__ );
-define( 'RFQ_INTAKE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
 $rfq_autoload_candidates = [
+    RFQ_INTAKE_PLUGIN_DIR . 'vendor/autoload.php',
     dirname( __DIR__ ) . '/vendor/autoload.php',
 ];
 

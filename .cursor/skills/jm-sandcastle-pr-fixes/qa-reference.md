@@ -75,6 +75,8 @@ Fork PRs from outside collaborators do not receive repository secrets.
 | `npm run test:frontend` | Frontend lint + Vitest unit/component tests | M4–M5 |
 | `npm run test:e2e` | Playwright mocked RFQ form happy path and fallback checks | M4–M5 |
 | `npm run test:a11y` | Playwright + axe accessibility smoke | M5 |
+| `npm run test:package` | Build and inspect the installable Plugin Package zip | Release |
+| `npm run package:plugin` | Build `dist/rfq-intake-<version>.zip` without artifact assertions | Release |
 
 ---
 
@@ -110,7 +112,7 @@ When `.github/workflows/test.yml` exists, mirror PR-tier jobs locally per `Plann
 | M1 | lint, php-unit, php-integration, contract, acceptance-coverage |
 | M2 | M1 + upload-url integration, S3 unit/mock, S3 spike |
 | M3 | M2 + submit integration, receipt/idempotency/webhook, webhook-e2e (mock ERP) |
-| M4–M5 | M3 + frontend-unit, e2e-mocked, a11y |
+| M4–M5 | M3 + frontend-unit, e2e-mocked, a11y, plugin-package |
 
 List actual jobs:
 

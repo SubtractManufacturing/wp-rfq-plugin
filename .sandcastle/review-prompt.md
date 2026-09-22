@@ -46,7 +46,8 @@ If you find blocking issues (wrong behaviour, missing AC coverage, security prob
 
 1. Fix them directly on this branch
 2. Run applicable tests
-3. Commit with message prefix `sandcastle: review:` describing fixes
+3. Commit with a Conventional Commit subject describing the actual change;
+   `review` may be used as an optional scope
 
 If the code is correct and clean, make no code changes.
 
@@ -70,13 +71,13 @@ Otherwise post exactly one comment with `gh pr comment <PR#> --body-file review-
 **Findings:**
 - Bullet each issue checked (scope, security, tests, conventions), or "No blocking issues."
 
-**Changes made:** List review commits (`sandcastle: review: …`) or "None — code approved as-is."
+**Changes made:** List review commits (for example, `fix(review): …`) or "None — code approved as-is."
 
 **Checks run:** Commands you actually ran, or "None applicable for this phase."
 ```
 
 - **✅ Approved** — no blocking issues; no review commits
-- **🔧 Fixed** — you committed `sandcastle: review:` fixes on this branch
+- **🔧 Fixed** — you committed fixes on this branch
 - **⚠️ Needs attention** — blocking issues remain that you could not fix (say what the human must do)
 
 Do not skip the comment when the review passes. Silence on the PR is not acceptable.
