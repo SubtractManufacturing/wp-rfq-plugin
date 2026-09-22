@@ -3,13 +3,14 @@ import { apiFetch } from "../api/client";
 import { UploadProgress } from "../components/UploadProgress";
 import { DRAWING_MAX_BYTES, PART_MAX_BYTES, resolveDrawingContentType } from "../lib/drawingContentType";
 import { uploadFile } from "../lib/uploadFile";
+import { randomUuid } from "../lib/uuid";
 import { useForm } from "../state/FormContext";
 import type { UploadUrlResponse } from "../types/api";
 import type { PartRow, UploadedFile } from "../types/manifest";
 
 function createPart(): PartRow {
   return {
-    part_id: crypto.randomUUID(),
+    part_id: randomUuid(),
     partFile: null,
     drawings: [],
     material: "",
