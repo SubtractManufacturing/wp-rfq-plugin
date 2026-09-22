@@ -58,6 +58,24 @@ and major versions. Other commit types do not publish a release by themselves.
 The merge creates the numeric git tag and published GitHub Release, then
 attaches the installable zip. Repository Actions settings must grant workflows
 read/write access and allow GitHub Actions to create pull requests.
+Release Please creates a draft Release; the workflow attaches the package and
+then publishes it. Enable GitHub's repository-level immutable Releases setting
+after this draft-first workflow is on `main` and before merging the first
+updater-enabled Release Please PR.
+
+Plugin Packages that include the bundled update checker discover newer stable
+Releases from this public repository and use only the attached
+`rfq-intake-<version>.zip`. GitHub source archives are not installable updates.
+Updates are manual-only: test on staging, then use **Update now** on production.
+The first updater-enabled package must still be uploaded to each existing site
+manually. Published package assets are immutable; corrections use a higher
+patch release.
+
+## License
+
+Source is publicly visible for distribution and audit, but remains proprietary
+and all rights reserved. See [`LICENSE`](LICENSE). Public access is not a grant
+to use, modify, or redistribute the plugin.
 
 ## Documentation
 
@@ -69,6 +87,7 @@ read/write access and allow GitHub Actions to create pull requests.
 | `Planning/TESTING.md` | Test strategy, acceptance-criterion registry, progressive CI gates |
 | `Planning/FUTURE.md` | Deferred ideas — not current scope |
 | `CONTEXT.md` | Domain glossary |
+| `docs/adr/` | Accepted architecture decisions |
 | `AGENTS.md` | Instructions for AI coding agents |
 | `.agents/planning.md` | Conventions for agents editing planning docs |
 | `docs/agents/sandcastle.md` | Sandcastle setup and runbook |

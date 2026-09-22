@@ -24,5 +24,7 @@ require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-contact-valid
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-postal-code.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-manifest-validator.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-activator.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-upgrade-manager.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-intake-maintenance.php';
 require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-webhook.php';
+require_once dirname(__DIR__, 3) . '/rfq-intake/includes/class-rfq-update-checker.php';

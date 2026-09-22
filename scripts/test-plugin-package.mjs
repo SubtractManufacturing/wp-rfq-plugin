@@ -60,7 +60,10 @@ for (const requiredFile of [
   "rfq-intake/rfq-intake.php",
   "rfq-intake/build/rfq-form.js",
   "rfq-intake/build/rfq-form.css",
+  "rfq-intake/includes/class-rfq-update-checker.php",
+  "rfq-intake/includes/class-rfq-upgrade-manager.php",
   "rfq-intake/vendor/autoload.php",
+  "rfq-intake/vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php",
 ]) {
   assert.ok(entryNames.includes(requiredFile), `missing ${requiredFile}`);
 }
@@ -91,6 +94,55 @@ assert.equal(
   packagedPlugin?.[1],
   version,
   "zip name and packaged plugin header versions must match",
+);
+
+assert.match(
+  zip.readAsText("rfq-intake/rfq-intake.php"),
+  /^\s*\*\s*Update URI:\s*https:\/\/github\.com\/SubtractManufacturing\/wp-rfq-plugin\s*$/m,
+  "packaged plugin must declare its external Update URI",
+);
+
+const packagedUpdater = zip.readAsText(
+  "rfq-intake/includes/class-rfq-update-checker.php",
+);
+assert.match(
+  packagedUpdater,
+  /SubtractManufacturing\/wp-rfq-plugin/,
+  "updater must target the public release repository",
+);
+assert.match(
+  packagedUpdater,
+  /REQUIRE_RELEASE_ASSETS/,
+  "updater must require a matching release asset",
+);
+assert.doesNotMatch(
+  packagedUpdater,
+  /setAuthentication\s*\(/,
+  "public update checks must not configure a GitHub token",
+);
+
+const releaseWorkflow = fs.readFileSync(
+  path.join(root, ".github", "workflows", "release.yml"),
+  "utf8",
+);
+assert.doesNotMatch(
+  releaseWorkflow,
+  /gh release upload[^\n]*--clobber/,
+  "published Plugin Package assets must not be overwritten",
+);
+assert.match(
+  releaseWorkflow,
+  /gh release edit "\$TAG_NAME" --draft=false/,
+  "release workflow must publish only after attaching the package",
+);
+
+const releasePleaseConfig = JSON.parse(
+  fs.readFileSync(path.join(root, "release-please-config.json"), "utf8"),
+);
+assert.equal(
+  releasePleaseConfig.draft,
+  true,
+  "Release Please must create a mutable draft before package upload",
 );
 
 console.log(`Plugin package verified: dist/${expectedZipName}`);

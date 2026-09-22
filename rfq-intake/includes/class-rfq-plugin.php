@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class RFQ_Plugin {
 
     public static function init(): void {
+        RFQ_Upgrade_Manager::init();
+        RFQ_Update_Checker::init();
         RFQ_REST_Controller::init();
         RFQ_Webhook::init();
         RFQ_Intake_Maintenance::init();

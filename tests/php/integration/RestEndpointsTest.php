@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 #[Group('AC-WP-006')]
 #[Group('AC-WP-012')]
 #[Group('AC-WP-024')]
+#[Group('AC-WP-032')]
 class RestEndpointsTest extends TestCase
 {
     protected function setUp(): void
@@ -27,6 +28,7 @@ class RestEndpointsTest extends TestCase
         delete_option('rfq_s3_region');
         delete_option('rfq_s3_secret_key');
         delete_option('rfq_jwt_secret');
+        delete_option(RFQ_Upgrade_Manager::FAILURE_OPTION);
 
         RFQ_Activator::bootstrap_secrets();
 
@@ -196,6 +198,30 @@ class RestEndpointsTest extends TestCase
 
         $this->assertSame(200, $response->get_status());
         $this->assertSame(['status' => 'ok'], $response->get_data());
+    }
+
+    public function test_health_returns_503_when_schema_upgrade_failed(): void
+    {
+        update_option('rfq_s3_endpoint', 'https://example.test');
+        update_option('rfq_s3_bucket', 'rfq-test-bucket');
+        update_option('rfq_s3_access_key_id', 'test-access-key');
+        update_option('rfq_s3_region', 'us-east-1');
+        RFQ_Secrets::set_secret('rfq_s3_secret_key', 'test-secret-key');
+        update_option(
+            RFQ_Upgrade_Manager::FAILURE_OPTION,
+            [
+                'target_version' => RFQ_INTAKE_SCHEMA_VERSION,
+                'failed_at' => time(),
+                'error_type' => RuntimeException::class,
+            ]
+        );
+
+        add_filter('rfq_s3_verify_connectivity', static fn (): bool => true);
+
+        $response = rest_do_request(new WP_REST_Request('GET', '/rfq/v1/health'));
+
+        $this->assertSame(503, $response->get_status());
+        $this->assertSame(['status' => 'unavailable'], $response->get_data());
     }
 
     public function test_submit_endpoint_requires_valid_jwt(): void

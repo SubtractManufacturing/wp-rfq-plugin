@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing numeric release tag to rebuild and attach
+        description: Existing numeric release tag missing its package asset
         required: false
         type: string
 
@@ -30,12 +30,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Open or publish the Plugin Release
+      - name: Open the release PR or create its draft Release
         id: release
         uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Ensure the draft release tag exists
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        run: |
+          git fetch --tags --force
+
+          if git rev-parse --verify --quiet "refs/tags/$TAG_NAME" >/dev/null; then
+            tag_sha="$(git rev-list -n 1 "$TAG_NAME")"
+            if [[ "$tag_sha" != "$GITHUB_SHA" ]]; then
+              echo "::error::$TAG_NAME exists at $tag_sha instead of $GITHUB_SHA"
+              exit 1
+            fi
+          else
+            git tag "$TAG_NAME" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG_NAME"
+          fi
 
       - name: Run checks on the release pull request
         if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
@@ -122,4 +140,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ steps.package.outputs.tag }}
           VERSION: ${{ steps.package.outputs.version }}
-        run: gh release upload "$TAG_NAME" "dist/rfq-intake-$VERSION.zip" --clobber
+        run: |
+          asset_name="rfq-intake-$VERSION.zip"
+          existing_asset="$(gh release view "$TAG_NAME" --json assets --jq \
+            ".assets[] | select(.name == \"$asset_name\") | .name")"
+          if [[ "$existing_asset" == "$asset_name" ]]; then
+            echo "::error::$asset_name already exists; published Plugin Packages are immutable"
+            exit 1
+          fi
+
+          gh release upload "$TAG_NAME" "dist/$asset_name"
+
+      - name: Publish the immutable-ready Plugin Release
+        if: ${{ steps.package.outputs.release_ready == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.package.outputs.tag }}
+        run: gh release edit "$TAG_NAME" --draft=false

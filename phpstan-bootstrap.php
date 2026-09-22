@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 define('ABSPATH', __DIR__ . '/phpstan-stubs/');
 define('RFQ_INTAKE_VERSION', '0.1.0');
+define('RFQ_INTAKE_SCHEMA_VERSION', 1);
 define('RFQ_MAX_PARTS', 20);
 define('RFQ_MAX_UPLOAD_URLS_PER_SESSION', 200);
 define('RFQ_DRAFT_SESSION_RETENTION_DAYS', 90);

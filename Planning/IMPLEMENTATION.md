@@ -348,6 +348,33 @@ Do **not** pass secrets or JWT in localized config.
 
 **Step 5.2** Optional WP-Cron: daily check for orphaned manifest.json without receipt.json >15 minutes → `error_log` or admin notice hook.
 
+**Step 5.3** `includes/class-rfq-update-checker.php`:
+
+- Bundle `yahnis-elsts/plugin-update-checker` through production Composer
+  dependencies.
+- Point it at the public
+  `https://github.com/SubtractManufacturing/wp-rfq-plugin` repository with the
+  plugin slug `rfq-intake`.
+- Use stable GitHub Releases and release assets matching only
+  `rfq-intake-<numeric-semver>.zip`; never authenticate and never fall back to
+  a generated source archive.
+- Register `auto_update_plugin` and Plugins-screen UI filters so this plugin is
+  manual-update-only.
+- Add the `Update URI` plugin header to prevent a future WordPress.org slug
+  collision.
+
+**Step 5.4** `includes/class-rfq-upgrade-manager.php`:
+
+- Store an independent schema version rather than using the Plugin Release
+  version as the migration number.
+- On activation and normal startup, run missing idempotent additive migrations
+  under a short-lived lock and record the target only after success.
+- Keep every release compatible with the immediately previous frontend/API
+  contract so forms already open during a Plugin Update can finish.
+- On migration failure, retain failure state, log a non-secret message, render
+  an administrator notice, and make `/health` return 503 until a retry
+  succeeds.
+
 ---
 
 ### Phase 6 — React form (TypeScript + Tailwind)
@@ -539,6 +566,8 @@ HTTP 401
 | `rfq-intake/includes/class-rfq-rate-limiter.php` | Create |
 | `rfq-intake/includes/class-rfq-material-catalog.php` | Create |
 | `rfq-intake/includes/class-rfq-shortcode.php` | Create |
+| `rfq-intake/includes/class-rfq-update-checker.php` | Create — public GitHub Release discovery and manual-only policy |
+| `rfq-intake/includes/class-rfq-upgrade-manager.php` | Create — versioned additive migrations and failure state |
 | `rfq-intake/admin/class-rfq-admin-settings.php` | Create |
 | `rfq-intake/admin/class-rfq-admin-intake-list.php` | Create — read-only intake ledger |
 | `rfq-intake/admin/views/settings-page.php` | Create |
@@ -620,6 +649,10 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-017** — Invalid manifest returns 422 with field errors
 - [ ] **AC-WP-018** — Missing S3 file at submit returns error identifying missing keys
 - [ ] **AC-WP-019** — Webhook POST fires on submit when URL configured; submit still succeeds when webhook target is down
+- [ ] **AC-WP-029** — Only the exact stable GitHub Release asset `rfq-intake-<version>.zip` is eligible for an in-app update; source archives are never used
+- [ ] **AC-WP-030** — Administrators can use **Update now**, but RFQ Intake automatic updates are disabled
+- [ ] **AC-WP-031** — Plugin Package bundles Plugin Update Checker and public update checks require no token or live-GitHub tests
+- [ ] **AC-WP-032** — Plugin Updates run idempotent additive migrations; migration failure degrades health and is not marked complete
 
 ### ERP (separate repo)
 
