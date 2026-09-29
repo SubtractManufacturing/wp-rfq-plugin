@@ -75,3 +75,13 @@ git worktree add .worktrees/<name>
 ## Out of scope
 
 Everything in `Planning/FUTURE.md` and ERP Phase 7 (M6).
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues in SubtractManufacturing/wp-rfq-plugin. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
