@@ -23,7 +23,7 @@
     "test:acceptance-coverage": "php scripts/check-acceptance-coverage.php",
     "test:contract": "php scripts/validate-contract-schemas.php",
     "test:frontend": "npm --prefix frontend ci && npm --prefix frontend run lint && npm --prefix frontend run test",
-    "test:e2e": "playwright test tests/e2e/specs/rfq-form.spec.ts",
+    "test:e2e": "playwright test tests/e2e/specs/rfq-form.spec.ts tests/e2e/specs/theme-isolation.spec.ts",
     "test:a11y": "playwright test tests/e2e/specs/a11y.spec.ts",
     "test:package": "node scripts/test-plugin-package.mjs",
     "package:plugin": "node scripts/build-plugin-package.mjs",
