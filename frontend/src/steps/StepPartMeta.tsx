@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Combobox } from "../components/Combobox";
+import { Select } from "../components/Select";
 import { dropdownMaterials, searchMaterials } from "../lib/materials";
 import { useForm } from "../state/FormContext";
 import type { PartRow, Tolerance } from "../types/manifest";
@@ -61,35 +63,38 @@ export function StepPartMeta() {
         <p className="mt-2 text-sm text-slate-600">Add material, tolerance, and quantity for each uploaded part.</p>
       </div>
       {parts.map((part, index) => {
-        const suggestions = searchMaterials(part.material, config.materials);
         return (
           <div className="rounded-lg border border-slate-200 p-4" key={part.part_id}>
-            <h2 className="font-medium text-slate-900">Part {index + 1}</h2>
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Material
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                list={`materials-${part.part_id}`}
-                onChange={(event) => updatePart(part.part_id, { material: event.target.value })}
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Part {index + 1} of {parts.length}
+            </p>
+            <h2 className="mt-0.5 break-all text-lg font-semibold text-slate-900">
+              {part.partFile?.filename ?? `Part ${index + 1}`}
+            </h2>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-800" htmlFor={`material-${part.part_id}`}>
+                Material
+              </label>
+              <Combobox
+                defaultOptions={dropdownMaterials(config.materials)}
+                id={`material-${part.part_id}`}
+                onChange={(material) => updatePart(part.part_id, { material })}
+                search={(query) => searchMaterials(query, config.materials)}
                 value={part.material}
+                wrapperClassName="mt-1"
               />
-              <datalist id={`materials-${part.part_id}`}>
-                {[...dropdownMaterials(config.materials), ...suggestions].map((label) => (
-                  <option key={label} value={label} />
-                ))}
-              </datalist>
-            </label>
+            </div>
             <label className="mt-3 block text-sm font-medium text-slate-800">
               Tolerance
-              <select
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+              <Select
                 onChange={(event) => updatePart(part.part_id, { tolerance: event.target.value as Tolerance })}
                 value={part.tolerance}
+                wrapperClassName="mt-1"
               >
                 <option value="standard">Standard</option>
                 <option value="precision">Precision</option>
                 <option value="custom">Custom</option>
-              </select>
+              </Select>
             </label>
             {part.tolerance === "custom" ? (
               <label className="mt-3 block text-sm font-medium text-slate-800">

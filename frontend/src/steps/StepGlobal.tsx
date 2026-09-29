@@ -1,4 +1,5 @@
 import { FieldError } from "../components/FieldError";
+import { Select } from "../components/Select";
 import { isValidPostalCode } from "../lib/postalCode";
 import { useForm } from "../state/FormContext";
 import type { LeadTimePreference } from "../types/manifest";
@@ -34,16 +35,16 @@ export function StepGlobal() {
       </label>
       <label className="block text-sm font-medium text-slate-800">
         Lead time preference
-        <select
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+        <Select
           onChange={(event) => setGlobal({ ...global, lead_time_preference: event.target.value as LeadTimePreference })}
           value={global.lead_time_preference}
+          wrapperClassName="mt-1"
         >
           <option value="">Select timing</option>
           {leadTimeOptions.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="block text-sm font-medium text-slate-800">
         Shipping ZIP or postal code

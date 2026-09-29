@@ -68,8 +68,10 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
       <ReviewSection onEdit={edit("uploads")} title="Parts">
         {parts.map((part, index) => (
           <div className="mt-3 border-t border-slate-100 pt-3 first:mt-0 first:border-t-0 first:pt-0" key={part.part_id}>
-            <p className="font-medium text-slate-900">Part {index + 1}</p>
-            <p>File: {part.partFile?.filename ?? "—"}</p>
+            <p className="break-all font-medium text-slate-900">
+              <span className="mr-2 text-slate-400">{index + 1}.</span>
+              {part.partFile?.filename ?? `Part ${index + 1}`}
+            </p>
             <p>Drawings: {part.drawings.filter((drawing) => drawing.status === "confirmed").map((drawing) => drawing.filename).join(", ") || "None"}</p>
             <p>Material: {part.material}</p>
             <p>Tolerance: {part.tolerance}{part.tolerance === "custom" && part.tolerance_detail ? ` (${part.tolerance_detail})` : ""}</p>

@@ -1,5 +1,6 @@
 import type { CountryCode } from "../lib/phone";
 import { formatPhoneDisplay, getCountryOptions } from "../lib/phone";
+import { Select } from "./Select";
 
 const countryOptions = getCountryOptions();
 
@@ -14,9 +15,8 @@ export function PhoneField({
 }) {
   return (
     <span className="mt-1 flex items-center gap-2">
-      <select
+      <Select
         aria-label="Country code"
-        className="w-40 shrink-0 rounded-md border border-slate-300 px-2 py-2 text-sm"
         onChange={(event) => {
           const nextCountry = event.target.value as CountryCode;
           onChange({
@@ -25,13 +25,14 @@ export function PhoneField({
           });
         }}
         value={phoneCountry}
+        wrapperClassName="w-44 shrink-0"
       >
         {countryOptions.map((option) => (
           <option key={option.code} value={option.code}>
             {option.label} (+{option.callingCode})
           </option>
         ))}
-      </select>
+      </Select>
       <input
         aria-label="Phone"
         className="w-full rounded-md border border-slate-300 px-3 py-2"
