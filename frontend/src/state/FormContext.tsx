@@ -1,4 +1,12 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import type { RfqFormConfig } from "../types/config";
 import {
   emptyContact,
@@ -30,7 +38,7 @@ interface FormContextValue extends FormState {
   setStep: (step: StepId) => void;
   setContact: (contact: ContactState) => void;
   setContactSaved: (saved: boolean) => void;
-  setParts: (parts: PartRow[]) => void;
+  setParts: Dispatch<SetStateAction<PartRow[]>>;
   setGlobal: (global: GlobalState) => void;
   setSubmitError: (message: string | null) => void;
   setTokenWarning: (warning: boolean) => void;

@@ -388,10 +388,11 @@ The form is divided into the following steps. Customers cannot proceed past Step
 
 Uploads are organized **per part row**, not in a shared pool. Each part row owns its files from selection through submit.
 
-- Customers click **Add part** to create a part row. The client assigns a `part_id` (UUID v4) per row; this ID is stable for the lifetime of the row in the session.
+- Step 2 opens with a single drop zone ("Upload part files": drag and drop or **Select files**, multi-select). Every file the customer selects or drops becomes its own part row, so a whole batch of parts can be added at once. Afterward a compact drop zone (**Add more parts**) stays below the list for further batches. The client assigns a `part_id` (UUID v4) per row; this ID is stable for the lifetime of the row in the session.
 - Each part row contains:
-  - One part file picker (STEP, SolidWorks `.sldprt`, `.sldasm`, `.x_t`, `.iges`, `.stl`, or other CAD formats). **Required** before the row counts toward Step 2 completion.
-  - One or more drawing/supporting file pickers (PDF, PNG, JPEG). **Optional**; drawings belong to the part row they are added under.
+  - One part file (STEP, SolidWorks `.sldprt`, `.sldasm`, `.x_t`, `.iges`, `.stl`, or other CAD formats). **Required** before the row counts toward Step 2 completion.
+  - Zero or more drawing/supporting files (PDF, PNG, JPEG), added per row from the list **after** the part batch is selected. **Optional**; drawings belong to the part row they are added under.
+- Uploads run with limited concurrency (3 at a time); remaining files show as waiting. **Continue** stays disabled while any upload is in progress or any part file has failed (retry or remove it).
 - Step 3 metadata is collected for the **same part rows** (matched by `part_id`). Step 3 does not reassign files between parts.
 - Per-file upload flow:
   1. Customer selects a file within a part row.
@@ -401,7 +402,7 @@ Uploads are organized **per part row**, not in a shared pool. Each part row owns
   5. On successful upload (HTTP 200 from S3), React marks the file as confirmed in that part row's local state and stores the returned `file_key`.
   6. Upload progress is shown per file. Failed uploads show an inline retry button.
 - Customers cannot advance to Step 3 until at least one part row has a confirmed uploaded part file.
-- **Part count limit:** Maximum **20 part rows** per RFQ (soft cap). When the limit is reached, disable **Add part** and show helper text directing the customer to email larger RFQs to the international RFQ email (see 5.2). Enforce the same limit server-side on submit.
+- **Part count limit:** Maximum **20 part rows** per RFQ (soft cap). When the limit is reached, disable **Add more parts** (files beyond the cap in a batch are skipped with a message) and show helper text directing the customer to email larger RFQs to the international RFQ email (see 5.2). Enforce the same limit server-side on submit.
 - **Implementation:** Define the limit as a single named constant in plugin code (e.g. `RFQ_MAX_PARTS = 20`) referenced by both React config and submit validation — not magic numbers scattered in the codebase. Not editable in WP admin in V1; structure so a future admin setting can override the constant.
 - Customers may **remove a part row** or **replace files** in the UI at any time before submit. This updates client state only — it does **not** delete objects from S3.
 - The **manifest** is the authoritative list of files for the RFQ. Extra objects in the session's S3 prefix (from removed rows, replaced files, or duplicate uploads) are ignored at submit.
