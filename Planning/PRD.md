@@ -418,16 +418,15 @@ Uploads are organized **per part row**, not in a shared pool. Each part row owns
 
 For each part row from Step 2 (same `part_id`), collect:
 
+- Quantity (integer, required, minimum **1**; no maximum — large production quantities are valid).
 - **Material** (required, non-empty) — dual UX, always stored as a free-text string in the manifest:
   - **Simple dropdown** — short list of common options (e.g. general-purpose aluminum, common steels) for customers who do not know a specific alloy. Selecting an option fills the material field.
   - **Type-ahead text field** — matches the effective material catalog (label and aliases). Example: typing `1018` suggests and can select `1018 Steel`.
   - **Custom entry** — user may ignore suggestions and submit any string (exotic alloy, customer-supplied material, etc.). Never block submit for a material not in the catalog.
   - Catalog source: see [Material catalog](#317-material-catalog).
 - **Tolerance** (required) — dropdown: `standard`, `precision`, or `custom`. If `custom`, a free-text **tolerance detail** field is required (non-empty). Omit or send `null` for detail when not custom.
-- Threads/features (free text, optional).
-- Quantity (integer, required, minimum **1**; no maximum — large production quantities are valid).
-- Target unit price (optional) — customer's target price **per part** in **USD**. Positive number, up to 2 decimal places; stored in manifest as a number or `null`. Display with helper text that this is optional and helps you understand their budget. Reject negative values and non-numeric input on submit.
 - Notes (multi-line text, optional).
+- Target unit price (optional) — customer's target price **per part** in **USD**. Positive number, up to 2 decimal places; stored in manifest as a number or `null`. Display with helper text that this is optional and helps you understand their budget. Reject negative values and non-numeric input on submit. Shown inside a collapsed **More details** section below Notes (auto-expanded when a value is already set).
 
 **Step 4 — Global RFQ Metadata**
 

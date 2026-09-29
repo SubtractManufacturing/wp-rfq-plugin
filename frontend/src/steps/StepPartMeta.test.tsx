@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { describe, expect, it } from "vitest";
 import { FormProvider, useForm } from "../state/FormContext";
@@ -68,5 +69,54 @@ describe("StepPartMeta", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Part 1" })).toBeInTheDocument();
+  });
+
+  it("orders fields quantity first and notes last, without threads/features", () => {
+    render(
+      <FormProvider config={config}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    const quantity = screen.getByLabelText("Quantity");
+    const material = screen.getByLabelText("Material");
+    const notes = screen.getByLabelText("Notes");
+    expect(quantity.compareDocumentPosition(material) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(material.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByLabelText(/threads/i)).not.toBeInTheDocument();
+  });
+
+  it("hides target price behind a More details toggle placed after notes", async () => {
+    const user = userEvent.setup();
+    render(
+      <FormProvider config={config}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    expect(screen.queryByLabelText(/target unit price/i)).not.toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "More details" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByLabelText("Notes").compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText(/target unit price/i)).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(screen.queryByLabelText(/target unit price/i)).not.toBeInTheDocument();
+  });
+
+  it("starts expanded when a target price is already set", () => {
+    render(
+      <FormProvider config={config}>
+        <Seed rows={[{ ...part("1", "a.step"), target_unit_price: 12.5 }]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    expect(screen.getByLabelText(/target unit price/i)).toHaveValue(12.5);
   });
 });
