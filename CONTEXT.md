@@ -57,7 +57,7 @@ The customer's requested need-by date for quoting — not a contractual ship dat
 _Avoid_: Ship date, promise date, due date (contractual sense)
 
 **Lead time preference**:
-How the customer wants production timing prioritized: `no_rush`, `standard`, `target_date` (meet the requested delivery date), `expedited`, or `economy`.
+How the customer wants production timing prioritized: `standard`, `target_date` (meet the requested delivery date), `expedited`, or `economy`.
 _Avoid_: Priority, urgency level, SLA
 
 **Treat as NDA** (`nda_required`):

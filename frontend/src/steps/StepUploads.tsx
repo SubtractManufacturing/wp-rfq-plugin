@@ -1,17 +1,26 @@
-import { useEffect, useRef } from "react";
+import { useRef, useState } from "react";
 import { apiFetch } from "../api/client";
+import {
+  btnDangerCompactClasses,
+  btnPrimaryBlockClasses,
+  btnSecondaryCompactClasses,
+} from "../components/buttonStyles";
+import { UploadDropzone } from "../components/UploadDropzone";
 import { UploadProgress } from "../components/UploadProgress";
 import { DRAWING_MAX_BYTES, PART_MAX_BYTES, resolveDrawingContentType } from "../lib/drawingContentType";
 import { uploadFile } from "../lib/uploadFile";
+import { createUploadQueue } from "../lib/uploadQueue";
 import { randomUuid } from "../lib/uuid";
 import { useForm } from "../state/FormContext";
 import type { UploadUrlResponse } from "../types/api";
 import type { PartRow, UploadedFile } from "../types/manifest";
 
-function createPart(): PartRow {
+const MAX_CONCURRENT_UPLOADS = 3;
+
+function createPart(partFile: UploadedFile): PartRow {
   return {
     part_id: randomUuid(),
-    partFile: null,
+    partFile,
     drawings: [],
     material: "",
     tolerance: "standard",
@@ -25,260 +34,402 @@ function createPart(): PartRow {
 
 type FileType = "part" | "drawing";
 
+const UPLOAD_FAILED = "Upload failed.";
+
 export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) {
   const { config, parts, setParts, sessionId, token, setStep } = useForm();
-  const rows = parts.length === 0 ? [createPart()] : parts;
-  const partInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+  const queueRef = useRef(createUploadQueue(MAX_CONCURRENT_UPLOADS));
+  // Files the customer removed while they were still queued; their uploads are skipped.
+  const discardedRef = useRef(new WeakSet<File>());
 
-  useEffect(() => {
-    if (parts.length === 0) {
-      setParts([createPart()]);
+  const atLimit = parts.length >= config.maxParts;
+
+  const patchPart = (partId: string, patch: (part: PartRow) => PartRow) => {
+    setParts((current) => current.map((part) => (part.part_id === partId ? patch(part) : part)));
+  };
+
+  const discard = (file: UploadedFile | null | undefined) => {
+    if (file?.sourceFile) {
+      discardedRef.current.add(file.sourceFile);
     }
-  }, [parts.length, setParts]);
+  };
 
-  const updatePart = (part: PartRow) => setParts(rows.map((row) => (row.part_id === part.part_id ? part : row)));
+  const applyFileUpdate = (partId: string, file: File, fileType: FileType, next: UploadedFile) => {
+    patchPart(partId, (part) => {
+      if (fileType === "part") {
+        return part.partFile?.sourceFile === file ? { ...part, partFile: next } : part;
+      }
+      return {
+        ...part,
+        drawings: part.drawings.map((drawing) => (drawing.sourceFile === file ? next : drawing)),
+      };
+    });
+  };
+
+  const queueUpload = (partId: string, file: File, fileType: FileType, contentType: string) => {
+    queueRef.current.enqueue(async () => {
+      if (discardedRef.current.has(file)) {
+        return;
+      }
+
+      const pending = toUploadedFile(file, "uploading");
+      const update = (next: UploadedFile) => applyFileUpdate(partId, file, fileType, next);
+      update(pending);
+
+      try {
+        const response = await apiFetch<UploadUrlResponse>(`/sessions/${sessionId}/upload-urls`, {
+          method: "POST",
+          token,
+          fetchImpl,
+          body: {
+            part_id: partId,
+            file_type: fileType,
+            filename: file.name,
+            content_type: contentType,
+          },
+        });
+
+        await uploadFile(
+          response.upload_url,
+          file,
+          contentType,
+          (progress) => update({ ...pending, progress, status: "uploading" }),
+          fetchImpl,
+        );
+
+        update({
+          ...pending,
+          file_key: response.file_key,
+          status: "confirmed",
+          progress: 100,
+          content_type: contentType,
+        });
+      } catch {
+        update(failedFile(file, UPLOAD_FAILED));
+      }
+    });
+  };
+
+  const addPartFiles = (files: File[]) => {
+    const capacity = Math.max(0, config.maxParts - parts.length);
+    const accepted = files.slice(0, capacity);
+    const skipped = files.length - accepted.length;
+
+    setNotice(
+      skipped > 0
+        ? `Only ${accepted.length} of ${files.length} files were added — RFQs are limited to ${config.maxParts} parts. Email ${config.internationalRfqEmail} for larger RFQs.`
+        : null,
+    );
+
+    if (accepted.length === 0) {
+      return;
+    }
+
+    const rows = accepted.map((file) =>
+      createPart(
+        file.size > PART_MAX_BYTES
+          ? failedFile(file, "Part files must be 500 MB or smaller.")
+          : toUploadedFile(file, "pending"),
+      ),
+    );
+
+    setParts((current) => [...current, ...rows]);
+
+    rows.forEach((row, index) => {
+      const file = accepted[index];
+      if (file && row.partFile?.status === "pending") {
+        queueUpload(row.part_id, file, "part", "application/octet-stream");
+      }
+    });
+  };
+
+  const retryPartFile = (part: PartRow) => {
+    const file = part.partFile?.sourceFile;
+    if (!file) {
+      return;
+    }
+    applyFileUpdate(part.part_id, file, "part", toUploadedFile(file, "pending"));
+    queueUpload(part.part_id, file, "part", "application/octet-stream");
+  };
+
+  const addDrawingFiles = (part: PartRow, files: File[]) => {
+    const additions: Array<{ file: File; contentType: string | null; entry: UploadedFile }> = files.map((file) => {
+      const contentType = resolveDrawingContentType(file);
+      if (!contentType) {
+        return { file, contentType, entry: failedFile(file, "Drawings must be PDF, PNG, or JPEG.") };
+      }
+      if (file.size > DRAWING_MAX_BYTES) {
+        return { file, contentType, entry: failedFile(file, "Drawing files must be 50 MB or smaller.") };
+      }
+      return { file, contentType, entry: toUploadedFile(file, "pending") };
+    });
+
+    patchPart(part.part_id, (row) => ({ ...row, drawings: [...row.drawings, ...additions.map((item) => item.entry)] }));
+
+    additions.forEach(({ file, contentType, entry }) => {
+      if (contentType && entry.status === "pending") {
+        queueUpload(part.part_id, file, "drawing", contentType);
+      }
+    });
+  };
+
+  const retryDrawing = (part: PartRow, drawing: UploadedFile) => {
+    const file = drawing.sourceFile;
+    const contentType = file ? resolveDrawingContentType(file) : null;
+    if (!file || !contentType) {
+      return;
+    }
+    applyFileUpdate(part.part_id, file, "drawing", toUploadedFile(file, "pending"));
+    queueUpload(part.part_id, file, "drawing", contentType);
+  };
 
   const removePart = (partId: string) => {
-    if (rows.length <= 1) {
-      return;
-    }
-    setParts(rows.filter((row) => row.part_id !== partId));
+    const part = parts.find((row) => row.part_id === partId);
+    discard(part?.partFile);
+    part?.drawings.forEach(discard);
+    setNotice(null);
+    setParts((current) => current.filter((part) => part.part_id !== partId));
   };
 
-  const uploadToS3 = async (
-    part: PartRow,
-    file: File,
-    fileType: FileType,
-    contentType: string,
-    onFileUpdate: (file: UploadedFile) => void,
-  ) => {
-    const pending = toUploadedFile(file, "uploading");
-    onFileUpdate(pending);
-
-    const setProgress = (progress: number) => {
-      onFileUpdate({ ...pending, progress, status: "uploading" });
-    };
-
-    try {
-      const response = await apiFetch<UploadUrlResponse>(`/sessions/${sessionId}/upload-urls`, {
-        method: "POST",
-        token,
-        fetchImpl,
-        body: {
-          part_id: part.part_id,
-          file_type: fileType,
-          filename: file.name,
-          content_type: contentType,
-        },
-      });
-
-      await uploadFile(response.upload_url, file, contentType, setProgress, fetchImpl);
-
-      onFileUpdate({
-        ...pending,
-        file_key: response.file_key,
-        status: "confirmed",
-        progress: 100,
-        content_type: contentType,
-      });
-    } catch {
-      onFileUpdate(failedFile(file, "Upload failed."));
-    }
+  const removeDrawing = (partId: string, drawingIndex: number) => {
+    discard(parts.find((row) => row.part_id === partId)?.drawings[drawingIndex]);
+    patchPart(partId, (part) => ({
+      ...part,
+      drawings: part.drawings.filter((_, index) => index !== drawingIndex),
+    }));
   };
 
-  const uploadPartFile = async (part: PartRow, file: File) => {
-    if (file.size > PART_MAX_BYTES) {
-      updatePart({ ...part, partFile: failedFile(file, "Part files must be 500 MB or smaller.") });
-      return;
-    }
+  const hasConfirmedPart = parts.some((part) => part.partFile?.status === "confirmed");
+  const hasInFlight = parts.some(
+    (part) =>
+      isInFlight(part.partFile) || part.drawings.some((drawing) => isInFlight(drawing)),
+  );
+  const hasFailedPart = parts.some((part) => part.partFile?.status === "error");
+  const canContinue = hasConfirmedPart && !hasInFlight && !hasFailedPart;
 
-    await uploadToS3(part, file, "part", "application/octet-stream", (partFile) => {
-      updatePart({ ...part, partFile });
-    });
-  };
-
-  const uploadDrawingFile = async (part: PartRow, file: File, drawingIndex?: number) => {
-    const contentType = resolveDrawingContentType(file);
-    if (!contentType) {
-      const errorFile = failedFile(file, "Drawings must be PDF, PNG, or JPEG.");
-      if (drawingIndex === undefined) {
-        updatePart({ ...part, drawings: [...part.drawings, errorFile] });
-      } else {
-        const drawings = [...part.drawings];
-        drawings[drawingIndex] = errorFile;
-        updatePart({ ...part, drawings });
-      }
-      return;
-    }
-
-    if (file.size > DRAWING_MAX_BYTES) {
-      const errorFile = failedFile(file, "Drawing files must be 50 MB or smaller.");
-      if (drawingIndex === undefined) {
-        updatePart({ ...part, drawings: [...part.drawings, errorFile] });
-      } else {
-        const drawings = [...part.drawings];
-        drawings[drawingIndex] = errorFile;
-        updatePart({ ...part, drawings });
-      }
-      return;
-    }
-
-    const placeholderIndex = drawingIndex ?? part.drawings.length;
-    const drawings = [...part.drawings];
-    if (drawingIndex === undefined) {
-      drawings.push(toUploadedFile(file, "uploading"));
-      updatePart({ ...part, drawings });
-    }
-
-    await uploadToS3(part, file, "drawing", contentType, (drawingFile) => {
-      const nextDrawings = [...(drawingIndex === undefined ? drawings : part.drawings)];
-      nextDrawings[placeholderIndex] = drawingFile;
-      updatePart({ ...part, drawings: nextDrawings });
-    });
-  };
-
-  const canContinue = rows.some((part) => part.partFile?.status === "confirmed");
+  let continueHint: string | null = null;
+  if (hasInFlight) {
+    continueHint = "Waiting for uploads to finish…";
+  } else if (hasFailedPart) {
+    continueHint = "Retry or remove failed part files to continue.";
+  }
 
   return (
     <section className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold text-slate-950">Part uploads</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Upload one CAD file per part. Larger RFQs should be emailed to {config.internationalRfqEmail}.
-        </p>
       </div>
-      {rows.map((part, index) => (
-        <div className="rounded-lg border border-slate-200 p-4" key={part.part_id}>
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-medium text-slate-900">Part {index + 1}</h2>
-            {rows.length > 1 ? (
-              <button
-                className="text-sm text-red-700 underline"
-                onClick={() => removePart(part.part_id)}
-                type="button"
-              >
-                Remove part
-              </button>
-            ) : null}
+
+      {parts.length === 0 ? (
+        <UploadDropzone inputLabel="Part files" onFiles={addPartFiles} />
+      ) : (
+        <>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {parts.length} {parts.length === 1 ? "part" : "parts"}
+            </h2>
+            <p className="text-xs text-slate-500">
+              {parts.length} of {config.maxParts} max
+            </p>
           </div>
-
-          {part.partFile?.status === "confirmed" ? (
-            <div className="mt-3 text-sm text-slate-700">
-              <p className="text-green-700">Uploaded: {part.partFile.filename}</p>
-              <button
-                className="mt-2 rounded-md border border-slate-300 px-3 py-1 text-sm"
-                onClick={() => {
-                  updatePart({ ...part, partFile: null });
-                  partInputRefs.current[part.part_id]?.click();
-                }}
-                type="button"
-              >
-                Replace file
-              </button>
-            </div>
-          ) : (
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Part file
-              <input
-                className="mt-1 block w-full text-sm"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    void uploadPartFile(part, file);
-                  }
-                  event.target.value = "";
-                }}
-                ref={(element) => {
-                  partInputRefs.current[part.part_id] = element;
-                }}
-                type="file"
+          <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+            {parts.map((part, index) => (
+              <PartUploadRow
+                index={index}
+                key={part.part_id}
+                onAddDrawings={(files) => addDrawingFiles(part, files)}
+                onRemove={() => removePart(part.part_id)}
+                onRemoveDrawing={(drawingIndex) => removeDrawing(part.part_id, drawingIndex)}
+                onRetryDrawing={(drawing) => retryDrawing(part, drawing)}
+                onRetryPart={() => retryPartFile(part)}
+                part={part}
               />
-            </label>
-          )}
-
-          {part.partFile?.status === "uploading" ? <UploadProgress progress={part.partFile.progress} /> : null}
-          {part.partFile?.status === "error" ? (
-            <FileUploadError
-              file={part.partFile}
-              onRetry={() => {
-                if (part.partFile?.sourceFile) {
-                  void uploadPartFile(part, part.partFile.sourceFile);
-                }
-              }}
-            />
-          ) : null}
-
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <p className="text-sm font-medium text-slate-800">Supporting files (optional)</p>
-            <p className="mt-1 text-xs text-slate-500">PDF, PNG, or JPEG up to 50 MB each.</p>
-            {part.drawings.map((drawing, drawingIndex) => (
-              <div className="mt-3" key={`${part.part_id}-drawing-${drawingIndex}`}>
-                {drawing.status === "confirmed" ? (
-                  <p className="text-sm text-green-700">Uploaded: {drawing.filename}</p>
-                ) : null}
-                {drawing.status === "uploading" ? <UploadProgress progress={drawing.progress} /> : null}
-                {drawing.status === "error" ? (
-                  <FileUploadError
-                    file={drawing}
-                    onRetry={() => {
-                      if (drawing.sourceFile) {
-                        void uploadDrawingFile(part, drawing.sourceFile, drawingIndex);
-                      }
-                    }}
-                  />
-                ) : null}
-              </div>
             ))}
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Add drawing
-              <input
-                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                className="mt-1 block w-full text-sm"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    void uploadDrawingFile(part, file);
-                  }
-                  event.target.value = "";
-                }}
-                type="file"
-              />
-            </label>
-          </div>
-        </div>
-      ))}
-      <button
-        className="rounded-md border border-slate-300 px-4 py-2 text-sm disabled:text-slate-400"
-        disabled={rows.length >= config.maxParts}
-        onClick={() => setParts([...rows, createPart()])}
-        type="button"
-      >
-        Add part
-      </button>
-      {rows.length >= config.maxParts ? (
-        <p className="text-sm text-slate-600">Maximum parts reached. Email {config.internationalRfqEmail} for larger RFQs.</p>
+          </ul>
+          <UploadDropzone compact disabled={atLimit} inputLabel="Part files" onFiles={addPartFiles} />
+        </>
+      )}
+
+      {atLimit ? (
+        <p className="text-sm text-slate-600">
+          Maximum parts reached. Email {config.internationalRfqEmail} for larger RFQs.
+        </p>
       ) : null}
-      <button
-        className="block rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
-        disabled={!canContinue}
-        onClick={() => setStep("partMeta")}
-        type="button"
-      >
-        Continue to part details
-      </button>
+      {notice ? <p className="text-sm text-amber-700">{notice}</p> : null}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          className={btnPrimaryBlockClasses}
+          disabled={!canContinue}
+          onClick={() => setStep("partMeta")}
+          type="button"
+        >
+          Continue to part details
+        </button>
+        {continueHint ? <p className="text-sm text-slate-600">{continueHint}</p> : null}
+      </div>
     </section>
   );
 }
 
-function FileUploadError({ file, onRetry }: { file: UploadedFile; onRetry: () => void }) {
+interface PartUploadRowProps {
+  part: PartRow;
+  index: number;
+  onRemove: () => void;
+  onRetryPart: () => void;
+  onAddDrawings: (files: File[]) => void;
+  onRemoveDrawing: (drawingIndex: number) => void;
+  onRetryDrawing: (drawing: UploadedFile) => void;
+}
+
+function PartUploadRow({
+  part,
+  index,
+  onRemove,
+  onRetryPart,
+  onAddDrawings,
+  onRemoveDrawing,
+  onRetryDrawing,
+}: PartUploadRowProps) {
+  const drawingInputRef = useRef<HTMLInputElement | null>(null);
+  const partFile = part.partFile;
+  const filename = partFile?.filename ?? `Part ${index + 1}`;
+
   return (
-    <div className="mt-2 text-sm text-red-700">
-      <p>{file.error ?? "Upload failed."}</p>
-      <button className="mt-2 rounded-md border border-red-300 px-3 py-1" onClick={onRetry} type="button">
-        Retry upload
-      </button>
-    </div>
+    <li className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-slate-900" title={filename}>
+            <span className="mr-2 text-slate-400">{index + 1}.</span>
+            {filename}
+          </p>
+          {partFile ? <FileStatus file={partFile} onRetry={onRetryPart} /> : null}
+        </div>
+        <button
+          aria-label={`Remove ${filename}`}
+          className="shrink-0 text-sm text-slate-500 transition-colors duration-150 hover:text-red-700"
+          onClick={onRemove}
+          type="button"
+        >
+          Remove
+        </button>
+      </div>
+
+      <div className="mt-3 border-t border-slate-100 pt-3">
+        {part.drawings.length > 0 ? (
+          <ul className="mb-3 space-y-2">
+            {part.drawings.map((drawing, drawingIndex) => (
+              <li className="flex items-start justify-between gap-3" key={`${part.part_id}-drawing-${drawingIndex}`}>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-slate-800" title={drawing.filename}>
+                    {drawing.filename}
+                  </p>
+                  <FileStatus file={drawing} onRetry={() => onRetryDrawing(drawing)} />
+                </div>
+                <button
+                  aria-label={`Remove ${drawing.filename}`}
+                  className="shrink-0 text-xs text-slate-500 transition-colors duration-150 hover:text-red-700"
+                  onClick={() => onRemoveDrawing(drawingIndex)}
+                  type="button"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <input
+          accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+          aria-label={`Supporting files for ${filename}`}
+          className="sr-only"
+          multiple
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            if (files.length > 0) {
+              onAddDrawings(files);
+            }
+            event.target.value = "";
+          }}
+          ref={drawingInputRef}
+          tabIndex={-1}
+          type="file"
+        />
+        <button
+          className={btnSecondaryCompactClasses}
+          onClick={() => drawingInputRef.current?.click()}
+          type="button"
+        >
+          + Add supporting files
+        </button>
+        <span className="ml-2 text-xs text-slate-500">Optional · PDF, PNG, or JPEG up to 50 MB each</span>
+      </div>
+    </li>
   );
+}
+
+function FileStatus({ file, onRetry }: { file: UploadedFile; onRetry: () => void }) {
+  const size = file.sourceFile ? formatBytes(file.sourceFile.size) : null;
+
+  if (file.status === "confirmed") {
+    return (
+      <p className="mt-0.5 text-xs text-green-700">
+        Uploaded{size ? ` · ${size}` : ""}
+      </p>
+    );
+  }
+
+  if (file.status === "uploading") {
+    return (
+      <div className="mt-0.5">
+        <p className="text-xs text-slate-500">
+          Uploading… {Math.round(file.progress)}%{size ? ` · ${size}` : ""}
+        </p>
+        <UploadProgress progress={file.progress} />
+      </div>
+    );
+  }
+
+  if (file.status === "error") {
+    return (
+      <div className="mt-0.5 text-sm text-red-700">
+        <p className="text-xs">{file.error ?? UPLOAD_FAILED}</p>
+        {file.sourceFile && !isValidationError(file) ? (
+          <button
+            className={btnDangerCompactClasses}
+            onClick={onRetry}
+            type="button"
+          >
+            Retry upload
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  return <p className="mt-0.5 text-xs text-slate-500">Waiting to upload…{size ? ` · ${size}` : ""}</p>;
+}
+
+function isInFlight(file: UploadedFile | null): boolean {
+  return file?.status === "pending" || file?.status === "uploading";
+}
+
+/** Size/type rejections can't be fixed by retrying — the customer must remove the file. */
+function isValidationError(file: UploadedFile): boolean {
+  return (file.error ?? UPLOAD_FAILED) !== UPLOAD_FAILED;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function toUploadedFile(file: File, status: UploadedFile["status"]): UploadedFile {

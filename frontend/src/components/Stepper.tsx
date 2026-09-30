@@ -26,11 +26,11 @@ export function Stepper() {
           return (
             <li key={item.id}>
               <button
-                className={`w-full rounded-full px-3 py-2 text-center text-sm ${
+                className={`w-full rounded-full px-3 py-2 text-center text-sm transition-colors duration-150 ${
                   isCurrent
                     ? "bg-slate-900 text-white"
                     : isComplete
-                      ? "bg-slate-200 text-slate-800"
+                      ? "bg-slate-200 text-slate-800 hover:bg-slate-300"
                       : reachable
                         ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
                         : "cursor-not-allowed bg-slate-50 text-slate-400"

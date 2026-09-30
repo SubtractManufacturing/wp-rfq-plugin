@@ -7,7 +7,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class RFQ_Manifest_Validator {
 
     private const LEAD_TIME_PREFERENCES = [
-        'no_rush',
         'standard',
         'target_date',
         'expedited',
@@ -206,20 +205,6 @@ class RFQ_Manifest_Validator {
             return;
         }
 
-        $required_delivery_date = $global_data['required_delivery_date'] ?? null;
-
-        if ( ! is_string( $required_delivery_date ) || ! self::is_valid_iso_date( $required_delivery_date ) ) {
-            $fields['global.required_delivery_date'] = __(
-                'required_delivery_date must be a valid ISO date (YYYY-MM-DD).',
-                'rfq-intake'
-            );
-        } elseif ( self::is_past_utc_date( $required_delivery_date ) ) {
-            $fields['global.required_delivery_date'] = __(
-                'required_delivery_date cannot be before today (UTC).',
-                'rfq-intake'
-            );
-        }
-
         $lead_time_preference = $global_data['lead_time_preference'] ?? null;
 
         if (
@@ -227,9 +212,41 @@ class RFQ_Manifest_Validator {
             || ! in_array( $lead_time_preference, self::LEAD_TIME_PREFERENCES, true )
         ) {
             $fields['global.lead_time_preference'] = __(
-                'lead_time_preference must be one of: no_rush, standard, target_date, expedited, economy.',
+                'lead_time_preference must be one of: standard, target_date, expedited, economy.',
                 'rfq-intake'
             );
+        }
+
+        $required_delivery_date = $global_data['required_delivery_date'] ?? null;
+        $requires_target_date   = $lead_time_preference === 'target_date';
+
+        if ( $requires_target_date ) {
+            if ( ! is_string( $required_delivery_date ) || ! self::is_valid_iso_date( $required_delivery_date ) ) {
+                $fields['global.required_delivery_date'] = __(
+                    'required_delivery_date must be a valid ISO date (YYYY-MM-DD) when lead time is Meet Target Date.',
+                    'rfq-intake'
+                );
+            } elseif ( self::is_past_utc_date( $required_delivery_date ) ) {
+                $fields['global.required_delivery_date'] = __(
+                    'required_delivery_date cannot be before today (UTC).',
+                    'rfq-intake'
+                );
+            }
+        } elseif (
+            is_string( $required_delivery_date )
+            && $required_delivery_date !== ''
+        ) {
+            if ( ! self::is_valid_iso_date( $required_delivery_date ) ) {
+                $fields['global.required_delivery_date'] = __(
+                    'required_delivery_date must be a valid ISO date (YYYY-MM-DD).',
+                    'rfq-intake'
+                );
+            } elseif ( self::is_past_utc_date( $required_delivery_date ) ) {
+                $fields['global.required_delivery_date'] = __(
+                    'required_delivery_date cannot be before today (UTC).',
+                    'rfq-intake'
+                );
+            }
         }
 
         $shipping_destination = $global_data['shipping_destination'] ?? null;

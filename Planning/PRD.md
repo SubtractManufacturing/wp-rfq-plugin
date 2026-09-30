@@ -388,10 +388,11 @@ The form is divided into the following steps. Customers cannot proceed past Step
 
 Uploads are organized **per part row**, not in a shared pool. Each part row owns its files from selection through submit.
 
-- Customers click **Add part** to create a part row. The client assigns a `part_id` (UUID v4) per row; this ID is stable for the lifetime of the row in the session.
+- Step 2 opens with a single drop zone ("Upload part files": drag and drop or **Select files**, multi-select). Every file the customer selects or drops becomes its own part row, so a whole batch of parts can be added at once. Afterward a compact drop zone (**Add more parts**) stays below the list for further batches. The client assigns a `part_id` (UUID v4) per row; this ID is stable for the lifetime of the row in the session.
 - Each part row contains:
-  - One part file picker (STEP, SolidWorks `.sldprt`, `.sldasm`, `.x_t`, `.iges`, `.stl`, or other CAD formats). **Required** before the row counts toward Step 2 completion.
-  - One or more drawing/supporting file pickers (PDF, PNG, JPEG). **Optional**; drawings belong to the part row they are added under.
+  - One part file (STEP, SolidWorks `.sldprt`, `.sldasm`, `.x_t`, `.iges`, `.stl`, or other CAD formats). **Required** before the row counts toward Step 2 completion.
+  - Zero or more drawing/supporting files (PDF, PNG, JPEG), added per row from the list **after** the part batch is selected. **Optional**; drawings belong to the part row they are added under.
+- Uploads run with limited concurrency (3 at a time); remaining files show as waiting. **Continue** stays disabled while any upload is in progress or any part file has failed (retry or remove it).
 - Step 3 metadata is collected for the **same part rows** (matched by `part_id`). Step 3 does not reassign files between parts.
 - Per-file upload flow:
   1. Customer selects a file within a part row.
@@ -401,7 +402,7 @@ Uploads are organized **per part row**, not in a shared pool. Each part row owns
   5. On successful upload (HTTP 200 from S3), React marks the file as confirmed in that part row's local state and stores the returned `file_key`.
   6. Upload progress is shown per file. Failed uploads show an inline retry button.
 - Customers cannot advance to Step 3 until at least one part row has a confirmed uploaded part file.
-- **Part count limit:** Maximum **20 part rows** per RFQ (soft cap). When the limit is reached, disable **Add part** and show helper text directing the customer to email larger RFQs to the international RFQ email (see 5.2). Enforce the same limit server-side on submit.
+- **Part count limit:** Maximum **20 part rows** per RFQ (soft cap). When the limit is reached, disable **Add more parts** (files beyond the cap in a batch are skipped with a message) and show helper text directing the customer to email larger RFQs to the international RFQ email (see 5.2). Enforce the same limit server-side on submit.
 - **Implementation:** Define the limit as a single named constant in plugin code (e.g. `RFQ_MAX_PARTS = 20`) referenced by both React config and submit validation — not magic numbers scattered in the codebase. Not editable in WP admin in V1; structure so a future admin setting can override the constant.
 - Customers may **remove a part row** or **replace files** in the UI at any time before submit. This updates client state only — it does **not** delete objects from S3.
 - The **manifest** is the authoritative list of files for the RFQ. Extra objects in the session's S3 prefix (from removed rows, replaced files, or duplicate uploads) are ignored at submit.
@@ -417,16 +418,15 @@ Uploads are organized **per part row**, not in a shared pool. Each part row owns
 
 For each part row from Step 2 (same `part_id`), collect:
 
+- Quantity (integer, required, minimum **1**; no maximum — large production quantities are valid).
 - **Material** (required, non-empty) — dual UX, always stored as a free-text string in the manifest:
   - **Simple dropdown** — short list of common options (e.g. general-purpose aluminum, common steels) for customers who do not know a specific alloy. Selecting an option fills the material field.
   - **Type-ahead text field** — matches the effective material catalog (label and aliases). Example: typing `1018` suggests and can select `1018 Steel`.
   - **Custom entry** — user may ignore suggestions and submit any string (exotic alloy, customer-supplied material, etc.). Never block submit for a material not in the catalog.
   - Catalog source: see [Material catalog](#317-material-catalog).
 - **Tolerance** (required) — dropdown: `standard`, `precision`, or `custom`. If `custom`, a free-text **tolerance detail** field is required (non-empty). Omit or send `null` for detail when not custom.
-- Threads/features (free text, optional).
-- Quantity (integer, required, minimum **1**; no maximum — large production quantities are valid).
-- Target unit price (optional) — customer's target price **per part** in **USD**. Positive number, up to 2 decimal places; stored in manifest as a number or `null`. Display with helper text that this is optional and helps you understand their budget. Reject negative values and non-numeric input on submit.
 - Notes (multi-line text, optional).
+- Target unit price (optional) — customer's target price **per part** in **USD**. Positive number, up to 2 decimal places; stored in manifest as a number or `null`. Display with helper text that this is optional and helps you understand their budget. Reject negative values and non-numeric input on submit. Shown inside a collapsed **More details** section below Notes (auto-expanded when a value is already set).
 
 **Step 4 — Global RFQ Metadata**
 
@@ -438,9 +438,8 @@ V1 online intake assumes **shipping within the US and Canada only**.
 
 | Manifest value | UI label | Meaning |
 |----------------|----------|---------|
-| `no_rush` | No rush | Flexible timing; no pressure to hit the requested date |
 | `standard` | Standard | Normal shop lead time |
-| `target_date` | Meet target date | Plan to the requested delivery date above |
+| `target_date` | Meet Target Date | Plan to the target date captured on the form |
 | `expedited` | Expedited | Faster than standard if feasible |
 | `economy` | Economy | Prefer lower cost; longer lead time acceptable |
 
@@ -602,7 +601,7 @@ When `POST /sessions/{session_id}/submit` is called, the WordPress plugin must e
 
 1. **Validate JWT.** Verify signature, expiry, and that `session_id` in the JWT matches the URL parameter.
 2. **Validate session state.** Check the WP DB `rfq_sessions` row. If `status` is already `submitted`, return the existing `receipt_number` (idempotent re-submission is safe).
-3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `no_rush`, `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required, ISO date format, and must not be before today (UTC).
+3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required when `lead_time_preference` is `target_date` (ISO date, not before today UTC); otherwise omit or `null`.
 4. **Confirm S3 objects exist and match declared constraints.** For every `part_file_key` and `drawing_file_key` declared in the manifest, call S3 `HeadObject` or equivalent metadata lookup. If any declared key is missing, returns an error, exceeds the file-category size limit, or has available content-type metadata that conflicts with the declared file category, abort and return an error identifying which files failed validation. Objects in the session prefix that are **not** listed in the manifest are not validated and are not an error — they are ignored until ERP import cleanup.
 5. **Write `manifest.json` to S3** at `intake/{session_id}/meta/manifest.json`.
 6. **Generate receipt number** using the daily sequence.

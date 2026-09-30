@@ -44,16 +44,18 @@ describe("contact and upload flow", () => {
     expect(await screen.findByRole("heading", { name: /part uploads/i })).toBeInTheDocument();
     expect(fetchMock.mock.calls[1]?.[0]).toBe("https://example.test/wp-json/rfq/v1/sessions");
     expect(String(fetchMock.mock.calls[2]?.[0])).toContain("/contact");
-    expect(screen.getAllByText(/large-rfq@example.test/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /add part/i })).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /^part uploads$/i })).toBeInTheDocument();
+    expect(screen.getByText("Drag & drop or click to browse")).toBeInTheDocument();
 
     const file = new File(["cad"], "part.step", { type: "application/octet-stream" });
-    await user.upload(screen.getByLabelText(/^part file$/i), file);
+    await user.upload(screen.getByLabelText(/^part files$/i), file);
 
     expect(await screen.findByText(/upload failed/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add more parts/i })).toBeDisabled();
+    expect(screen.getByText(/maximum parts reached/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /retry upload/i }));
 
-    await waitFor(() => expect(screen.getByText(/uploaded:/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/^uploaded/i)).toBeInTheDocument());
   });
 
   it("does not save contact on email blur alone", async () => {
