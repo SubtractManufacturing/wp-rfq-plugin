@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.1.1...0.2.0) (2026-09-30)
+
+
+### Features
+
+* RFQ form UI polish, batch uploads, and theme isolation ([#68](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/68)) ([1630a9b](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/1630a9b8f0c285f303d682ea542cdb36e5e77a6b))
+
 ## [0.1.1](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.1.0...0.1.1) (2026-09-22)
 
 
