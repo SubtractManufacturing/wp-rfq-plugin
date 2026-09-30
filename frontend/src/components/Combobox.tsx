@@ -116,7 +116,7 @@ export function Combobox({ id, value, onChange, defaultOptions, search, wrapperC
       />
       <button
         aria-label="Show common options"
-        className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-slate-500 hover:text-slate-900"
+        className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-slate-500 transition-colors duration-150 hover:text-slate-900"
         onClick={() => {
           if (expanded) {
             close();

@@ -144,9 +144,8 @@ async function walkSteps(page: Page): Promise<Record<string, string[]>> {
   await page.getByRole("heading", { name: "RFQ details" }).waitFor();
   shots.rfqDetails = await snapshotForm(page);
 
-  await page.getByLabel("Required delivery date").fill("2030-08-01");
-  await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByLabel("Shipping ZIP or postal code").fill("90210");
+  await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByRole("button", { name: "Continue to review" }).click();
   await page.getByRole("heading", { name: "Review" }).first().waitFor();
   shots.review = await snapshotForm(page);

@@ -1,4 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
+import { btnPrimaryClasses, btnSecondaryClasses } from "./buttonStyles";
 
 interface UploadDropzoneProps {
   onFiles: (files: File[]) => void;
@@ -77,7 +78,7 @@ export function UploadDropzone({ onFiles, inputLabel, disabled = false, compact 
         <>
           <p className="text-sm text-slate-600">Drag &amp; drop more files here, or</p>
           <button
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            className={`${btnSecondaryClasses} font-medium text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white`}
             disabled={disabled}
             type="button"
           >
@@ -104,7 +105,7 @@ export function UploadDropzone({ onFiles, inputLabel, disabled = false, compact 
           <p className="mt-1 text-sm text-slate-600">Drag &amp; drop or click to browse</p>
           <p className="mt-1 text-xs text-slate-500">STEP, IGES, STL, SLDPRT, etc.</p>
           <button
-            className="mt-5 rounded-md bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            className={`${btnPrimaryClasses} mt-5 px-5`}
             type="button"
           >
             Select files

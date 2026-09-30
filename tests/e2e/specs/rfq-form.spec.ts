@@ -77,9 +77,8 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
   await page.getByLabel("Material").nth(0).fill("1018 Steel");
   await page.getByLabel("Material").nth(1).fill("6061 Aluminum");
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
-  await page.getByLabel("Required delivery date").fill("2026-08-01");
-  await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByLabel("Shipping ZIP or postal code").fill("90210");
+  await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByRole("button", { name: "Continue to review" }).click();
   await page.getByRole("button", { name: "Edit" }).first().click();
   await expect(page.getByRole("heading", { name: "Contact information" })).toBeVisible();

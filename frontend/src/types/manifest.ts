@@ -2,7 +2,7 @@ import type { CountryCode } from "../lib/phone";
 
 export type StepId = "contact" | "uploads" | "partMeta" | "global" | "review";
 export type Tolerance = "standard" | "precision" | "custom";
-export type LeadTimePreference = "no_rush" | "standard" | "target_date" | "expedited" | "economy";
+export type LeadTimePreference = "standard" | "target_date" | "expedited" | "economy";
 export type UploadStatus = "pending" | "uploading" | "confirmed" | "error";
 
 export interface ContactState {
@@ -73,7 +73,7 @@ export interface RfqManifest {
     notes?: string | null;
   }>;
   global: {
-    required_delivery_date: string;
+    required_delivery_date: string | null;
     lead_time_preference: LeadTimePreference;
     shipping_destination: { postal_code: string };
     po_number: string | null;

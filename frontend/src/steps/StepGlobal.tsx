@@ -1,21 +1,19 @@
+import { btnPrimaryClasses } from "../components/buttonStyles";
 import { FieldError } from "../components/FieldError";
 import { Select } from "../components/Select";
+import { leadTimeOptions } from "../lib/leadTime";
 import { isValidPostalCode } from "../lib/postalCode";
 import { useForm } from "../state/FormContext";
 import type { LeadTimePreference } from "../types/manifest";
 
-const leadTimeOptions: Array<{ value: LeadTimePreference; label: string }> = [
-  { value: "no_rush", label: "No rush" },
-  { value: "standard", label: "Standard" },
-  { value: "target_date", label: "Meet target date" },
-  { value: "expedited", label: "Expedited" },
-  { value: "economy", label: "Economy" },
-];
-
 export function StepGlobal() {
   const { config, global, setGlobal, setStep } = useForm();
   const postalValid = isValidPostalCode(global.shipping_destination.postal_code);
-  const canContinue = global.required_delivery_date !== "" && global.lead_time_preference !== "" && postalValid;
+  const needsTargetDate = global.lead_time_preference === "target_date";
+  const canContinue =
+    global.lead_time_preference !== "" &&
+    postalValid &&
+    (!needsTargetDate || global.required_delivery_date !== "");
 
   return (
     <section className="space-y-5">
@@ -23,29 +21,6 @@ export function StepGlobal() {
         <h1 className="text-2xl font-semibold text-slate-950">RFQ details</h1>
         <p className="mt-2 text-sm text-slate-600">Orders outside North America should be emailed to {config.internationalRfqEmail}.</p>
       </div>
-      <label className="block text-sm font-medium text-slate-800">
-        Required delivery date
-        <input
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-          min={new Date().toISOString().slice(0, 10)}
-          onChange={(event) => setGlobal({ ...global, required_delivery_date: event.target.value })}
-          type="date"
-          value={global.required_delivery_date}
-        />
-      </label>
-      <label className="block text-sm font-medium text-slate-800">
-        Lead time preference
-        <Select
-          onChange={(event) => setGlobal({ ...global, lead_time_preference: event.target.value as LeadTimePreference })}
-          value={global.lead_time_preference}
-          wrapperClassName="mt-1"
-        >
-          <option value="">Select timing</option>
-          {leadTimeOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </Select>
-      </label>
       <label className="block text-sm font-medium text-slate-800">
         Shipping ZIP or postal code
         <input
@@ -55,6 +30,38 @@ export function StepGlobal() {
         />
       </label>
       <FieldError message={global.shipping_destination.postal_code && !postalValid ? "Enter a valid US ZIP or Canadian postal code." : null} />
+      <label className="block text-sm font-medium text-slate-800">
+        Lead time preference
+        <Select
+          onChange={(event) => {
+            const lead_time_preference = event.target.value as LeadTimePreference | "";
+            setGlobal({
+              ...global,
+              lead_time_preference,
+              required_delivery_date: lead_time_preference === "target_date" ? global.required_delivery_date : "",
+            });
+          }}
+          value={global.lead_time_preference}
+          wrapperClassName="mt-1"
+        >
+          <option value="">Select timing</option>
+          {leadTimeOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </Select>
+      </label>
+      {needsTargetDate ? (
+        <label className="block text-sm font-medium text-slate-800">
+          Target date
+          <input
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+            min={new Date().toISOString().slice(0, 10)}
+            onChange={(event) => setGlobal({ ...global, required_delivery_date: event.target.value })}
+            type="date"
+            value={global.required_delivery_date}
+          />
+        </label>
+      ) : null}
       <label className="block text-sm font-medium text-slate-800">
         Purchase order number
         <input
@@ -85,7 +92,7 @@ export function StepGlobal() {
         />
       </label>
       <button
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
+        className={btnPrimaryClasses}
         disabled={!canContinue}
         onClick={() => setStep("review")}
         type="button"

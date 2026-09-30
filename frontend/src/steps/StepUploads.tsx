@@ -1,5 +1,10 @@
 import { useRef, useState } from "react";
 import { apiFetch } from "../api/client";
+import {
+  btnDangerCompactClasses,
+  btnPrimaryBlockClasses,
+  btnSecondaryCompactClasses,
+} from "../components/buttonStyles";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { UploadProgress } from "../components/UploadProgress";
 import { DRAWING_MAX_BYTES, PART_MAX_BYTES, resolveDrawingContentType } from "../lib/drawingContentType";
@@ -214,10 +219,6 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
     <section className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold text-slate-950">Part uploads</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Select all the parts you want quoted — one CAD file per part. You can add supporting drawings next, and
-          material and quantity on the following step. Larger RFQs should be emailed to {config.internationalRfqEmail}.
-        </p>
       </div>
 
       {parts.length === 0 ? (
@@ -259,7 +260,7 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
 
       <div className="flex flex-wrap items-center gap-3">
         <button
-          className="block rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
+          className={btnPrimaryBlockClasses}
           disabled={!canContinue}
           onClick={() => setStep("partMeta")}
           type="button"
@@ -307,7 +308,7 @@ function PartUploadRow({
         </div>
         <button
           aria-label={`Remove ${filename}`}
-          className="shrink-0 text-sm text-slate-500 hover:text-red-700"
+          className="shrink-0 text-sm text-slate-500 transition-colors duration-150 hover:text-red-700"
           onClick={onRemove}
           type="button"
         >
@@ -328,7 +329,7 @@ function PartUploadRow({
                 </div>
                 <button
                   aria-label={`Remove ${drawing.filename}`}
-                  className="shrink-0 text-xs text-slate-500 hover:text-red-700"
+                  className="shrink-0 text-xs text-slate-500 transition-colors duration-150 hover:text-red-700"
                   onClick={() => onRemoveDrawing(drawingIndex)}
                   type="button"
                 >
@@ -355,7 +356,7 @@ function PartUploadRow({
           type="file"
         />
         <button
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
+          className={btnSecondaryCompactClasses}
           onClick={() => drawingInputRef.current?.click()}
           type="button"
         >
@@ -395,7 +396,7 @@ function FileStatus({ file, onRetry }: { file: UploadedFile; onRetry: () => void
         <p className="text-xs">{file.error ?? UPLOAD_FAILED}</p>
         {file.sourceFile && !isValidationError(file) ? (
           <button
-            className="mt-1 rounded-md border border-red-300 px-2 py-0.5 text-xs"
+            className={btnDangerCompactClasses}
             onClick={onRetry}
             type="button"
           >

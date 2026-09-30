@@ -1,19 +1,13 @@
 import type { ReactNode } from "react";
 import { apiFetch } from "../api/client";
+import { btnPrimaryClasses, btnSecondaryClasses, btnTextLinkClasses } from "../components/buttonStyles";
 import { FieldError } from "../components/FieldError";
 import { buildManifest } from "../lib/manifest";
 import { formatPhoneSummary } from "../lib/phone";
 import { useForm } from "../state/FormContext";
 import type { SubmitResponse } from "../types/api";
-import type { LeadTimePreference, StepId } from "../types/manifest";
-
-const leadTimeLabels: Record<LeadTimePreference, string> = {
-  no_rush: "No rush",
-  standard: "Standard",
-  target_date: "Meet target date",
-  expedited: "Expedited",
-  economy: "Economy",
-};
+import { leadTimeLabels } from "../lib/leadTime";
+import type { StepId } from "../types/manifest";
 
 export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) {
   const {
@@ -84,9 +78,11 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
       </ReviewSection>
 
       <ReviewSection onEdit={edit("global")} title="RFQ details">
-        <p>Delivery date: {global.required_delivery_date}</p>
-        <p>Lead time: {global.lead_time_preference ? leadTimeLabels[global.lead_time_preference] : "—"}</p>
         <p>Shipping postal code: {global.shipping_destination.postal_code}</p>
+        <p>Lead time: {global.lead_time_preference ? leadTimeLabels[global.lead_time_preference] : "—"}</p>
+        {global.lead_time_preference === "target_date" && global.required_delivery_date ? (
+          <p>Target date: {global.required_delivery_date}</p>
+        ) : null}
         {global.po_number ? <p>PO number: {global.po_number}</p> : null}
         <p>NDA required: {global.nda_required ? "Yes" : "No"}</p>
         {global.notes ? <p>Notes: {global.notes}</p> : null}
@@ -97,10 +93,10 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
         <p className="text-sm text-slate-600">Submission failed, but your work is saved. Retry submission without re-uploading files.</p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button className="rounded-md border border-slate-300 px-4 py-2 text-sm" onClick={() => setStep("global")} type="button">
+        <button className={btnSecondaryClasses} onClick={() => setStep("global")} type="button">
           Back
         </button>
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white" onClick={() => void submit()} type="button">
+        <button className={btnPrimaryClasses} onClick={() => void submit()} type="button">
           {submitError ? "Retry Submission" : "Submit RFQ"}
         </button>
       </div>
@@ -121,7 +117,7 @@ function ReviewSection({
     <div className="rounded-lg border border-slate-200 p-4 text-sm text-slate-700">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-        <button className="text-sm text-slate-600 underline" onClick={onEdit} type="button">
+        <button className={btnTextLinkClasses} onClick={onEdit} type="button">
           Edit
         </button>
       </div>

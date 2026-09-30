@@ -44,7 +44,6 @@ describe("contact and upload flow", () => {
     expect(await screen.findByRole("heading", { name: /part uploads/i })).toBeInTheDocument();
     expect(fetchMock.mock.calls[1]?.[0]).toBe("https://example.test/wp-json/rfq/v1/sessions");
     expect(String(fetchMock.mock.calls[2]?.[0])).toContain("/contact");
-    expect(screen.getAllByText(/large-rfq@example.test/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: /^part uploads$/i })).toBeInTheDocument();
     expect(screen.getByText("Drag & drop or click to browse")).toBeInTheDocument();
 

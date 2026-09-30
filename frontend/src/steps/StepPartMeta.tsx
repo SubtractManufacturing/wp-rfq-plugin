@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { btnPrimaryClasses } from "../components/buttonStyles";
 import { ChevronIcon } from "../components/ChevronIcon";
 import { Combobox } from "../components/Combobox";
 import { Select } from "../components/Select";
@@ -133,7 +134,7 @@ export function StepPartMeta() {
               <button
                 aria-controls={`more-details-${part.part_id}`}
                 aria-expanded={moreOpen}
-                className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-slate-950"
+                className="flex items-center gap-1 text-sm font-medium text-slate-700 transition-colors duration-150 hover:text-slate-950"
                 onClick={() => setMoreDetailsOpen((current) => ({ ...current, [part.part_id]: !moreOpen }))}
                 type="button"
               >
@@ -166,7 +167,7 @@ export function StepPartMeta() {
         );
       })}
       <button
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
+        className={btnPrimaryClasses}
         disabled={!canContinue}
         onClick={() => setStep("global")}
         type="button"
