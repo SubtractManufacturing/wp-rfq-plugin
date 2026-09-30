@@ -218,7 +218,7 @@ class RFQ_Manifest_Validator {
         }
 
         $required_delivery_date = $global_data['required_delivery_date'] ?? null;
-        $requires_target_date = $lead_time_preference === 'target_date';
+        $requires_target_date   = $lead_time_preference === 'target_date';
 
         if ( $requires_target_date ) {
             if ( ! is_string( $required_delivery_date ) || ! self::is_valid_iso_date( $required_delivery_date ) ) {
