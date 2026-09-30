@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { btnPrimaryClasses } from "../components/buttonStyles";
+import { ChevronIcon } from "../components/ChevronIcon";
+import { Combobox } from "../components/Combobox";
+import { Select } from "../components/Select";
 import { dropdownMaterials, searchMaterials } from "../lib/materials";
 import { useForm } from "../state/FormContext";
 import type { PartRow, Tolerance } from "../types/manifest";
@@ -18,6 +22,7 @@ function parseTargetUnitPrice(value: string): number | null {
 export function StepPartMeta() {
   const { config, parts, setParts, setStep } = useForm();
   const [priceErrors, setPriceErrors] = useState<Record<string, string>>({});
+  const [moreDetailsOpen, setMoreDetailsOpen] = useState<Record<string, boolean>>({});
 
   const updatePart = (partId: string, update: Partial<PartRow>) => {
     setParts(parts.map((part) => (part.part_id === partId ? { ...part, ...update } : part)));
@@ -58,38 +63,54 @@ export function StepPartMeta() {
     <section className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold text-slate-950">Part details</h1>
-        <p className="mt-2 text-sm text-slate-600">Add material, tolerance, and quantity for each uploaded part.</p>
+        <p className="mt-2 text-sm text-slate-600">Add quantity, material, and tolerance for each uploaded part.</p>
       </div>
       {parts.map((part, index) => {
-        const suggestions = searchMaterials(part.material, config.materials);
+        const hasPriceError = Boolean(priceErrors[part.part_id]);
+        // Stay open when a price is set or invalid so a hidden value/error never blocks Continue.
+        const moreOpen = hasPriceError || (moreDetailsOpen[part.part_id] ?? part.target_unit_price !== null);
         return (
           <div className="rounded-lg border border-slate-200 p-4" key={part.part_id}>
-            <h2 className="font-medium text-slate-900">Part {index + 1}</h2>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Part {index + 1} of {parts.length}
+            </p>
+            <h2 className="mt-0.5 break-all text-lg font-semibold text-slate-900">
+              {part.partFile?.filename ?? `Part ${index + 1}`}
+            </h2>
             <label className="mt-3 block text-sm font-medium text-slate-800">
-              Material
+              Quantity
               <input
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                list={`materials-${part.part_id}`}
-                onChange={(event) => updatePart(part.part_id, { material: event.target.value })}
-                value={part.material}
+                min={1}
+                onChange={(event) => updatePart(part.part_id, { quantity: Number(event.target.value) })}
+                type="number"
+                value={part.quantity}
               />
-              <datalist id={`materials-${part.part_id}`}>
-                {[...dropdownMaterials(config.materials), ...suggestions].map((label) => (
-                  <option key={label} value={label} />
-                ))}
-              </datalist>
             </label>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-800" htmlFor={`material-${part.part_id}`}>
+                Material
+              </label>
+              <Combobox
+                defaultOptions={dropdownMaterials(config.materials)}
+                id={`material-${part.part_id}`}
+                onChange={(material) => updatePart(part.part_id, { material })}
+                search={(query) => searchMaterials(query, config.materials)}
+                value={part.material}
+                wrapperClassName="mt-1"
+              />
+            </div>
             <label className="mt-3 block text-sm font-medium text-slate-800">
               Tolerance
-              <select
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+              <Select
                 onChange={(event) => updatePart(part.part_id, { tolerance: event.target.value as Tolerance })}
                 value={part.tolerance}
+                wrapperClassName="mt-1"
               >
                 <option value="standard">Standard</option>
                 <option value="precision">Precision</option>
                 <option value="custom">Custom</option>
-              </select>
+              </Select>
             </label>
             {part.tolerance === "custom" ? (
               <label className="mt-3 block text-sm font-medium text-slate-800">
@@ -102,39 +123,6 @@ export function StepPartMeta() {
               </label>
             ) : null}
             <label className="mt-3 block text-sm font-medium text-slate-800">
-              Threads / features
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                onChange={(event) => updatePart(part.part_id, { threads_features: event.target.value || null })}
-                value={part.threads_features ?? ""}
-              />
-            </label>
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Quantity
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                min={1}
-                onChange={(event) => updatePart(part.part_id, { quantity: Number(event.target.value) })}
-                type="number"
-                value={part.quantity}
-              />
-            </label>
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Target unit price (USD)
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                min={0}
-                onChange={(event) => updateTargetPrice(part.part_id, event.target.value)}
-                step="0.01"
-                type="number"
-                value={part.target_unit_price ?? ""}
-              />
-              <span className="mt-1 block text-xs text-slate-500">Optional — your target price per part in USD.</span>
-            </label>
-            {priceErrors[part.part_id] ? (
-              <p className="mt-1 text-sm text-red-700">{priceErrors[part.part_id]}</p>
-            ) : null}
-            <label className="mt-3 block text-sm font-medium text-slate-800">
               Notes
               <textarea
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
@@ -142,11 +130,44 @@ export function StepPartMeta() {
                 value={part.notes ?? ""}
               />
             </label>
+            <div className="mt-4 border-t border-slate-200 pt-3">
+              <button
+                aria-controls={`more-details-${part.part_id}`}
+                aria-expanded={moreOpen}
+                className="flex items-center gap-1 text-sm font-medium text-slate-700 transition-colors duration-150 hover:text-slate-950"
+                onClick={() => setMoreDetailsOpen((current) => ({ ...current, [part.part_id]: !moreOpen }))}
+                type="button"
+              >
+                <ChevronIcon className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+                More details
+              </button>
+              {moreOpen ? (
+                <div className="mt-3" id={`more-details-${part.part_id}`}>
+                  <label className="block text-sm font-medium text-slate-800">
+                    Target unit price (USD)
+                    <input
+                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                      min={0}
+                      onChange={(event) => updateTargetPrice(part.part_id, event.target.value)}
+                      step="0.01"
+                      type="number"
+                      value={part.target_unit_price ?? ""}
+                    />
+                    <span className="mt-1 block text-xs text-slate-500">
+                      Optional — your target price per part in USD.
+                    </span>
+                  </label>
+                  {hasPriceError ? (
+                    <p className="mt-1 text-sm text-red-700">{priceErrors[part.part_id]}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         );
       })}
       <button
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
+        className={btnPrimaryClasses}
         disabled={!canContinue}
         onClick={() => setStep("global")}
         type="button"

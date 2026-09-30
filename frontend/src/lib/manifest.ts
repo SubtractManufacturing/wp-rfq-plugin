@@ -36,7 +36,10 @@ export function buildManifest(sessionId: string, contact: ContactState, parts: P
         notes: part.notes,
       })),
     global: {
-      required_delivery_date: global.required_delivery_date,
+      required_delivery_date:
+        global.lead_time_preference === "target_date" && global.required_delivery_date !== ""
+          ? global.required_delivery_date
+          : null,
       lead_time_preference: global.lead_time_preference as LeadTimePreference,
       shipping_destination: global.shipping_destination,
       po_number: global.po_number,

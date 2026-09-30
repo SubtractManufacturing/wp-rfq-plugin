@@ -105,7 +105,10 @@ class RFQ_REST_Controller {
         if ( ! RFQ_Rate_Limiter::is_session_creation_allowed( $ip ) ) {
             return new WP_Error(
                 'rfq_rate_limited',
-                __( 'Session creation rate limit exceeded.', 'rfq-intake' ),
+                __(
+                    'Rate Limit Exceeded, Please email your RFQ to rfq@subtractmanufacturing.com',
+                    'rfq-intake'
+                ),
                 [ 'status' => 429 ]
             );
         }

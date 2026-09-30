@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { apiFetch } from "../api/client";
 import { PhoneField } from "../components/PhoneField";
+import { btnDangerOutlineClasses, btnPrimaryClasses } from "../components/buttonStyles";
 import { FieldError } from "../components/FieldError";
 import { getPhoneValidationError, normalizePhone } from "../lib/phone";
 import { ensureSession } from "../lib/session";
@@ -150,7 +151,7 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
       <FieldError message={requiredMissing ? "First name, last name, and email are required." : contactError} />
       {contactError ? (
         <button
-          className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700"
+          className={btnDangerOutlineClasses}
           disabled={contactSaving || requiredMissing}
           onClick={() => {
             void saveContact({ advance: false });
@@ -161,7 +162,7 @@ export function StepContact({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
         </button>
       ) : null}
       <button
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-300"
+        className={btnPrimaryClasses}
         disabled={requiredMissing || contactSaving}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => {

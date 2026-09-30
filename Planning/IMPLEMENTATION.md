@@ -515,7 +515,7 @@ export interface RfqManifest {
   }>;
   global: {
     required_delivery_date: string; // YYYY-MM-DD
-    lead_time_preference: 'no_rush' | 'standard' | 'target_date' | 'expedited' | 'economy';
+    lead_time_preference: 'standard' | 'target_date' | 'expedited' | 'economy';
     shipping_destination: { postal_code: string };
     po_number: string | null;
     nda_required: boolean;

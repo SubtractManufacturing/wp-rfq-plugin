@@ -59,18 +59,26 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
   await page.getByRole("button", { name: "Continue to uploads" }).click();
   await expect.poll(() => sessionCreates).toBe(1);
 
-  await page.getByLabel("Part file").setInputFiles({
-    name: "part.step",
-    mimeType: "application/octet-stream",
-    buffer: Buffer.from("cad"),
-  });
-  await expect(page.getByText(/Uploaded: part\.step/i)).toBeVisible();
+  await page.getByLabel("Part files").setInputFiles([
+    {
+      name: "part.step",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from("cad"),
+    },
+    {
+      name: "part-2.step",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from("cad"),
+    },
+  ]);
+  await expect(page.getByText("Uploaded")).toHaveCount(2);
+  await expect(page.getByTitle("part.step", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Continue to part details" }).click();
-  await page.getByLabel("Material").fill("1018 Steel");
+  await page.getByLabel("Material").nth(0).fill("1018 Steel");
+  await page.getByLabel("Material").nth(1).fill("6061 Aluminum");
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
-  await page.getByLabel("Required delivery date").fill("2026-08-01");
-  await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByLabel("Shipping ZIP or postal code").fill("90210");
+  await page.getByLabel("Lead time preference").selectOption("standard");
   await page.getByRole("button", { name: "Continue to review" }).click();
   await page.getByRole("button", { name: "Edit" }).first().click();
   await expect(page.getByRole("heading", { name: "Contact information" })).toBeVisible();

@@ -47,7 +47,7 @@ class ManifestValidatorTest extends TestCase
                 ],
             ],
             'global' => [
-                'required_delivery_date' => $today,
+                'required_delivery_date' => null,
                 'lead_time_preference' => 'standard',
                 'shipping_destination' => [
                     'postal_code' => '90210',
@@ -295,11 +295,54 @@ class ManifestValidatorTest extends TestCase
         $this->assertArrayHasKey('global.lead_time_preference', $this->fieldErrors($result));
     }
 
+    public function test_removed_no_rush_lead_time_returns_field_error(): void
+    {
+        $manifest = $this->validManifest([
+            'global' => [
+                'lead_time_preference' => 'no_rush',
+            ],
+        ]);
+
+        $result = RFQ_Manifest_Validator::validate($manifest);
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertArrayHasKey('global.lead_time_preference', $this->fieldErrors($result));
+    }
+
     public function test_past_delivery_date_returns_field_error(): void
     {
         $manifest = $this->validManifest([
             'global' => [
                 'required_delivery_date' => gmdate('Y-m-d', strtotime('-1 day')),
+            ],
+        ]);
+
+        $result = RFQ_Manifest_Validator::validate($manifest);
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertArrayHasKey('global.required_delivery_date', $this->fieldErrors($result));
+    }
+
+    public function test_standard_lead_time_does_not_require_delivery_date(): void
+    {
+        $manifest = $this->validManifest([
+            'global' => [
+                'required_delivery_date' => null,
+                'lead_time_preference' => 'standard',
+            ],
+        ]);
+
+        $result = RFQ_Manifest_Validator::validate($manifest);
+
+        $this->assertNotInstanceOf(WP_Error::class, $result);
+    }
+
+    public function test_target_date_lead_time_requires_delivery_date(): void
+    {
+        $manifest = $this->validManifest([
+            'global' => [
+                'required_delivery_date' => null,
+                'lead_time_preference' => 'target_date',
             ],
         ]);
 

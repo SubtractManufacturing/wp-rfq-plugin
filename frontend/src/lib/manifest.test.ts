@@ -43,8 +43,19 @@ describe("buildManifest", () => {
     ).toMatchObject({
       session_id: "session",
       parts: [{ part_file_key: "intake/session/parts/file.step", drawing_file_keys: ["intake/session/drawings/file.pdf"], material: "1018 Steel", quantity: 2 }],
-      global: { lead_time_preference: "standard" },
+      global: { lead_time_preference: "standard", required_delivery_date: null },
     });
+  });
+
+  it("includes target date only when lead time is Meet Target Date", () => {
+    expect(
+      buildManifest("session", { ...emptyContact, first_name: "Jane", last_name: "Smith", email: "jane@example.com" }, [], {
+        ...emptyGlobal,
+        required_delivery_date: "2026-08-01",
+        lead_time_preference: "target_date",
+        shipping_destination: { postal_code: "90210" },
+      }).global.required_delivery_date,
+    ).toBe("2026-08-01");
   });
 
   it("includes international phone metadata in the contact section", () => {
