@@ -157,3 +157,65 @@ describe("StepUploads batch upload", () => {
     expect(requestedFilenames).toEqual([]);
   });
 });
+
+describe("StepUploads export control notice", () => {
+  it("blocks the step with a modal until the customer confirms the files are uncontrolled", async () => {
+    const user = userEvent.setup();
+    const { mock } = createFetchMock();
+    renderStep(mock as unknown as typeof fetch);
+
+    const dialog = screen.getByRole("dialog", { name: /do not upload controlled files/i });
+    expect(dialog).toHaveTextContent(/ITAR/);
+    expect(dialog).toHaveTextContent(/EAR/);
+    expect(within(dialog).getByRole("link", { name: "sales@example.test" })).toHaveAttribute(
+      "href",
+      "mailto:sales@example.test",
+    );
+
+    const agree = within(dialog).getByRole("button", { name: /agree and continue/i });
+    expect(agree).toBeDisabled();
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("checkbox", { name: /not subject to itar/i }));
+    expect(agree).toBeEnabled();
+    await user.click(agree);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("only shows the notice the first time the uploads step opens", async () => {
+    const user = userEvent.setup();
+    const { mock } = createFetchMock();
+
+    function Harness() {
+      const { step: currentStep, setStep } = useForm();
+      return (
+        <>
+          <button onClick={() => setStep(currentStep === "uploads" ? "partMeta" : "uploads")} type="button">
+            Toggle step
+          </button>
+          {currentStep === "uploads" ? <StepUploads fetchImpl={mock as unknown as typeof fetch} /> : null}
+        </>
+      );
+    }
+
+    render(
+      <FormProvider config={config} sessionId="session-1" token="jwt">
+        <Harness />
+      </FormProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /toggle step/i }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("checkbox"));
+    await user.click(within(dialog).getByRole("button", { name: /agree and continue/i }));
+
+    await user.click(screen.getByRole("button", { name: /toggle step/i }));
+    await user.click(screen.getByRole("button", { name: /toggle step/i }));
+
+    expect(screen.getByRole("heading", { name: /part uploads/i })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});

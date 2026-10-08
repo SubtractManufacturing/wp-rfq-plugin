@@ -59,6 +59,13 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
   await page.getByRole("button", { name: "Continue to uploads" }).click();
   await expect.poll(() => sessionCreates).toBe(1);
 
+  const exportControlDialog = page.getByRole("dialog", { name: "Do not upload controlled files" });
+  await expect(exportControlDialog).toBeVisible();
+  await expect(exportControlDialog.getByRole("button", { name: "Agree and continue" })).toBeDisabled();
+  await exportControlDialog.getByRole("checkbox").check();
+  await exportControlDialog.getByRole("button", { name: "Agree and continue" }).click();
+  await expect(exportControlDialog).toBeHidden();
+
   await page.getByLabel("Part files").setInputFiles([
     {
       name: "part.step",

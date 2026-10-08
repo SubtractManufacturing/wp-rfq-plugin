@@ -116,6 +116,10 @@ async function walkSteps(page: Page): Promise<Record<string, string[]>> {
 
   await page.getByRole("button", { name: "Continue to uploads" }).click();
   await page.getByRole("heading", { name: "Part uploads" }).waitFor();
+  const exportControlDialog = page.getByRole("dialog", { name: "Do not upload controlled files" });
+  await exportControlDialog.getByRole("checkbox").check();
+  await exportControlDialog.getByRole("button", { name: "Agree and continue" }).click();
+  await exportControlDialog.waitFor({ state: "hidden" });
   shots.uploadsEmpty = await snapshotForm(page);
 
   await page.getByLabel("Part files").setInputFiles([
