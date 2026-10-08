@@ -185,6 +185,43 @@ describe("StepUploads export control notice", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("focuses the dialog itself, leaving the checkbox unchecked and without a focus ring", async () => {
+    const user = userEvent.setup();
+    const { mock } = createFetchMock();
+    renderStep(mock as unknown as typeof fetch);
+
+    const dialog = screen.getByRole("dialog");
+    const checkbox = within(dialog).getByRole("checkbox");
+
+    expect(dialog).toHaveFocus();
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).not.toHaveFocus();
+
+    // Keyboard users still land on the first control, and focus wraps within the dialog.
+    await user.tab();
+    expect(within(dialog).getByRole("link")).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(checkbox).toHaveFocus();
+  });
+
+  it("hides the focus ring after a mouse click on the checkbox, but shows it for keyboard use", async () => {
+    const user = userEvent.setup();
+    const { mock } = createFetchMock();
+    renderStep(mock as unknown as typeof fetch);
+
+    const checkbox = within(screen.getByRole("dialog")).getByRole("checkbox");
+    expect(checkbox).not.toHaveClass("focus:outline-none");
+
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toHaveClass("focus:outline-none");
+
+    // Any key press switches back to keyboard modality, so the ring returns for keyboard users.
+    await user.keyboard(" ");
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).not.toHaveClass("focus:outline-none");
+  });
+
   it("only shows the notice the first time the uploads step opens", async () => {
     const user = userEvent.setup();
     const { mock } = createFetchMock();

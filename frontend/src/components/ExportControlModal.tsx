@@ -15,17 +15,22 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled])';
  */
 export function ExportControlModal({ contactEmail, onAcknowledge }: ExportControlModalProps) {
   const [confirmed, setConfirmed] = useState(false);
+  // Browsers disagree on whether a mouse click on a checkbox matches :focus-visible, so track the input
+  // modality ourselves: no focus ring after a pointer interaction, ring again as soon as a key is pressed.
+  const [pointerFocus, setPointerFocus] = useState(false);
+  const noRing = pointerFocus ? "focus:outline-none" : "";
   const dialogRef = useRef<HTMLDivElement | null>(null);
-  const checkboxRef = useRef<HTMLInputElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
 
+  // Move focus into the dialog (not onto the checkbox, which would draw a focus ring on it).
   useEffect(() => {
-    checkboxRef.current?.focus();
+    dialogRef.current?.focus();
   }, []);
 
   // Keep keyboard focus inside the dialog while it is open.
   const trapFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    setPointerFocus(false);
     if (event.key !== "Tab") {
       return;
     }
@@ -35,10 +40,11 @@ export function ExportControlModal({ contactEmail, onAcknowledge }: ExportContro
     if (!first || !last) {
       return;
     }
-    if (event.shiftKey && document.activeElement === first) {
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || active === dialogRef.current)) {
       event.preventDefault();
       last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
+    } else if (!event.shiftKey && active === last) {
       event.preventDefault();
       first.focus();
     }
@@ -50,10 +56,12 @@ export function ExportControlModal({ contactEmail, onAcknowledge }: ExportContro
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl outline-none focus:outline-none"
         onKeyDown={trapFocus}
+        onPointerDown={() => setPointerFocus(true)}
         ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <h2 className="text-xl font-semibold text-slate-950" id={titleId}>
           Do not upload controlled files
@@ -76,9 +84,8 @@ export function ExportControlModal({ contactEmail, onAcknowledge }: ExportContro
         <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm text-slate-900">
           <input
             checked={confirmed}
-            className="mt-0.5 h-4 w-4 shrink-0"
+            className={`mt-0.5 h-4 w-4 shrink-0 ${noRing}`}
             onChange={(event) => setConfirmed(event.target.checked)}
-            ref={checkboxRef}
             type="checkbox"
           />
           <span>
@@ -88,7 +95,12 @@ export function ExportControlModal({ contactEmail, onAcknowledge }: ExportContro
         </label>
 
         <div className="mt-6 flex justify-end">
-          <button className={btnPrimaryClasses} disabled={!confirmed} onClick={onAcknowledge} type="button">
+          <button
+            className={`${btnPrimaryClasses} ${noRing}`}
+            disabled={!confirmed}
+            onClick={onAcknowledge}
+            type="button"
+          >
             Agree and continue
           </button>
         </div>
