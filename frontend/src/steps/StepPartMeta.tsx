@@ -2,6 +2,7 @@ import { useState } from "react";
 import { btnPrimaryClasses } from "../components/buttonStyles";
 import { ChevronIcon } from "../components/ChevronIcon";
 import { Combobox } from "../components/Combobox";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { Select } from "../components/Select";
 import { dropdownMaterials, searchMaterials } from "../lib/materials";
 import { useForm } from "../state/FormContext";
@@ -122,14 +123,29 @@ export function StepPartMeta() {
                 />
               </label>
             ) : null}
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Notes
+            <div className="mt-3">
+              <div className="flex items-center gap-1.5">
+                <label className="text-sm font-medium text-slate-800" htmlFor={`notes-${part.part_id}`}>
+                  Notes &amp; Details
+                </label>
+                <InfoTooltip id={`notes-help-${part.part_id}`} label="What to include in Notes & Details">
+                  <p>Use this field to define any other requirements for these parts like:</p>
+                  <ul className="mt-1.5 space-y-0.5 pl-4">
+                    <li className="list-disc">Color specifications</li>
+                    <li className="list-disc">Finishing specifications</li>
+                    <li className="list-disc">Postprocessing requirements</li>
+                    <li className="list-disc">Etc.</li>
+                  </ul>
+                </InfoTooltip>
+              </div>
               <textarea
+                aria-describedby={`notes-help-${part.part_id}`}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                id={`notes-${part.part_id}`}
                 onChange={(event) => updatePart(part.part_id, { notes: event.target.value || null })}
                 value={part.notes ?? ""}
               />
-            </label>
+            </div>
             <div className="mt-4 border-t border-slate-200 pt-3">
               <button
                 aria-controls={`more-details-${part.part_id}`}
