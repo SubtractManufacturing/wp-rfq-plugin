@@ -1,6 +1,7 @@
 import { SuccessView } from "./SuccessView";
 import { AirtableFallback } from "./components/AirtableFallback";
 import { DraftSaveIndicator } from "./components/DraftSaveIndicator";
+import { FormLoading } from "./components/FormLoading";
 import { Stepper } from "./components/Stepper";
 import { useAppHealthStartup } from "./hooks/useAppHealthStartup";
 import { useAutosave } from "./hooks/useAutosave";
@@ -27,7 +28,7 @@ export function App({
   }
 
   if (startup.status === "loading") {
-    return <p className="p-4 text-center text-sm text-slate-600">Loading RFQ form...</p>;
+    return <FormLoading />;
   }
 
   return (

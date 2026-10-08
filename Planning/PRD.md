@@ -360,7 +360,7 @@ The form is a **TypeScript** React application (`.tsx` source), built with Vite 
 
 On page load, the form must:
 
-1. Call `GET /wp-json/rfq/v1/health` with a **3-second timeout**.
+1. Call `GET /wp-json/rfq/v1/health` with a **10-second timeout**. The health check performs a live S3 round trip, which can take several seconds on a cold start. While it is in flight, show a loading indicator ("Loading quote form...").
 2. If the response is `200 OK`, render the custom React RFQ form.
 3. If the response is non-200 or the request times out, render the Airtable embed iframe (existing embed code, stored as a plugin setting).
 
@@ -804,7 +804,7 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 
 - **AC-ERP-001** — A customer who completes the full RFQ form and receives a receipt number can have their submission located in the ERP within one import poll cycle (≤5 minutes). _(Verified in ERP repo.)_
 - **AC-WP-001** — A customer who submits and then re-submits the same session (due to a network error causing them to retry) receives the same receipt number and does not create a duplicate quote.
-- **AC-WP-002** — If the WordPress plugin is unreachable when a customer navigates to the RFQ page, the Airtable form renders within 3 seconds.
+- **AC-WP-002** — If the WordPress plugin is unreachable when a customer navigates to the RFQ page, the Airtable form renders within 10 seconds, and a loading indicator is shown until then.
 - **AC-WP-003** — If S3 upload of any file fails, the customer sees a per-file error and can retry without re-entering any form data.
 - **AC-WP-004** — If the final submit endpoint fails after all files are uploaded, the customer can retry submission without re-uploading files.
 - **AC-WP-005** — No RFQ with a `receipt.json` in S3 and a corresponding WP DB receipt row is ever lost due to ERP downtime.

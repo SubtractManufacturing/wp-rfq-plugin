@@ -34,6 +34,24 @@ describe("performHealthStartup", () => {
     expect(clearStartupTimer).toHaveBeenCalledTimes(1);
   });
 
+  it("allows a slow but healthy S3 round trip up to 10 seconds before aborting", async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const abortSpy = vi.spyOn(controller, "abort");
+
+      scheduleHealthCheckAbort(controller);
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(abortSpy).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(HEALTH_CHECK_TIMEOUT_MS).toBe(10_000);
+      expect(abortSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("aborts the health controller after the timeout elapses", async () => {
     vi.useFakeTimers();
     try {

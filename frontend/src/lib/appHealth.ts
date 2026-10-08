@@ -1,6 +1,7 @@
 import { apiFetch } from "../api/client";
 
-export const HEALTH_CHECK_TIMEOUT_MS = 3000;
+/** The health check does a live S3 round trip, which can take several seconds on a cold start. */
+export const HEALTH_CHECK_TIMEOUT_MS = 10_000;
 
 export function scheduleHealthCheckAbort(controller: AbortController): () => void {
   const timer = window.setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);

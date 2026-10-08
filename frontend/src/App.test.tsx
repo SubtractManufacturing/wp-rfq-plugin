@@ -16,12 +16,22 @@ const config: RfqFormConfig = {
 };
 
 describe("App startup", () => {
-  it("shows a loading message while the health check is in flight", () => {
+  it("shows a loading indicator while the health check is in flight", () => {
     const fetchMock = vi.fn(() => new Promise<Response>(() => undefined));
 
     render(<App config={config} fetchImpl={fetchMock} />);
 
-    expect(screen.getByText(/loading rfq form/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/loading quote form/i);
+    expect(screen.queryByTitle("RFQ fallback form")).not.toBeInTheDocument();
+  });
+
+  it("replaces the loading indicator with the form once health succeeds", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ status: "ok" })));
+
+    render(<App config={config} fetchImpl={fetchMock} />);
+
+    expect(await screen.findByRole("heading", { name: /contact information/i })).toBeInTheDocument();
+    expect(screen.queryByText(/loading quote form/i)).not.toBeInTheDocument();
   });
 
   // @covers AC-WP-009

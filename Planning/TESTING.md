@@ -71,7 +71,7 @@ A planned build artifact `scripts/check-acceptance-coverage.php` (introduced at 
 |----|--------|-----------|-------|-----------|--------------|-------------|
 | AC-ERP-001 | PRD §7 | Submission locatable in ERP within one poll cycle (≤5 min) | ERP repo | — | ERP integration/E2E | — |
 | AC-WP-001 | PRD §7 | Re-submit same session → same receipt number, no duplicate quote | Plugin | M3 | PHP unit + integration | — |
-| AC-WP-002 | PRD §7 | WP unreachable on page load → Airtable within 3s | Plugin | M4–M5 | Vitest + E2E | — |
+| AC-WP-002 | PRD §7 | WP unreachable on page load → Airtable within 10s | Plugin | M4–M5 | Vitest + E2E | — |
 | AC-WP-003 | PRD §7 | S3 upload fail → per-file error + retry, form data preserved | Plugin | M4–M5 | Vitest + E2E | — |
 | AC-WP-004 | PRD §7 | Submit fail after uploads → retry without re-upload | Plugin | M4–M5 | Vitest + E2E | — |
 | AC-WP-005 | PRD §7 | Receipt in S3 + WP DB not lost when ERP/webhook down | Plugin | M3 | PHP integration | — |
