@@ -194,7 +194,7 @@ class RFQ_Receipt_Service {
             $wpdb->prepare(
                 // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name from $wpdb->prefix.
                 'INSERT INTO ' . $table . ' (receipt_date, seq)
-                 VALUES (%s, 1)
+                 VALUES (%s, LAST_INSERT_ID(1))
                  ON DUPLICATE KEY UPDATE seq = LAST_INSERT_ID(seq + 1)',
                 $receipt_date
             )
