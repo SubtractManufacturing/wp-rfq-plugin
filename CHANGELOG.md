@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.2.0...0.3.0) (2026-10-09)
+
+
+### Features
+
+* rename part notes to Notes & Details with a help tooltip ([c3fc41b](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/c3fc41b2239a603615df44f3e57a24e0f58a6ba8))
+* require export-control acknowledgment before uploads ([c3fc41b](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/c3fc41b2239a603615df44f3e57a24e0f58a6ba8))
+
+
+### Bug Fixes
+
+* allocate first receipt number of the day correctly ([c3fc41b](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/c3fc41b2239a603615df44f3e57a24e0f58a6ba8))
+* raise health-check timeout to 10s and show loading indicators ([c3fc41b](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/c3fc41b2239a603615df44f3e57a24e0f58a6ba8))
+* stop export-control checkbox showing a focus ring on open and click ([c3fc41b](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/c3fc41b2239a603615df44f3e57a24e0f58a6ba8))
+
 ## [0.2.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.1.1...0.2.0) (2026-09-30)
 
 
