@@ -195,6 +195,33 @@ class RFQ_S3_Client implements RFQ_S3_Client_Interface {
         }
     }
 
+    public function has_session_objects( string $session_id ): bool|WP_Error {
+        // Guard the prefix: a malformed ID must never widen the listing scope.
+        if ( ! RFQ_S3_Key_Builder::is_uuid( $session_id ) ) {
+            return new WP_Error(
+                'rfq_invalid_session_id',
+                __( 'Invalid intake session ID.', 'rfq-intake' ),
+                [ 'status' => 400 ]
+            );
+        }
+
+        try {
+            $result = $this->aws_client->listObjectsV2(
+                [
+                    'Bucket'  => $this->bucket,
+                    'Prefix'  => 'intake/' . $session_id . '/',
+                    'MaxKeys' => 1,
+                ]
+            );
+
+            return ! empty( $result['Contents'] );
+        } catch ( AwsException $exception ) {
+            return self::map_exception( $exception );
+        } catch ( Throwable $exception ) {
+            return self::map_exception( $exception );
+        }
+    }
+
     /**
      * @return array<string, mixed>|false|WP_Error
      */

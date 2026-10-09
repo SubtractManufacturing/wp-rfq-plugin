@@ -272,6 +272,24 @@ class SubmitTest extends TestCase
         $this->assertCount(3, array_unique($receipt_numbers));
     }
 
+    public function test_first_receipt_of_the_day_is_sequence_one(): void
+    {
+        // Create several sessions first so the connection's LAST_INSERT_ID()
+        // holds a stale, non-zero value from rfq_sessions auto-increment.
+        $this->create_session_ready_for_submit();
+        $this->create_session_ready_for_submit();
+        [$session_id, $token, $manifest] = $this->create_session_ready_for_submit();
+        $this->seed_manifest_files($session_id, $manifest);
+
+        $response = $this->request_submit($session_id, $token, $manifest);
+
+        $this->assertSame(200, $response->get_status());
+        $this->assertSame(
+            'RFQ-' . gmdate('Ymd') . '-000001',
+            $response->get_data()['receipt_number']
+        );
+    }
+
     public function test_submit_rejects_invalid_jwt(): void
     {
         [$session_id, , $manifest] = $this->create_session_ready_for_submit();

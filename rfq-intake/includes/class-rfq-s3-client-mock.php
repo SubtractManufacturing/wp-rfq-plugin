@@ -94,6 +94,47 @@ class RFQ_S3_Client_Mock implements RFQ_S3_Client_Interface {
         return array_values( $sessions );
     }
 
+    public function has_session_objects( string $session_id ): bool|WP_Error {
+        if ( $this->should_fail ) {
+            return new WP_Error(
+                'rfq_s3_error',
+                __( 'S3 operation failed.', 'rfq-intake' ),
+                [ 'status' => 502 ]
+            );
+        }
+
+        if ( ! RFQ_S3_Key_Builder::is_uuid( $session_id ) ) {
+            return new WP_Error(
+                'rfq_invalid_session_id',
+                __( 'Invalid intake session ID.', 'rfq-intake' ),
+                [ 'status' => 400 ]
+            );
+        }
+
+        $prefix = 'intake/' . $session_id . '/';
+
+        foreach ( array_keys( $this->objects ) as $key ) {
+            if ( str_starts_with( $key, $prefix ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Test helper: simulate the ERP importer removing a session's objects.
+     */
+    public function remove_session_objects( string $session_id ): void {
+        $prefix = 'intake/' . $session_id . '/';
+
+        foreach ( array_keys( $this->objects ) as $key ) {
+            if ( str_starts_with( $key, $prefix ) ) {
+                unset( $this->objects[ $key ], $this->object_last_modified[ $key ] );
+            }
+        }
+    }
+
     /**
      * @return array<string, mixed>|false|WP_Error
      */

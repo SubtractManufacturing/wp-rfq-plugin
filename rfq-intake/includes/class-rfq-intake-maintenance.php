@@ -65,6 +65,7 @@ class RFQ_Intake_Maintenance {
 
         self::log_unreceipted_prefix_candidates( $s3, time() );
         self::purge_stale_draft_sessions();
+        RFQ_Session_Deleter::purge_expired( $s3, time() );
     }
 
     /**

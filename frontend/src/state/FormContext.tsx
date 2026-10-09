@@ -29,6 +29,8 @@ export interface FormState {
   tokenWarning: boolean;
   draftStatus: "idle" | "saving" | "saved" | "error";
   receiptNumber: string | null;
+  /** Customer confirmed their files are not export-controlled (once per form session). */
+  exportControlAcknowledged: boolean;
 }
 
 interface FormContextValue extends FormState {
@@ -44,6 +46,7 @@ interface FormContextValue extends FormState {
   setTokenWarning: (warning: boolean) => void;
   setDraftStatus: (status: FormState["draftStatus"]) => void;
   setReceiptNumber: (receiptNumber: string | null) => void;
+  setExportControlAcknowledged: (acknowledged: boolean) => void;
 }
 
 const FormContext = createContext<FormContextValue | null>(null);
@@ -70,6 +73,7 @@ export function FormProvider({
   const [tokenWarning, setTokenWarning] = useState(false);
   const [draftStatus, setDraftStatus] = useState<FormState["draftStatus"]>("idle");
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
+  const [exportControlAcknowledged, setExportControlAcknowledged] = useState(false);
 
   const setSession = (nextSessionId: string, nextToken: string) => {
     setSessionId(nextSessionId);
@@ -90,6 +94,7 @@ export function FormProvider({
       tokenWarning,
       draftStatus,
       receiptNumber,
+      exportControlAcknowledged,
       setToken,
       setSession,
       setStep,
@@ -101,8 +106,23 @@ export function FormProvider({
       setTokenWarning,
       setDraftStatus,
       setReceiptNumber,
+      setExportControlAcknowledged,
     }),
-    [config, sessionId, currentToken, step, contact, contactSaved, parts, global, submitError, tokenWarning, draftStatus, receiptNumber],
+    [
+      config,
+      sessionId,
+      currentToken,
+      step,
+      contact,
+      contactSaved,
+      parts,
+      global,
+      submitError,
+      tokenWarning,
+      draftStatus,
+      receiptNumber,
+      exportControlAcknowledged,
+    ],
   );
 
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;

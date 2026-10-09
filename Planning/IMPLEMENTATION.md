@@ -393,7 +393,7 @@ Do **not** pass secrets or JWT in localized config.
 
 **Step 6.3** Startup (`App.tsx`):
 
-1. Health check (3s timeout)
+1. Health check (10s timeout) with a "Loading quote form..." indicator while in flight
 2. If fail → render Airtable iframe from config
 3. If ok → `POST /sessions`, store token, render stepper
 
@@ -643,7 +643,7 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-014** — Success screen shows SVG, thank-you copy, muted `Ref: RFQ-...`
 - [ ] **AC-WP-001** — Submit retry after simulated network failure returns same receipt number (idempotent)
 - [ ] **AC-WP-015** — Page refresh starts new session; prior Step 1 contact row remains in DB
-- [ ] **AC-WP-002** — Health failure within 3s shows Airtable embed
+- [ ] **AC-WP-002** — Health failure within 10s shows Airtable embed
 - [ ] **AC-WP-016** — >20 parts blocked in UI and rejected on submit
 - [ ] **AC-WP-006** — Rate limit: 11th session from same IP in 1 hour → 429
 - [ ] **AC-WP-017** — Invalid manifest returns 422 with field errors
@@ -653,6 +653,7 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-030** — Administrators can use **Update now**, but RFQ Intake automatic updates are disabled
 - [ ] **AC-WP-031** — Plugin Package bundles Plugin Update Checker and public update checks require no token or live-GitHub tests
 - [ ] **AC-WP-032** — Plugin Updates run idempotent additive migrations; migration failure degrades health and is not marked complete
+- [ ] **AC-WP-033** — Sessions older than the retention setting (default 180 days, 0 = off) are auto-deleted, and admins can delete from the intake list, only when S3 shows no objects under the session prefix (draft sessions skip the S3 check)
 
 ### ERP (separate repo)
 

@@ -14,7 +14,17 @@ export default {
     container: false,
   },
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        "rfq-progress": {
+          "0%": { transform: "translateX(-110%)" },
+          "100%": { transform: "translateX(390%)" },
+        },
+      },
+      animation: {
+        "rfq-progress": "rfq-progress 1.15s ease-in-out infinite",
+      },
+    },
   },
   plugins: [],
 } satisfies Config;

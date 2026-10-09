@@ -5,6 +5,7 @@ import {
   btnPrimaryBlockClasses,
   btnSecondaryCompactClasses,
 } from "../components/buttonStyles";
+import { ExportControlModal } from "../components/ExportControlModal";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { UploadProgress } from "../components/UploadProgress";
 import { DRAWING_MAX_BYTES, PART_MAX_BYTES, resolveDrawingContentType } from "../lib/drawingContentType";
@@ -37,7 +38,16 @@ type FileType = "part" | "drawing";
 const UPLOAD_FAILED = "Upload failed.";
 
 export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) {
-  const { config, parts, setParts, sessionId, token, setStep } = useForm();
+  const {
+    config,
+    parts,
+    setParts,
+    sessionId,
+    token,
+    setStep,
+    exportControlAcknowledged,
+    setExportControlAcknowledged,
+  } = useForm();
   const [notice, setNotice] = useState<string | null>(null);
   const queueRef = useRef(createUploadQueue(MAX_CONCURRENT_UPLOADS));
   // Files the customer removed while they were still queued; their uploads are skipped.
@@ -217,6 +227,12 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
 
   return (
     <section className="space-y-5">
+      {exportControlAcknowledged ? null : (
+        <ExportControlModal
+          contactEmail={config.salesContactEmail}
+          onAcknowledge={() => setExportControlAcknowledged(true)}
+        />
+      )}
       <div>
         <h1 className="text-2xl font-semibold text-slate-950">Part uploads</h1>
       </div>

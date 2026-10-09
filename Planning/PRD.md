@@ -360,7 +360,7 @@ The form is a **TypeScript** React application (`.tsx` source), built with Vite 
 
 On page load, the form must:
 
-1. Call `GET /wp-json/rfq/v1/health` with a **3-second timeout**.
+1. Call `GET /wp-json/rfq/v1/health` with a **10-second timeout**. The health check performs a live S3 round trip, which can take several seconds on a cold start. While it is in flight, show a loading indicator ("Loading quote form...").
 2. If the response is `200 OK`, render the custom React RFQ form.
 3. If the response is non-200 or the request times out, render the Airtable embed iframe (existing embed code, stored as a plugin setting).
 
@@ -772,7 +772,7 @@ Typical pairing: WP plugin testing branch → staging S3 bucket (or shared dev b
 ### 5.3 Data Retention
 
 - Unfinished sessions and Step 1 contact records (`status = 'draft'`, plus future explicit `abandoned` rows): retain WP DB rows for 90 days, then archive or delete. Submitted sessions are handled through the manifest/receipt and ERP Quote after import, not as CRM leads in WordPress.
-- Submitted receipts: retain WP DB rows indefinitely (they are lightweight index rows).
+- Submitted receipts and all other session rows: retained until the admin-configurable retention window (**Settings → Data retention**, default 180 days, `0` disables) has passed. The daily maintenance job and the admin **Delete** action remove a WP DB row only after S3 confirms no object remains under `intake/{session_id}/`; non-draft rows whose S3 data still exists, or whose S3 state cannot be verified, are kept. `draft` rows (never submitted) skip the S3 check and are deleted regardless; any leftover draft objects are cleaned up later by the ERP. The plugin never deletes S3 objects.
 - S3 intake prefixes: deleted by the ERP import worker after successful quote creation (step 3.5.2). Unreceipted session prefixes (no `receipt.json`): deleted by the 30-day cleanup cron. Retain indefinitely only when import repeatedly fails — alert and investigate.
 
 ### 5.4 Quality Assurance
@@ -804,7 +804,7 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 
 - **AC-ERP-001** — A customer who completes the full RFQ form and receives a receipt number can have their submission located in the ERP within one import poll cycle (≤5 minutes). _(Verified in ERP repo.)_
 - **AC-WP-001** — A customer who submits and then re-submits the same session (due to a network error causing them to retry) receives the same receipt number and does not create a duplicate quote.
-- **AC-WP-002** — If the WordPress plugin is unreachable when a customer navigates to the RFQ page, the Airtable form renders within 3 seconds.
+- **AC-WP-002** — If the WordPress plugin is unreachable when a customer navigates to the RFQ page, the Airtable form renders within 10 seconds, and a loading indicator is shown until then.
 - **AC-WP-003** — If S3 upload of any file fails, the customer sees a per-file error and can retry without re-entering any form data.
 - **AC-WP-004** — If the final submit endpoint fails after all files are uploaded, the customer can retry submission without re-uploading files.
 - **AC-WP-005** — No RFQ with a `receipt.json` in S3 and a corresponding WP DB receipt row is ever lost due to ERP downtime.
@@ -815,3 +815,4 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-030** — RFQ Intake can be updated with the standard manual **Update now** action, but WordPress automatic updates are always disabled for this plugin.
 - **AC-WP-031** — The installable Plugin Package contains Plugin Update Checker and performs public update checks without a GitHub token or live-GitHub test dependency.
 - **AC-WP-032** — Plugin Updates run idempotent additive schema migrations; a failed migration is not marked complete and makes plugin health unavailable until recovery.
+- **AC-WP-033** — Intake sessions older than the configurable retention window (default 180 days, `0` disables) are auto-deleted from the WP DB daily, and admins can delete a session from the intake list, only when S3 confirms no object remains under `intake/{session_id}/`. Non-draft sessions still in S3, or whose S3 check fails, are kept and the batch continues; `draft` sessions are deleted without an S3 check.

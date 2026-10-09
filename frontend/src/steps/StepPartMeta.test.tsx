@@ -81,10 +81,41 @@ describe("StepPartMeta", () => {
 
     const quantity = screen.getByLabelText("Quantity");
     const material = screen.getByLabelText("Material");
-    const notes = screen.getByLabelText("Notes");
+    const notes = screen.getByLabelText("Notes & Details");
     expect(quantity.compareDocumentPosition(material) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(material.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByLabelText(/threads/i)).not.toBeInTheDocument();
+  });
+
+  it("labels the notes field 'Notes & Details' with a tooltip explaining what to include", async () => {
+    const user = userEvent.setup();    render(
+      <FormProvider config={config}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    expect(screen.queryByLabelText("Notes")).not.toBeInTheDocument();
+    const notes = screen.getByLabelText("Notes & Details");
+
+    const trigger = screen.getByRole("button", { name: /what to include in notes & details/i });
+    const tooltip = screen.getByRole("tooltip");
+    expect(trigger).toHaveAttribute("aria-describedby", tooltip.id);
+    expect(notes).toHaveAttribute("aria-describedby", tooltip.id);
+    expect(tooltip).toHaveTextContent(/define any other requirements for these parts/i);
+    expect(within(tooltip).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "Color specifications",
+      "Finishing specifications",
+      "Postprocessing requirements",
+      "Etc.",
+    ]);
+
+    // Keyboard users reach the trigger by tabbing from the label's field neighbours: it sits right before the textarea.
+    await user.click(screen.getByLabelText("Tolerance"));
+    await user.tab();
+    expect(trigger).toHaveFocus();
+    await user.tab();
+    expect(notes).toHaveFocus();
   });
 
   it("hides target price behind a More details toggle placed after notes", async () => {
@@ -99,7 +130,7 @@ describe("StepPartMeta", () => {
     expect(screen.queryByLabelText(/target unit price/i)).not.toBeInTheDocument();
     const toggle = screen.getByRole("button", { name: "More details" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByLabelText("Notes").compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByLabelText("Notes & Details").compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");

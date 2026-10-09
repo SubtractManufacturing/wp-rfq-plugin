@@ -116,6 +116,12 @@ async function walkSteps(page: Page): Promise<Record<string, string[]>> {
 
   await page.getByRole("button", { name: "Continue to uploads" }).click();
   await page.getByRole("heading", { name: "Part uploads" }).waitFor();
+  const exportControlDialog = page.getByRole("dialog", { name: "Do not upload controlled files" });
+  await exportControlDialog.getByRole("checkbox").check();
+  await exportControlDialog.getByRole("button", { name: "Agree and continue" }).click();
+  await exportControlDialog.waitFor({ state: "hidden" });
+  // The agree button sits where the dropzone renders; park the pointer so :hover styles don't skew the snapshot.
+  await page.mouse.move(0, 0);
   shots.uploadsEmpty = await snapshotForm(page);
 
   await page.getByLabel("Part files").setInputFiles([
