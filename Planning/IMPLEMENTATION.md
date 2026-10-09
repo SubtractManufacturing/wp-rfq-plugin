@@ -653,6 +653,7 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-030** — Administrators can use **Update now**, but RFQ Intake automatic updates are disabled
 - [ ] **AC-WP-031** — Plugin Package bundles Plugin Update Checker and public update checks require no token or live-GitHub tests
 - [ ] **AC-WP-032** — Plugin Updates run idempotent additive migrations; migration failure degrades health and is not marked complete
+- [ ] **AC-WP-033** — Sessions older than the retention setting (default 180 days, 0 = off) are auto-deleted, and admins can delete from the intake list, only when S3 shows no objects under the session prefix (draft sessions skip the S3 check)
 
 ### ERP (separate repo)
 

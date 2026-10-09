@@ -102,6 +102,69 @@ class S3ClientTest extends TestCase
         $this->assertFalse($client->head_object('missing.key'));
     }
 
+    public function test_has_session_objects_reflects_listing_contents(): void
+    {
+        $session_id = '550e8400-e29b-41d4-a716-446655440201';
+
+        $present = $this->create_mocked_aws_client([
+            new Result(['Contents' => [['Key' => 'intake/' . $session_id . '/meta/receipt.json']]]),
+        ]);
+        $this->assertTrue($present->has_session_objects($session_id));
+
+        $empty = $this->create_mocked_aws_client([
+            new Result(['KeyCount' => 0]),
+        ]);
+        $this->assertFalse($empty->has_session_objects($session_id));
+    }
+
+    public function test_has_session_objects_scopes_listing_to_session_prefix(): void
+    {
+        $session_id = '550e8400-e29b-41d4-a716-446655440202';
+        $captured = null;
+
+        $mock = new MockHandler();
+        $mock->append(function (Aws\CommandInterface $command) use (&$captured) {
+            $captured = $command;
+
+            return new Result(['KeyCount' => 0]);
+        });
+
+        $client = $this->create_mocked_aws_client([], $mock);
+        $client->has_session_objects($session_id);
+
+        $this->assertSame('intake/' . $session_id . '/', $captured['Prefix']);
+        $this->assertSame(1, $captured['MaxKeys']);
+    }
+
+    public function test_has_session_objects_rejects_non_uuid_without_calling_s3(): void
+    {
+        $client = $this->create_mocked_aws_client([]);
+
+        $result = $client->has_session_objects('../other');
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertSame('rfq_invalid_session_id', $result->get_error_code());
+    }
+
+    public function test_has_session_objects_returns_error_when_s3_fails(): void
+    {
+        $mock = new MockHandler();
+        $mock->append(function (): void {
+            throw new Aws\Exception\AwsException(
+                'Server Error',
+                new Command('ListObjectsV2'),
+                ['response' => new GuzzleHttp\Psr7\Response(500)]
+            );
+        });
+
+        $client = $this->create_mocked_aws_client([], $mock);
+
+        $result = $client->has_session_objects('550e8400-e29b-41d4-a716-446655440203');
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertSame('rfq_s3_error', $result->get_error_code());
+    }
+
     public function test_create_presigned_put_binds_key_content_type_and_default_expiry(): void
     {
         $client = $this->create_mocked_aws_client([]);

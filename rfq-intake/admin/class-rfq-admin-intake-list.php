@@ -13,13 +13,127 @@ class RFQ_Admin_Intake_List {
     /** @var list<int> */
     public const PER_PAGE_OPTIONS = [ 25, 50, 75 ];
 
+    public const DELETE_ACTION = 'rfq_delete_intake_session';
+
     public static function init(): void {
         add_action( 'admin_menu', [ self::class, 'register_menu' ] );
+        add_action( 'admin_post_' . self::DELETE_ACTION, [ self::class, 'handle_delete' ] );
     }
 
+    public static function delete_nonce_action( string $session_id ): string {
+        return self::DELETE_ACTION . '_' . $session_id;
+    }
+
+    /**
+     * Result notice for the list page, keyed by `rfq_delete` query value.
+     *
+     * @return array{type: string, message: string}|null
+     */
+    public static function resolve_delete_notice( ?string $code ): ?array {
+        $notices = [
+            'deleted'      => [
+                'success',
+                __( 'Intake session deleted.', 'rfq-intake' ),
+            ],
+            'in_s3'        => [
+                'error',
+                __( 'Not deleted: files for this intake session still exist in S3.', 'rfq-intake' ),
+            ],
+            'check_failed' => [
+                'error',
+                __( 'Not deleted: S3 could not be checked. Verify the S3 settings and try again.', 'rfq-intake' ),
+            ],
+            'not_found'    => [
+                'error',
+                __( 'That intake session no longer exists.', 'rfq-intake' ),
+            ],
+            'error'        => [
+                'error',
+                __( 'The intake session could not be deleted.', 'rfq-intake' ),
+            ],
+        ];
+
+        if ( $code === null || ! isset( $notices[ $code ] ) ) {
+            return null;
+        }
+
+        return [
+            'type'    => $notices[ $code ][0],
+            'message' => $notices[ $code ][1],
+        ];
+    }
+
+    public static function delete_result_code( true|WP_Error $result ): string {
+        if ( $result === true ) {
+            return 'deleted';
+        }
+
+        return match ( $result->get_error_code() ) {
+            'rfq_session_in_s3'          => 'in_s3',
+            'rfq_session_s3_check_failed',
+            'rfq_s3_not_configured'      => 'check_failed',
+            'rfq_session_not_found'      => 'not_found',
+            default                      => 'error',
+        };
+    }
+
+    public static function handle_delete(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to delete intake sessions.', 'rfq-intake' ), '', [ 'response' => 403 ] );
+        }
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified below, bound to the session ID.
+        $session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['session_id'] ) ) : '';
+
+        check_admin_referer( self::delete_nonce_action( $session_id ) );
+
+        $s3 = RFQ_S3_Client::resolve();
+
+        $code = $s3 instanceof WP_Error
+            ? self::delete_result_code( $s3 )
+            : self::delete_result_code( RFQ_Session_Deleter::delete_session( $session_id, $s3 ) );
+
+        $args = [
+            'page'       => self::MENU_SLUG,
+            'rfq_delete' => $code,
+        ];
+
+        // Return to the same list position (nonce already verified above).
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        $per_page = isset( $_POST['per_page'] ) ? (int) $_POST['per_page'] : 0;
+        $paged    = isset( $_POST['paged'] ) ? (int) $_POST['paged'] : 0;
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
+
+        if ( in_array( $per_page, self::PER_PAGE_OPTIONS, true ) ) {
+            $args['per_page'] = $per_page;
+        }
+
+        if ( $paged > 1 ) {
+            $args['paged'] = $paged;
+        }
+
+        wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+        exit;
+    }
+
+    /**
+     * Top-level "RFQ Intake" menu opens the intake list; Settings is a
+     * submenu registered by RFQ_Admin_Settings (later admin_menu priority).
+     */
     public static function register_menu(): void {
+        add_menu_page(
+            __( 'Intake Sessions', 'rfq-intake' ),
+            __( 'RFQ Intake', 'rfq-intake' ),
+            'manage_options',
+            self::MENU_SLUG,
+            [ self::class, 'render_page' ],
+            'dashicons-clipboard',
+            80
+        );
+
+        // Same slug as the parent relabels the auto-created first submenu item.
         add_submenu_page(
-            RFQ_Admin_Settings::MENU_SLUG,
+            self::MENU_SLUG,
             __( 'Intake Sessions', 'rfq-intake' ),
             __( 'Intake Sessions', 'rfq-intake' ),
             'manage_options',
@@ -146,6 +260,8 @@ class RFQ_Admin_Intake_List {
         $total_pages = max( 1, (int) ceil( $total / $per_page ) );
         $page        = self::resolve_page_number( $total_pages );
         $sessions    = self::query_sessions( $per_page, $page );
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only result code, whitelisted by resolve_delete_notice().
+        $notice = self::resolve_delete_notice( isset( $_GET['rfq_delete'] ) ? sanitize_key( (string) $_GET['rfq_delete'] ) : null );
 
         require RFQ_INTAKE_PLUGIN_DIR . 'admin/views/intake-list-page.php';
     }

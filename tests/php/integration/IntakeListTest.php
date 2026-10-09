@@ -104,6 +104,54 @@ class IntakeListTest extends TestCase
         $this->assertSame('', RFQ_Admin_Intake_List::format_created_at('0000-00-00 00:00:00'));
     }
 
+    public function test_top_level_menu_opens_intake_list_with_settings_submenu(): void
+    {
+        global $menu, $submenu;
+
+        require_once ABSPATH . 'wp-admin/includes/plugin.php';
+
+        // User 1 is the administrator created by the WP test installer.
+        wp_set_current_user(1);
+
+        $saved_menu = $menu;
+        $saved_submenu = $submenu;
+        $menu = [];
+        $submenu = [];
+
+        try {
+            // Parent must register before the Settings submenu (priority 10 then 11).
+            RFQ_Admin_Intake_List::register_menu();
+            RFQ_Admin_Settings::register_menu();
+
+            $top_level = array_values(array_filter(
+                $menu,
+                static fn(array $item): bool => $item[2] === RFQ_Admin_Intake_List::MENU_SLUG
+            ));
+
+            $this->assertCount(1, $top_level);
+            $this->assertSame('RFQ Intake', $top_level[0][0]);
+
+            $items = array_values($submenu[RFQ_Admin_Intake_List::MENU_SLUG]);
+
+            $this->assertCount(2, $items);
+            $this->assertSame('Intake Sessions', $items[0][0]);
+            $this->assertSame(RFQ_Admin_Intake_List::MENU_SLUG, $items[0][2]);
+            $this->assertSame('Settings', $items[1][0]);
+            $this->assertSame(RFQ_Admin_Settings::MENU_SLUG, $items[1][2]);
+        } finally {
+            $menu = $saved_menu;
+            $submenu = $saved_submenu;
+        }
+
+        RFQ_Admin_Settings::init();
+
+        $this->assertSame(
+            11,
+            has_action('admin_menu', [RFQ_Admin_Settings::class, 'register_menu']) ?: null,
+            'Settings submenu must register after the parent menu'
+        );
+    }
+
     private function truncate_sessions(): void
     {
         global $wpdb;

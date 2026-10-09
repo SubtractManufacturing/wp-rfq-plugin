@@ -84,6 +84,7 @@ require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-webhook.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-rest-controller.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-upgrade-manager.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-activator.php';
+require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-session-deleter.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-intake-maintenance.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-shortcode.php';
 require_once RFQ_INTAKE_PLUGIN_DIR . 'includes/class-rfq-update-checker.php';

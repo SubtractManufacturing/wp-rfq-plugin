@@ -21,6 +21,14 @@ interface RFQ_S3_Client_Interface {
     public function list_intake_session_prefixes(): array|WP_Error;
 
     /**
+     * Whether any object still exists under `intake/{session_id}/`.
+     *
+     * Returns WP_Error when S3 cannot answer; callers must treat that as
+     * "unknown" and must not delete anything.
+     */
+    public function has_session_objects( string $session_id ): bool|WP_Error;
+
+    /**
      * @return array<string, mixed>|false|WP_Error
      */
     public function get_json( string $key ): array|false|WP_Error;

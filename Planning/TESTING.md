@@ -112,6 +112,7 @@ A planned build artifact `scripts/check-acceptance-coverage.php` (introduced at 
 | AC-WP-030 | Standard manual update remains available while automatic updates are disabled | Plugin | Release | Unit + integration | `UpdateCheckerTest` |
 | AC-WP-031 | Plugin Package bundles update checker; public checks use no token or live API in tests | Plugin | Release | Unit + package inspection | `UpdateCheckerTest`, `test-plugin-package.mjs` |
 | AC-WP-032 | Additive migrations are idempotent; failure is not recorded and degrades health | Plugin | Release | Unit + integration | `UpgradeManagerTest`, `RestEndpointsTest` |
+| AC-WP-033 | Session retention: auto-delete after N days (default 180, 0 = off) and admin Delete only when S3 prefix is empty; S3-present or unverifiable non-draft sessions are kept, drafts skip the S3 check | Plugin | Post-M3 | Unit + integration | `SessionDeleterTest`, `S3ClientTest` |
 
 ### ERP IMPLEMENTATION §7 checkboxes
 

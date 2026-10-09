@@ -90,6 +90,25 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('{"disabled":[]}', $sanitized);
     }
 
+    public function test_cleanup_notice_summarizes_manual_run_outcomes(): void
+    {
+        $done = RFQ_Admin_Settings::resolve_cleanup_notice('done', 5, 3, 1, 1);
+        $this->assertSame('warning', $done['type']);
+        $this->assertStringContainsString('5 expired', $done['message']);
+        $this->assertStringContainsString('3 deleted', $done['message']);
+
+        $clean = RFQ_Admin_Settings::resolve_cleanup_notice('done', 2, 2, 0, 0);
+        $this->assertSame('success', $clean['type']);
+
+        $capped = RFQ_Admin_Settings::resolve_cleanup_notice('done', RFQ_Session_Deleter::MAX_CHECKS_PER_RUN, 1, 0, 0);
+        $this->assertStringContainsString('run it again', $capped['message']);
+
+        $this->assertSame('warning', RFQ_Admin_Settings::resolve_cleanup_notice('disabled')['type']);
+        $this->assertSame('error', RFQ_Admin_Settings::resolve_cleanup_notice('s3_unavailable')['type']);
+        $this->assertNull(RFQ_Admin_Settings::resolve_cleanup_notice('<script>'));
+        $this->assertNull(RFQ_Admin_Settings::resolve_cleanup_notice(null));
+    }
+
     public function test_activation_bootstraps_encryption_key_and_jwt_secret(): void
     {
         delete_option('rfq_encryption_key');
