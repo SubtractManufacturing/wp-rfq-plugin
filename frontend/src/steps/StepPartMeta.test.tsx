@@ -14,7 +14,18 @@ const config: RfqFormConfig = {
   internationalRfqEmail: "large-rfq@example.test",
   salesContactEmail: "sales@example.test",
   maxParts: 20,
-  materials: [],
+  materials: [
+    {
+      id: "6061-t6-aluminum",
+      label: "6061-T6 Aluminum",
+      aliases: ["6061"],
+      show_in_dropdown: true,
+      group: "Metal",
+      type: "Aluminum",
+      guidance: "The general-purpose default.",
+      finishes: ["As-machined", "Anodize Type II"],
+    },
+  ],
 };
 
 function part(id: string, filename: string | null): PartRow {
@@ -80,7 +91,7 @@ describe("StepPartMeta", () => {
     );
 
     const quantity = screen.getByLabelText("Quantity");
-    const material = screen.getByLabelText("Material");
+    const material = screen.getByLabelText(/know the exact material/i);
     const notes = screen.getByLabelText("Notes & Details");
     expect(quantity.compareDocumentPosition(material) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(material.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -90,7 +101,7 @@ describe("StepPartMeta", () => {
   it("labels the notes field 'Notes & Details' with a tooltip explaining what to include", async () => {
     const user = userEvent.setup();    render(
       <FormProvider config={config}>
-        <Seed rows={[part("1", "a.step")]} />
+        <Seed rows={[{ ...part("1", "a.step"), material: "6061-T6 Aluminum" }]} />
         <StepPartMeta />
       </FormProvider>,
     );
@@ -102,16 +113,16 @@ describe("StepPartMeta", () => {
     const tooltip = screen.getByRole("tooltip");
     expect(trigger).toHaveAttribute("aria-describedby", tooltip.id);
     expect(notes).toHaveAttribute("aria-describedby", tooltip.id);
-    expect(tooltip).toHaveTextContent(/define any other requirements for these parts/i);
+    expect(tooltip).toHaveTextContent(/anything not covered by material, finish, and global tolerance/i);
     expect(within(tooltip).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "Color specifications",
-      "Finishing specifications",
-      "Postprocessing requirements",
+      "Threads or special features",
+      "Masking or postprocessing requirements",
+      "Inspection or certification needs",
       "Etc.",
     ]);
 
     // Keyboard users reach the trigger by tabbing from the label's field neighbours: it sits right before the textarea.
-    await user.click(screen.getByLabelText("Tolerance"));
+    await user.click(screen.getByLabelText(/global tolerance/i));
     await user.tab();
     expect(trigger).toHaveFocus();
     await user.tab();
@@ -138,6 +149,104 @@ describe("StepPartMeta", () => {
 
     await user.click(toggle);
     expect(screen.queryByLabelText(/target unit price/i)).not.toBeInTheDocument();
+  });
+
+  it("shows Global Tolerance options with metal values in inches, then plastic values after picking a plastic", async () => {
+    const user = userEvent.setup();
+    const plasticConfig: RfqFormConfig = {
+      ...config,
+      materials: [
+        ...config.materials,
+        {
+          id: "abs",
+          label: "ABS",
+          aliases: ["abs"],
+          show_in_dropdown: false,
+          group: "Plastic",
+          type: "ABS",
+          finishes: ["As-machined"],
+          colors: ["Black"],
+        },
+      ],
+    };
+    render(
+      <FormProvider config={plasticConfig}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    // Hidden until a material is completely selected.
+    expect(screen.queryByLabelText(/global tolerance/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Metal" }));
+    await user.click(screen.getByRole("button", { name: "Aluminum" }));
+    await user.click(screen.getByRole("button", { name: "6061-T6 Aluminum" }));
+
+    const tolerance = screen.getByLabelText(/global tolerance/i) as HTMLSelectElement;
+    expect(Array.from(tolerance.options).map((option) => option.text)).toEqual([
+      'Economy (±0.010")',
+      'Standard (±0.005")',
+      'Tight (±0.003")',
+      "Custom",
+    ]);
+    expect(screen.queryByText(/Applies to the whole part/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Plastic" }));
+    expect(screen.queryByLabelText(/global tolerance/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ABS" }));
+    const absButtons = screen.getAllByRole("button", { name: "ABS" });
+    await user.click(absButtons[absButtons.length - 1] as HTMLElement);
+
+    const plasticTolerance = screen.getByLabelText(/global tolerance/i) as HTMLSelectElement;
+    expect(Array.from(plasticTolerance.options).map((option) => option.text)).toEqual([
+      'Economy (±0.020")',
+      'Standard (±0.010")',
+      'Tight (±0.005")',
+      "Custom",
+    ]);
+  });
+
+  it("gives custom materials a typed tolerance with an inches/millimeters selector", async () => {
+    const user = userEvent.setup();
+    render(
+      <FormProvider config={config}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    const continueButton = screen.getByRole("button", { name: "Continue to RFQ details" });
+    await user.click(screen.getByRole("button", { name: "Other / custom" }));
+    await user.type(screen.getByLabelText("Specify material"), "Customer-supplied brass");
+
+    // No tier dropdown for custom materials; a typed amount with a unit choice instead.
+    expect(screen.queryByLabelText(/global tolerance/i, { selector: "select" })).not.toBeInTheDocument();
+    const valueInput = screen.getByLabelText(/global tolerance/i, { selector: "input" });
+    expect(continueButton).toBeDisabled();
+
+    await user.type(valueInput, "0.1");
+    await user.selectOptions(screen.getByLabelText("Tolerance unit"), "mm");
+    expect(continueButton).toBeEnabled();
+  });
+
+  it("enables Continue after a material is picked through the guided tree", async () => {
+    const user = userEvent.setup();
+    render(
+      <FormProvider config={config}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+      </FormProvider>,
+    );
+
+    const continueButton = screen.getByRole("button", { name: "Continue to RFQ details" });
+    expect(continueButton).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Metal" }));
+    await user.click(screen.getByRole("button", { name: "Aluminum" }));
+    await user.click(screen.getByRole("button", { name: "6061-T6 Aluminum" }));
+
+    expect(continueButton).toBeEnabled();
   });
 
   it("starts expanded when a target price is already set", () => {

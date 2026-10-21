@@ -238,9 +238,14 @@ Materials are **suggestions, not constraints**. The manifest always stores the c
 | Field | Purpose |
 |-------|---------|
 | `id` | Stable key for admin overrides |
-| `label` | Display name (e.g. `1018 Steel`, `6061 Aluminum`) |
+| `label` | Display name (e.g. `1018 Steel`, `6061-T6 Aluminum`) |
 | `aliases` | Optional match strings for type-ahead (e.g. `1018`, `1018 steel`) |
 | `show_in_dropdown` | If true, include in the simple dropdown; if false, type-ahead only |
+| `group` | Optional tree level 1 for guided selection (e.g. `Metal`, `Plastic`) |
+| `type` | Optional tree level 2 within the group (e.g. `Aluminum`, `Acetal`) |
+| `guidance` | Optional short plain-language note shown after the material is picked |
+| `finishes` | Optional list of finishes offered for this material |
+| `colors` | Optional list of stock colors offered for this material (some plastics) |
 
 **Effective catalog:** At form load, the plugin merges defaults with admin overrides (see 5.2) and passes the result to the React form (e.g. via localized script config). Disabled entries are omitted. Renamed entries use the admin label. Admin-added entries are appended.
 
@@ -419,12 +424,15 @@ Uploads are organized **per part row**, not in a shared pool. Each part row owns
 For each part row from Step 2 (same `part_id`), collect:
 
 - Quantity (integer, required, minimum **1**; no maximum — large production quantities are valid).
-- **Material** (required, non-empty) — dual UX, always stored as a free-text string in the manifest:
-  - **Simple dropdown** — short list of common options (e.g. general-purpose aluminum, common steels) for customers who do not know a specific alloy. Selecting an option fills the material field.
-  - **Type-ahead text field** — matches the effective material catalog (label and aliases). Example: typing `1018` suggests and can select `1018 Steel`.
-  - **Custom entry** — user may ignore suggestions and submit any string (exotic alloy, customer-supplied material, etc.). Never block submit for a material not in the catalog.
-  - Catalog source: see [Material catalog](#317-material-catalog).
-- **Tolerance** (required) — dropdown: `standard`, `precision`, or `custom`. If `custom`, a free-text **tolerance detail** field is required (non-empty). Omit or send `null` for detail when not custom.
+- **Material** (required, non-empty) — guided selection, always stored as a free-text string in the manifest:
+  - **Guided tree** — the customer picks a material group (e.g. Metal, Plastic), then a type within it (e.g. Aluminum, Acetal), then an alloy/grade. Only the next step is shown, and each catalog entry may carry short guidance text shown after it is picked.
+  - **Search shortcut** — a type-ahead field matches the effective material catalog (label, aliases, group, and type) and jumps straight to that alloy/grade. Example: typing `1018` suggests and can select `1018 Steel`.
+  - **Finish** — after a catalog material is picked, the finishes that apply to that material are offered (defaulting to `As-machined` when available). Finishes that need a color (e.g. anodize, powder coat) show an optional finish-color field; `Other: specify` requires a free-text finish specification. Stored as optional manifest fields `finish`, `finish_color`, and `finish_specification` alongside the material string.
+  - **Plastic color** — catalog plastics that offer stock colors show a color choice with a `No preference` default. Stored as the optional manifest field `plastic_color`.
+  - **Custom entry** — via `Other / custom`, the user may describe any material (exotic alloy, customer-supplied material, or "not sure") and submit that string. Never block submit for a material not in the catalog.
+  - **Same material for all parts** — when a part has a complete material/finish selection and the RFQ has more than one part, the customer can apply it to every part in one click.
+  - Catalog source: see [Material catalog](#317-material-catalog). Flat admin-added entries without tree fields remain searchable and pickable under `More materials`.
+- **Global Tolerance** (required) — shown only once a material is completely selected. For catalog materials, a dropdown shows inch values that adjust to the material category (Economy / Standard / Tight). Metal: Economy ±0.010", Standard ±0.005", Tight ±0.003". Plastic: Economy ±0.020", Standard ±0.010", Tight ±0.005". The v2 manifest sends the **actual tolerance string** (e.g. `+/- 0.005"`) in `tolerance`, never the tier label, so the ERP imports it verbatim; `tolerance_detail` is always `null` in v2. Choosing Custom in the dropdown requires a free-text **tolerance detail**, which is sent as the `tolerance` string itself. For custom (non-catalog) materials, the customer instead types a tolerance amount (prefilled with the ± symbol) and picks inches or millimeters; the client converts it to inches (e.g. `+/- 0.00394"`) without showing the conversion and sends that as `tolerance`. (v1 sent tier labels such as `standard`/`precision`/`custom`, with the detail in `tolerance_detail`.)
 - Notes (multi-line text, optional).
 - Target unit price (optional) — customer's target price **per part** in **USD**. Positive number, up to 2 decimal places; stored in manifest as a number or `null`. Display with helper text that this is optional and helps you understand their budget. Reject negative values and non-numeric input on submit. Shown inside a collapsed **More details** section below Notes (auto-expanded when a value is already set).
 
@@ -464,6 +472,7 @@ Server validation: `global.lead_time_preference` must be one of the values above
 
 ```json
 {
+  "manifest_version": 2,
   "session_id": "...",
   "contact": {
     "first_name": "Jane",
@@ -480,8 +489,12 @@ Server validation: `global.lead_time_preference` must be one of the values above
       "part_file_key": "intake/{session_id}/parts/{file_id}_{filename}",
       "drawing_file_keys": ["intake/{session_id}/drawings/{file_id}_{filename}"],
       "material": "...",
-      "tolerance": "custom",
-      "tolerance_detail": "±0.001 on all diameters",
+      "finish": "Anodize Type II",
+      "finish_color": "Black",
+      "finish_specification": null,
+      "plastic_color": null,
+      "tolerance": "+/- 0.005\"",
+      "tolerance_detail": null,
       "quantity": 10,
       "target_unit_price": 12.50,
       "notes": "..."
@@ -499,6 +512,8 @@ Server validation: `global.lead_time_preference` must be one of the values above
   }
 }
 ```
+
+**Manifest versioning:** `manifest_version` is always the first field. A manifest without it is **v1 (legacy)**. The current version is **2** (adds the per-part finish/color fields and sends `tolerance` as the actual tolerance string, e.g. `+/- 0.005"`, instead of a tier label). **Any change to the manifest's shape or to the meaning/format of an existing field must bump `manifest_version`** and follow [ADR 0003](../docs/adr/0003-manifest-versioning.md): bump the version constant, document the new version there, and keep the WordPress validator and ERP importer accepting every older version.
 
 2. React sends this manifest to `POST /sessions/{session_id}/submit`.
 3. If the request succeeds and returns a `receipt_number`, React shows the [success screen](#326-success-screen). **This is the only condition under which a success screen is shown.**
@@ -601,7 +616,7 @@ When `POST /sessions/{session_id}/submit` is called, the WordPress plugin must e
 
 1. **Validate JWT.** Verify signature, expiry, and that `session_id` in the JWT matches the URL parameter.
 2. **Validate session state.** Check the WP DB `rfq_sessions` row. If `status` is already `submitted`, return the existing `receipt_number` (idempotent re-submission is safe).
-3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. Each part `tolerance` must be `standard`, `precision`, or `custom`. If `tolerance` is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required when `lead_time_preference` is `target_date` (ISO date, not before today UTC); otherwise omit or `null`.
+3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. If `manifest_version` is present it must be `1` or `2` (absent means v1). In v2, each part `tolerance` must be a non-empty actual-tolerance string (e.g. `+/- 0.005"`); in v1, each part `tolerance` must be `economy`, `standard`, `tight`, `precision` (legacy), or `custom`, and if it is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required when `lead_time_preference` is `target_date` (ISO date, not before today UTC); otherwise omit or `null`.
 4. **Confirm S3 objects exist and match declared constraints.** For every `part_file_key` and `drawing_file_key` declared in the manifest, call S3 `HeadObject` or equivalent metadata lookup. If any declared key is missing, returns an error, exceeds the file-category size limit, or has available content-type metadata that conflicts with the declared file category, abort and return an error identifying which files failed validation. Objects in the session prefix that are **not** listed in the manifest are not validated and are not an error — they are ignored until ERP import cleanup.
 5. **Write `manifest.json` to S3** at `intake/{session_id}/meta/manifest.json`.
 6. **Generate receipt number** using the daily sequence.
@@ -816,3 +831,5 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-031** — The installable Plugin Package contains Plugin Update Checker and performs public update checks without a GitHub token or live-GitHub test dependency.
 - **AC-WP-032** — Plugin Updates run idempotent additive schema migrations; a failed migration is not marked complete and makes plugin health unavailable until recovery.
 - **AC-WP-033** — Intake sessions older than the configurable retention window (default 180 days, `0` disables) are auto-deleted from the WP DB daily, and admins can delete a session from the intake list, only when S3 confirms no object remains under `intake/{session_id}/`. Non-draft sessions still in S3, or whose S3 check fails, are kept and the batch continues; `draft` sessions are deleted without an S3 check.
+- **AC-WP-034** — Material selection walks the customer through group → type → alloy/grade, offers only the finishes and plastic stock colors that apply to the chosen material, keeps a search shortcut and an unblocked free-text custom material, and stores the material string plus optional finish/color fields in the manifest.
+- **AC-WP-035** — Every submitted manifest carries `manifest_version` as its first field (current version 2; absence means legacy v1), and in v2 each part's `tolerance` is the actual tolerance string (e.g. `+/- 0.005"`) rather than a tier label. The validator accepts v1 and v2 manifests and rejects other versions.

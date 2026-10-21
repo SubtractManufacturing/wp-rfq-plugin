@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { btnPrimaryClasses } from "../components/buttonStyles";
 import { ChevronIcon } from "../components/ChevronIcon";
-import { Combobox } from "../components/Combobox";
 import { InfoTooltip } from "../components/InfoTooltip";
+import { MaterialPicker } from "../components/MaterialPicker";
 import { Select } from "../components/Select";
-import { dropdownMaterials, searchMaterials } from "../lib/materials";
+import { findMaterialByLabel, isOtherFinish } from "../lib/materials";
+import {
+  normalizeTolerance,
+  parseToleranceValue,
+  toleranceCategoryForMaterial,
+  toleranceTierLabel,
+} from "../lib/tolerances";
 import { useForm } from "../state/FormContext";
 import type { PartRow, Tolerance } from "../types/manifest";
 
@@ -54,19 +60,62 @@ export function StepPartMeta() {
     updatePart(partId, { target_unit_price: parsed });
   };
 
+  const applyMaterialToAll = (source: PartRow) => {
+    setParts(
+      parts.map((part) => ({
+        ...part,
+        material: source.material,
+        finish: source.finish ?? null,
+        finish_color: source.finish_color ?? null,
+        finish_specification: source.finish_specification ?? null,
+        plastic_color: source.plastic_color ?? null,
+        tolerance: source.tolerance,
+        tolerance_detail: source.tolerance_detail,
+        tolerance_value: source.tolerance_value ?? null,
+        tolerance_unit: source.tolerance_unit ?? null,
+      })),
+    );
+  };
+
+  const handleMaterialChange = (part: PartRow, patch: Partial<PartRow>) => {
+    const nextMaterial = patch.material ?? part.material;
+    const wasCustomMaterial =
+      part.material.trim() !== "" && findMaterialByLabel(part.material, config.materials) === null;
+    let tolerancePatch: Partial<PartRow> = {};
+    if (nextMaterial.trim() !== "" && findMaterialByLabel(nextMaterial, config.materials) === null) {
+      // Custom materials get a typed tolerance, stored as the custom tier.
+      tolerancePatch = { tolerance: "custom" };
+    } else if (wasCustomMaterial && findMaterialByLabel(nextMaterial, config.materials) !== null) {
+      // Back to a catalog material: return to the standard tier.
+      tolerancePatch = { tolerance: "standard" };
+    }
+    updatePart(part.part_id, { ...patch, ...tolerancePatch });
+  };
+
   const hasPriceErrors = Object.keys(priceErrors).length > 0;
   const canContinue = parts.length > 0 && parts.every((part) => {
-    const hasToleranceDetail = part.tolerance !== "custom" || (part.tolerance_detail?.trim() ?? "") !== "";
-    return part.material.trim() !== "" && part.quantity >= 1 && hasToleranceDetail;
+    const isCustomMaterial =
+      part.material.trim() !== "" && findMaterialByLabel(part.material, config.materials) === null;
+    const hasToleranceDetail = isCustomMaterial
+      ? parseToleranceValue(part.tolerance_value) !== null
+      : part.tolerance !== "custom" || (part.tolerance_detail?.trim() ?? "") !== "";
+    const hasFinishDetail = !isOtherFinish(part.finish) || (part.finish_specification?.trim() ?? "") !== "";
+    return part.material.trim() !== "" && part.quantity >= 1 && hasToleranceDetail && hasFinishDetail;
   }) && !hasPriceErrors;
 
   return (
     <section className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold text-slate-950">Part details</h1>
-        <p className="mt-2 text-sm text-slate-600">Add quantity, material, and tolerance for each uploaded part.</p>
+        <p className="mt-2 text-sm text-slate-600">
+          Add quantity, material, finish, and global tolerance for each uploaded part. Pick a material group to get started,
+          or search if you already know the alloy you need.
+        </p>
       </div>
       {parts.map((part, index) => {
+        const leaf = findMaterialByLabel(part.material, config.materials);
+        const hasCompleteMaterial = part.material.trim() !== "";
+        const isCustomMaterial = hasCompleteMaterial && leaf === null;
         const hasPriceError = Boolean(priceErrors[part.part_id]);
         // Stay open when a price is set or invalid so a hidden value/error never blocks Continue.
         const moreOpen = hasPriceError || (moreDetailsOpen[part.part_id] ?? part.target_unit_price !== null);
@@ -88,40 +137,93 @@ export function StepPartMeta() {
                 value={part.quantity}
               />
             </label>
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-800" htmlFor={`material-${part.part_id}`}>
-                Material
-              </label>
-              <Combobox
-                defaultOptions={dropdownMaterials(config.materials)}
-                id={`material-${part.part_id}`}
-                onChange={(material) => updatePart(part.part_id, { material })}
-                search={(query) => searchMaterials(query, config.materials)}
-                value={part.material}
-                wrapperClassName="mt-1"
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <MaterialPicker
+                idPrefix={`material-${part.part_id}`}
+                materials={config.materials}
+                onChange={(patch) => handleMaterialChange(part, patch)}
+                value={part}
               />
+              {parts.length > 1 && part.material.trim() !== "" ? (
+                <button
+                  className="mt-3 text-sm text-slate-600 underline transition-colors duration-150 hover:text-slate-900"
+                  onClick={() => applyMaterialToAll(part)}
+                  type="button"
+                >
+                  Use this material, finish &amp; tolerance for all parts
+                </button>
+              ) : null}
             </div>
-            <label className="mt-3 block text-sm font-medium text-slate-800">
-              Tolerance
-              <Select
-                onChange={(event) => updatePart(part.part_id, { tolerance: event.target.value as Tolerance })}
-                value={part.tolerance}
-                wrapperClassName="mt-1"
-              >
-                <option value="standard">Standard</option>
-                <option value="precision">Precision</option>
-                <option value="custom">Custom</option>
-              </Select>
-            </label>
-            {part.tolerance === "custom" ? (
-              <label className="mt-3 block text-sm font-medium text-slate-800">
-                Tolerance detail
-                <input
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                  onChange={(event) => updatePart(part.part_id, { tolerance_detail: event.target.value })}
-                  value={part.tolerance_detail ?? ""}
-                />
-              </label>
+            {hasCompleteMaterial && isCustomMaterial ? (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-slate-800" htmlFor={`tolerance-value-${part.part_id}`}>
+                  Global Tolerance
+                </label>
+                <div className="mt-1 flex gap-2">
+                  <span className="relative block flex-1">
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-500">
+                      ±
+                    </span>
+                    <input
+                      className="w-full rounded-md border border-slate-300 py-2 pl-8 pr-3"
+                      id={`tolerance-value-${part.part_id}`}
+                      inputMode="decimal"
+                      onChange={(event) =>
+                        updatePart(part.part_id, {
+                          tolerance: "custom",
+                          tolerance_value: event.target.value.replace(/^±/, "").replace(/^\+-\//, ""),
+                        })
+                      }
+                      placeholder="0.005"
+                      value={part.tolerance_value ?? ""}
+                    />
+                  </span>
+                  <Select
+                    aria-label="Tolerance unit"
+                    onChange={(event) =>
+                      updatePart(part.part_id, { tolerance_unit: event.target.value as "in" | "mm" })
+                    }
+                    value={part.tolerance_unit ?? "in"}
+                  >
+                    <option value="in">Inches (")</option>
+                    <option value="mm">Millimeters (mm)</option>
+                  </Select>
+                </div>
+              </div>
+            ) : null}
+            {hasCompleteMaterial && !isCustomMaterial ? (
+              <>
+                <label className="mt-3 block text-sm font-medium text-slate-800">
+                  Global Tolerance
+                  <Select
+                    onChange={(event) => updatePart(part.part_id, { tolerance: event.target.value as Tolerance })}
+                    value={normalizeTolerance(part.tolerance)}
+                    wrapperClassName="mt-1"
+                  >
+                    {(() => {
+                      const category = toleranceCategoryForMaterial(part.material, config.materials);
+                      return (
+                        <>
+                          <option value="economy">{toleranceTierLabel("economy", category)}</option>
+                          <option value="standard">{toleranceTierLabel("standard", category)}</option>
+                          <option value="tight">{toleranceTierLabel("tight", category)}</option>
+                          <option value="custom">Custom</option>
+                        </>
+                      );
+                    })()}
+                  </Select>
+                </label>
+                {part.tolerance === "custom" ? (
+                  <label className="mt-3 block text-sm font-medium text-slate-800">
+                    Custom tolerance detail
+                    <input
+                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                      onChange={(event) => updatePart(part.part_id, { tolerance_detail: event.target.value })}
+                      value={part.tolerance_detail ?? ""}
+                    />
+                  </label>
+                ) : null}
+              </>
             ) : null}
             <div className="mt-3">
               <div className="flex items-center gap-1.5">
@@ -129,11 +231,11 @@ export function StepPartMeta() {
                   Notes &amp; Details
                 </label>
                 <InfoTooltip id={`notes-help-${part.part_id}`} label="What to include in Notes & Details">
-                  <p>Use this field to define any other requirements for these parts like:</p>
+                  <p>Use this field for anything not covered by material, finish, and global tolerance above, like:</p>
                   <ul className="mt-1.5 space-y-0.5 pl-4">
-                    <li className="list-disc">Color specifications</li>
-                    <li className="list-disc">Finishing specifications</li>
-                    <li className="list-disc">Postprocessing requirements</li>
+                    <li className="list-disc">Threads or special features</li>
+                    <li className="list-disc">Masking or postprocessing requirements</li>
+                    <li className="list-disc">Inspection or certification needs</li>
                     <li className="list-disc">Etc.</li>
                   </ul>
                 </InfoTooltip>
@@ -170,7 +272,7 @@ export function StepPartMeta() {
                       value={part.target_unit_price ?? ""}
                     />
                     <span className="mt-1 block text-xs text-slate-500">
-                      Optional — your target price per part in USD.
+                      Optional - your target price per part in USD.
                     </span>
                   </label>
                   {hasPriceError ? (

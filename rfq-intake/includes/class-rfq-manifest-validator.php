@@ -13,8 +13,11 @@ class RFQ_Manifest_Validator {
         'economy',
     ];
 
+    // 'precision' is the legacy name for the tight tier and stays accepted.
     private const TOLERANCE_VALUES = [
+        'economy',
         'standard',
+        'tight',
         'precision',
         'custom',
     ];
@@ -27,7 +30,7 @@ class RFQ_Manifest_Validator {
 
         self::validate_top_level_structure( $manifest, $fields );
         self::validate_contact( $manifest['contact'] ?? null, $fields );
-        self::validate_parts( $manifest['parts'] ?? null, $fields );
+        self::validate_parts( $manifest['parts'] ?? null, $fields, self::manifest_version( $manifest ) );
         self::validate_global( $manifest['global'] ?? null, $fields );
 
         if ( $fields !== [] ) {
@@ -60,6 +63,14 @@ class RFQ_Manifest_Validator {
             $fields['session_id'] = __( 'A valid session_id UUID is required.', 'rfq-intake' );
         }
 
+        if ( array_key_exists( 'manifest_version', $manifest ) ) {
+            $version = $manifest['manifest_version'];
+
+            if ( ! is_int( $version ) || ! in_array( $version, [ 1, 2 ], true ) ) {
+                $fields['manifest_version'] = __( 'manifest_version must be 1 or 2.', 'rfq-intake' );
+            }
+        }
+
         foreach ( [ 'contact', 'parts', 'global' ] as $section ) {
             if ( ! array_key_exists( $section, $manifest ) ) {
                 $fields[ $section ] = __( 'This section is required.', 'rfq-intake' );
@@ -85,9 +96,20 @@ class RFQ_Manifest_Validator {
     }
 
     /**
+     * Manifest version for validation rules. Absence of the field is v1 (legacy).
+     *
+     * @param array<string, mixed> $manifest
+     */
+    private static function manifest_version( array $manifest ): int {
+        $version = $manifest['manifest_version'] ?? 1;
+
+        return is_int( $version ) && in_array( $version, [ 1, 2 ], true ) ? $version : 1;
+    }
+
+    /**
      * @param array<string, string> $fields
      */
-    private static function validate_parts( mixed $parts, array &$fields ): void {
+    private static function validate_parts( mixed $parts, array &$fields, int $manifest_version = 1 ): void {
         if ( ! is_array( $parts ) ) {
             $fields['parts'] = __( 'Parts must be an array.', 'rfq-intake' );
 
@@ -159,9 +181,17 @@ class RFQ_Manifest_Validator {
 
             $tolerance = $part['tolerance'] ?? null;
 
-            if ( ! is_string( $tolerance ) || ! in_array( $tolerance, self::TOLERANCE_VALUES, true ) ) {
+            if ( $manifest_version >= 2 ) {
+                // v2 sends the actual tolerance (e.g. '+/- 0.005"'), never a tier label.
+                if ( ! is_string( $tolerance ) || trim( $tolerance ) === '' ) {
+                    $fields[ $prefix . '.tolerance' ] = __(
+                        'Tolerance is required.',
+                        'rfq-intake'
+                    );
+                }
+            } elseif ( ! is_string( $tolerance ) || ! in_array( $tolerance, self::TOLERANCE_VALUES, true ) ) {
                 $fields[ $prefix . '.tolerance' ] = __(
-                    'Tolerance must be standard, precision, or custom.',
+                    'Tolerance must be economy, standard, tight, precision, or custom.',
                     'rfq-intake'
                 );
             } elseif ( $tolerance === 'custom' ) {
@@ -192,6 +222,11 @@ class RFQ_Manifest_Validator {
 
             self::validate_optional_string_field( $part, 'notes', $prefix . '.notes', $fields );
             self::validate_optional_string_field( $part, 'threads_features', $prefix . '.threads_features', $fields );
+            self::validate_optional_string_field( $part, 'finish', $prefix . '.finish', $fields );
+            self::validate_optional_string_field( $part, 'finish_color', $prefix . '.finish_color', $fields );
+            self::validate_optional_string_field( $part, 'finish_specification', $prefix . '.finish_specification', $fields );
+            self::validate_optional_string_field( $part, 'plastic_color', $prefix . '.plastic_color', $fields );
+            self::validate_optional_string_field( $part, 'tolerance_detail', $prefix . '.tolerance_detail', $fields );
         }
     }
 

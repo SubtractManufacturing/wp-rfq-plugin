@@ -33,6 +33,7 @@ This document explains *why* the architecture is designed the way it is. It is i
 21. [Private S3 bucket — no public object access](#21-private-s3-bucket--no-public-object-access)
 22. [TypeScript and Tailwind for the React form](#22-typescript-and-tailwind-for-the-react-form)
 23. [Production automated testing before release](#23-production-automated-testing-before-release)
+24. [Manifest versioning](#24-manifest-versioning)
 
 ---
 
@@ -361,3 +362,11 @@ This pattern (detect-and-return on retry rather than re-execute) is safe here be
 **Trade-offs accepted:** Contributors need Docker (wp-env), Composer, and Node. ERP import tests live in the ERP repo (ADD §7, §8). Manual staging smoke supplements automation before production deploy but is not a merge gate.
 
 See [Planning/TESTING.md](TESTING.md) §3–§5 for the acceptance-criterion registry, progressive gates, and S3 validation requirements.
+
+---
+
+## 24. Manifest versioning
+
+**Decision:** Every manifest carries `manifest_version` as its first field (current version 2). A manifest without the field is legacy v1. Any change to the manifest's shape, or to the meaning/format of an existing field, must bump the version. Full rules and the version history live in [ADR 0003](../docs/adr/0003-manifest-versioning.md).
+
+**Why we chose this:** The manifest is the contract between WordPress and the ERP, and stored manifests in S3 are never rewritten. Without an explicit version, the ERP importer has to guess which format it is reading - and every silent format change (such as v2 sending the actual tolerance string instead of a tier label) risks mis-importing customer data. An explicit first-field version lets both repos evolve the contract deliberately while older manifests keep importing forever.

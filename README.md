@@ -34,6 +34,12 @@ npm --prefix frontend run build
 npm run wp-env start
 ```
 
+**S3 credentials (local dev):** put them in `config/dev.env.local` (copy
+`config/dev.env.example`; the local file is gitignored - never commit it).
+`wp-env start` restores them into the dev site's plugin settings automatically
+via the `afterStart` hook (`scripts/restore-dev-s3.mjs`), so you should not
+need the admin UI. To re-apply them manually: `npm run dev:restore-s3`.
+
 Add `[rfq_form]` to a WordPress page in wp-env. For a focused shortcode smoke check, run:
 
 ```bash

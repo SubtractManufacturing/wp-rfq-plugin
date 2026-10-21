@@ -491,6 +491,7 @@ async function importReceipt(receiptKey: string) {
 
 ```typescript
 export interface RfqManifest {
+  manifest_version: 2; // first field; absent = legacy v1. Bump on ANY manifest shape/meaning change - see docs/adr/0003-manifest-versioning.md
   session_id: string;
   contact: {
     first_name: string;
@@ -506,8 +507,12 @@ export interface RfqManifest {
     part_file_key: string;
     drawing_file_keys: string[];
     material: string;
-    tolerance: 'standard' | 'precision' | 'custom';
-    tolerance_detail: string | null;
+    finish: string | null;
+    finish_color: string | null;
+    finish_specification: string | null;
+    plastic_color: string | null;
+    tolerance: string; // v2: actual tolerance verbatim, e.g. '+/- 0.005"'; never a tier label
+    tolerance_detail: string | null; // always null in v2 (kept for v1 shape)
     threads_features?: string | null;
     quantity: number;
     target_unit_price: number | null;

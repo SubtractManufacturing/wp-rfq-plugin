@@ -1,26 +1,326 @@
 [
   {
+    "id": "6061-t6-aluminum",
+    "label": "6061-T6 Aluminum",
+    "aliases": ["6061", "6061 aluminum", "6061-t6", "aluminum 6061"],
+    "show_in_dropdown": true,
+    "group": "Metal",
+    "type": "Aluminum",
+    "guidance": "The general-purpose default: strong, light, corrosion-resistant, and easy to machine. A good choice when you are not sure which aluminum you need.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Anodize Type III (hardcoat)", "Chem film", "Powder coat", "Cerakote", "Other: specify"]
+  },
+  {
+    "id": "7075-t6-aluminum",
+    "label": "7075-T6 Aluminum",
+    "aliases": ["7075", "7075 aluminum", "7075-t6"],
+    "show_in_dropdown": true,
+    "group": "Metal",
+    "type": "Aluminum",
+    "guidance": "Higher strength than 6061, closer to steel, at a higher material cost. Common for aerospace and high-load parts.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Anodize Type III (hardcoat)", "Chem film", "Powder coat", "Cerakote", "Other: specify"]
+  },
+  {
+    "id": "2024-t3-aluminum",
+    "label": "2024-T3 Aluminum",
+    "aliases": ["2024", "2024 aluminum", "2024-t3"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Aluminum",
+    "guidance": "High strength and fatigue resistance, widely used in aerospace structures. Less corrosion-resistant than 6061, so it is often coated.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Chem film", "Powder coat", "Other: specify"]
+  },
+  {
+    "id": "5052-h32-aluminum",
+    "label": "5052-H32 Aluminum",
+    "aliases": ["5052", "5052 aluminum"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Aluminum",
+    "guidance": "Excellent corrosion resistance and formability. A common pick for sheet-metal parts, enclosures, and marine use.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Chem film", "Powder coat", "Other: specify"]
+  },
+  {
+    "id": "6063-t6-aluminum",
+    "label": "6063-T6 Aluminum",
+    "aliases": ["6063", "6063 aluminum"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Aluminum",
+    "guidance": "Smooth surface finish and good corrosion resistance. Often used for extrusions, frames, and architectural parts.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Chem film", "Powder coat", "Other: specify"]
+  },
+  {
     "id": "1018-steel",
     "label": "1018 Steel",
-    "aliases": ["1018", "1018 steel"],
-    "show_in_dropdown": true
+    "aliases": ["1018", "1018 steel", "mild steel", "cold rolled steel"],
+    "show_in_dropdown": true,
+    "group": "Metal",
+    "type": "Carbon steel",
+    "guidance": "Low-cost, easy-to-machine mild steel. Good for fixtures, shafts, and general-purpose parts that will be painted or plated.",
+    "finishes": ["As-machined", "Bead blast", "Black oxide", "Zinc plating", "Powder coat", "Cerakote", "Other: specify"]
   },
   {
-    "id": "6061-aluminum",
-    "label": "6061 Aluminum",
-    "aliases": ["6061", "6061 aluminum"],
-    "show_in_dropdown": true
+    "id": "1045-steel",
+    "label": "1045 Steel",
+    "aliases": ["1045", "1045 steel"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Carbon steel",
+    "guidance": "Medium-carbon steel with more strength and wear resistance than 1018. Used for gears, axles, and bolts.",
+    "finishes": ["As-machined", "Bead blast", "Black oxide", "Zinc plating", "Powder coat", "Other: specify"]
   },
   {
-    "id": "7075-aluminum",
-    "label": "7075 Aluminum",
-    "aliases": ["7075", "7075 aluminum"],
-    "show_in_dropdown": true
+    "id": "4140-steel",
+    "label": "4140 Steel",
+    "aliases": ["4140", "4140 steel", "chromoly"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Carbon steel",
+    "guidance": "Strong, tough alloy steel that can be heat-treated. Common for shafts, tooling, and high-stress components.",
+    "finishes": ["As-machined", "Bead blast", "Black oxide", "Zinc plating", "Powder coat", "Other: specify"]
+  },
+  {
+    "id": "a36-steel",
+    "label": "A36 Steel",
+    "aliases": ["a36", "a36 steel", "hot rolled steel"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Carbon steel",
+    "guidance": "Inexpensive structural steel for brackets, plates, and welded assemblies. Surface finish is rougher than cold-rolled grades.",
+    "finishes": ["As-machined", "Bead blast", "Black oxide", "Zinc plating", "Powder coat", "Other: specify"]
+  },
+  {
+    "id": "303-stainless",
+    "label": "303 Stainless Steel",
+    "aliases": ["303", "303 stainless", "303 ss"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Stainless steel",
+    "guidance": "The easiest stainless to machine. Good corrosion resistance for fittings, fasteners, and general turned parts.",
+    "finishes": ["As-machined", "Bead blast", "Passivation", "Electropolish", "Powder coat", "Other: specify"]
   },
   {
     "id": "304-stainless",
-    "label": "304 Stainless",
+    "label": "304 Stainless Steel",
     "aliases": ["304", "304 stainless", "304 ss"],
-    "show_in_dropdown": true
+    "show_in_dropdown": true,
+    "group": "Metal",
+    "type": "Stainless steel",
+    "guidance": "The most common stainless: corrosion-resistant and food-safe. Used for enclosures, brackets, and food or medical-adjacent parts.",
+    "finishes": ["As-machined", "Bead blast", "Passivation", "Electropolish", "Powder coat", "Other: specify"]
+  },
+  {
+    "id": "316-stainless",
+    "label": "316 Stainless Steel",
+    "aliases": ["316", "316 stainless", "316 ss", "marine grade stainless"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Stainless steel",
+    "guidance": "Better corrosion resistance than 304, especially against salt water and chemicals. Common for marine and medical parts.",
+    "finishes": ["As-machined", "Bead blast", "Passivation", "Electropolish", "Powder coat", "Other: specify"]
+  },
+  {
+    "id": "17-4-stainless",
+    "label": "17-4 PH Stainless Steel",
+    "aliases": ["17-4", "17-4 ph", "17-4 stainless"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Stainless steel",
+    "guidance": "Very strong, heat-treatable stainless. Used where stainless corrosion resistance and steel-like strength are both needed.",
+    "finishes": ["As-machined", "Bead blast", "Passivation", "Electropolish", "Other: specify"]
+  },
+  {
+    "id": "grade-2-titanium",
+    "label": "Grade 2 Titanium",
+    "aliases": ["grade 2 titanium", "cp titanium", "titanium grade 2"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Titanium",
+    "guidance": "Light, extremely corrosion-resistant, and biocompatible. Common for medical, marine, and chemical-processing parts.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Other: specify"]
+  },
+  {
+    "id": "grade-5-titanium",
+    "label": "Grade 5 Titanium (Ti-6Al-4V)",
+    "aliases": ["grade 5 titanium", "ti-6al-4v", "ti6al4v", "titanium grade 5"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Titanium",
+    "guidance": "The strongest common titanium alloy, with an excellent strength-to-weight ratio. Standard for aerospace and high-performance parts.",
+    "finishes": ["As-machined", "Bead blast", "Anodize Type II", "Other: specify"]
+  },
+  {
+    "id": "c360-brass",
+    "label": "C360 Brass",
+    "aliases": ["c360", "360 brass", "free machining brass", "brass"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Brass & copper",
+    "guidance": "Extremely easy to machine with a clean finish. Used for fittings, valves, connectors, and decorative hardware.",
+    "finishes": ["As-machined", "Bead blast", "Polished", "Clear coat", "Other: specify"]
+  },
+  {
+    "id": "c110-copper",
+    "label": "C110 Copper",
+    "aliases": ["c110", "110 copper", "copper"],
+    "show_in_dropdown": false,
+    "group": "Metal",
+    "type": "Brass & copper",
+    "guidance": "Excellent electrical and thermal conductivity. Used for bus bars, terminals, heat sinks, and RF parts.",
+    "finishes": ["As-machined", "Bead blast", "Polished", "Clear coat", "Other: specify"]
+  },
+  {
+    "id": "abs",
+    "label": "ABS",
+    "aliases": ["abs", "abs plastic"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "ABS",
+    "guidance": "Low-cost, tough, and easy to machine. A good general-purpose plastic for prototypes, housings, and covers.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Black", "White", "Natural", "Gray"]
+  },
+  {
+    "id": "acetal-homopolymer",
+    "label": "Acetal Homopolymer (Delrin)",
+    "aliases": ["delrin", "acetal", "pom", "delrin 150"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Acetal",
+    "guidance": "Low friction, stiff, and dimensionally stable. The usual pick for gears, bushings, and sliding parts.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural (white)", "Black"]
+  },
+  {
+    "id": "acetal-copolymer",
+    "label": "Acetal Copolymer",
+    "aliases": ["acetal copolymer", "pom-c", "celcon"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Acetal",
+    "guidance": "Similar to Delrin with better chemical and hot-water resistance. Good for gears, bushings, and fluid-handling parts.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural (white)", "Black", "Blue"]
+  },
+  {
+    "id": "polycarbonate",
+    "label": "Polycarbonate",
+    "aliases": ["polycarbonate", "pc", "lexan"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Polycarbonate",
+    "guidance": "Very impact-resistant and available clear. Used for guards, windows, covers, and parts that take abuse.",
+    "finishes": ["As-machined", "Bead blast", "Vapor polish", "Other: specify"],
+    "colors": ["Clear", "Black", "Gray (smoke)", "White"]
+  },
+  {
+    "id": "nylon-66",
+    "label": "Nylon 6/6",
+    "aliases": ["nylon", "nylon 66", "nylon 6/6", "pa66"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Nylon",
+    "guidance": "Strong, wear-resistant, and self-lubricating. Common for bushings, rollers, and structural plastic parts. Absorbs moisture over time.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural", "Black"]
+  },
+  {
+    "id": "nylon-6",
+    "label": "Nylon 6",
+    "aliases": ["nylon 6", "pa6", "cast nylon"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Nylon",
+    "guidance": "Tough cast nylon for larger wear parts such as sheaves, wear pads, and rollers.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural", "Black", "Blue"]
+  },
+  {
+    "id": "glass-filled-nylon",
+    "label": "Glass-Filled Nylon (30%)",
+    "aliases": ["glass filled nylon", "gf nylon", "nylon gf30"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Nylon",
+    "guidance": "Much stiffer and more dimensionally stable than unfilled nylon. Used for structural brackets and housings.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural", "Black"]
+  },
+  {
+    "id": "cast-acrylic",
+    "label": "Cast Acrylic (PMMA)",
+    "aliases": ["acrylic", "pmma", "plexiglass", "cast acrylic"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Acrylic",
+    "guidance": "Crystal-clear and polishable. Used for windows, displays, light pipes, and covers. More brittle than polycarbonate.",
+    "finishes": ["As-machined", "Flame polish", "Vapor polish", "Other: specify"],
+    "colors": ["Clear", "Black", "White", "Gray (smoke)"]
+  },
+  {
+    "id": "hdpe",
+    "label": "HDPE",
+    "aliases": ["hdpe", "high density polyethylene", "polyethylene"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Polyethylene",
+    "guidance": "Low-cost, chemical-resistant, and easy to cut. Used for tanks, trays, cutting surfaces, and outdoor parts.",
+    "finishes": ["As-machined", "Other: specify"],
+    "colors": ["Natural (white)", "Black"]
+  },
+  {
+    "id": "uhmw-pe",
+    "label": "UHMW-PE",
+    "aliases": ["uhmw", "uhmw-pe", "uhmw polyethylene"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "Polyethylene",
+    "guidance": "Extremely wear-resistant with a very slippery surface. Used for guides, rails, liners, and conveyor parts.",
+    "finishes": ["As-machined", "Other: specify"],
+    "colors": ["Natural (white)", "Black"]
+  },
+  {
+    "id": "peek",
+    "label": "PEEK",
+    "aliases": ["peek", "polyetheretherketone"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "High-performance plastic",
+    "guidance": "Premium plastic for high heat, chemicals, and strength. Common in medical, aerospace, and semiconductor parts. Material cost is high.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural (tan)", "Black"]
+  },
+  {
+    "id": "pei-ultem",
+    "label": "PEI (Ultem)",
+    "aliases": ["ultem", "pei", "ultem 1000"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "High-performance plastic",
+    "guidance": "Strong, flame-resistant, and stable at high temperature. Used for electrical, medical, and aerospace components.",
+    "finishes": ["As-machined", "Bead blast", "Other: specify"],
+    "colors": ["Natural (amber)", "Black"]
+  },
+  {
+    "id": "ptfe",
+    "label": "PTFE (Teflon)",
+    "aliases": ["ptfe", "teflon"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "High-performance plastic",
+    "guidance": "The lowest-friction plastic, with outstanding chemical and heat resistance. Soft, so tolerances are harder to hold. Used for seals and insulators.",
+    "finishes": ["As-machined", "Other: specify"],
+    "colors": ["White"]
+  },
+  {
+    "id": "pvc",
+    "label": "PVC",
+    "aliases": ["pvc", "vinyl"],
+    "show_in_dropdown": false,
+    "group": "Plastic",
+    "type": "PVC",
+    "guidance": "Low-cost, chemical-resistant, and easy to bond. Used for fluid handling, electrical insulation, and general-purpose panels.",
+    "finishes": ["As-machined", "Other: specify"],
+    "colors": ["Gray", "White", "Clear"]
   }
 ]

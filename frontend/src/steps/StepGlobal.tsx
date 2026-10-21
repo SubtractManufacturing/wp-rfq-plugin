@@ -76,7 +76,7 @@ export function StepGlobal() {
           onChange={(event) => setGlobal({ ...global, nda_required: event.target.checked })}
           type="checkbox"
         />
-        Treat as NDA — These parts will be completely excluded from posting on social media or being used in any marketing materials.
+        Treat as NDA - These parts will be completely excluded from posting on social media or being used in any marketing materials.
       </label>
       {global.nda_required ? (
         <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">

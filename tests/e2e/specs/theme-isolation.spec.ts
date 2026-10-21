@@ -141,11 +141,12 @@ async function walkSteps(page: Page): Promise<Record<string, string[]>> {
   await page.getByRole("heading", { name: "Part details" }).waitFor();
   shots.partDetails = await snapshotForm(page);
 
-  await page.getByRole("button", { name: "Show common options" }).first().click();
+  await page.getByLabel(/Know the exact material/).first().fill("1018");
   await expect(page.getByRole("listbox")).toBeVisible();
   shots.materialOpen = await snapshotForm(page);
-  await page.getByRole("option").first().click();
-  await page.getByLabel("Material").nth(1).fill("6061 Aluminum");
+  await page.locator("ul[role='listbox'] button").first().click();
+  await page.getByLabel(/Know the exact material/).nth(1).fill("6061");
+  await page.locator("ul[role='listbox'] button").first().click();
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
   await page.getByRole("heading", { name: "RFQ details" }).waitFor();
   shots.rfqDetails = await snapshotForm(page);

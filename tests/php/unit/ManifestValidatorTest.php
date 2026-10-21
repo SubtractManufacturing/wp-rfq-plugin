@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(RFQ_Manifest_Validator::class)]
 #[Group('AC-WP-016')]
 #[Group('AC-WP-017')]
+#[Group('AC-WP-034')]
+#[Group('AC-WP-035')]
 class ManifestValidatorTest extends TestCase
 {
     /**
@@ -208,6 +210,54 @@ class ManifestValidatorTest extends TestCase
         $this->assertArrayHasKey('parts[1].part_id', $this->fieldErrors($result));
     }
 
+    public function test_global_tolerance_tiers_are_accepted(): void
+    {
+        foreach (['economy', 'standard', 'tight', 'precision'] as $tolerance) {
+            $manifest = $this->validManifest();
+            $manifest['parts'][0]['tolerance'] = $tolerance;
+            $this->assertTrue(
+                RFQ_Manifest_Validator::validate($manifest),
+                "tolerance {$tolerance} should be accepted"
+            );
+        }
+
+        $manifest = $this->validManifest();
+        $manifest['parts'][0]['tolerance'] = 'ultra';
+        $result = RFQ_Manifest_Validator::validate($manifest);
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertArrayHasKey('parts[0].tolerance', $this->fieldErrors($result));
+    }
+
+    public function test_v2_manifest_accepts_actual_tolerance_and_rejects_unknown_version(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['manifest_version'] = 2;
+        $manifest['parts'][0]['tolerance'] = '+/- 0.005"';
+        $manifest['parts'][0]['tolerance_detail'] = null;
+        $this->assertTrue(RFQ_Manifest_Validator::validate($manifest));
+
+        $manifest['parts'][0]['tolerance'] = '   ';
+        $result = RFQ_Manifest_Validator::validate($manifest);
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertArrayHasKey('parts[0].tolerance', $this->fieldErrors($result));
+
+        $manifest = $this->validManifest();
+        $manifest['manifest_version'] = 3;
+        $result = RFQ_Manifest_Validator::validate($manifest);
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertArrayHasKey('manifest_version', $this->fieldErrors($result));
+    }
+
+    public function test_v1_manifest_without_version_still_uses_tier_labels(): void
+    {
+        $manifest = $this->validManifest();
+        $this->assertArrayNotHasKey('manifest_version', $manifest);
+        $this->assertTrue(RFQ_Manifest_Validator::validate($manifest));
+
+        $manifest['manifest_version'] = 1;
+        $this->assertTrue(RFQ_Manifest_Validator::validate($manifest));
+    }
+
     public function test_missing_material_returns_field_error(): void
     {
         $manifest = $this->validManifest([
@@ -222,6 +272,22 @@ class ManifestValidatorTest extends TestCase
 
         $this->assertInstanceOf(WP_Error::class, $result);
         $this->assertArrayHasKey('parts[0].material', $this->fieldErrors($result));
+    }
+
+    public function test_finish_fields_must_be_strings_or_null(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['parts'][0]['finish'] = 'Anodize Type II';
+        $manifest['parts'][0]['finish_color'] = 'Black';
+        $manifest['parts'][0]['finish_specification'] = null;
+        $manifest['parts'][0]['plastic_color'] = 'Black';
+        $this->assertTrue(RFQ_Manifest_Validator::validate($manifest));
+
+        $manifest['parts'][0]['finish'] = 42;
+        $result = RFQ_Manifest_Validator::validate($manifest);
+
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertArrayHasKey('parts[0].finish', $this->fieldErrors($result));
     }
 
     public function test_custom_tolerance_without_detail_returns_field_error(): void

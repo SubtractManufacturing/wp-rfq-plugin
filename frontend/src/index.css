@@ -5,7 +5,7 @@
  *
  * Preflight is disabled (see tailwind.config.ts). These rules live in @layer base
  * so Tailwind utilities always win on equal specificity. Do not set background,
- * padding, radius, or cursor on buttons here — type="button" attribute selectors
+ * padding, radius, or cursor on buttons here - type="button" attribute selectors
  * tie with utility classes and our stylesheet order would undo chip/CTA styling.
  */
 @layer base {

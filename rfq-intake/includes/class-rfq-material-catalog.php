@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class RFQ_Material_Catalog {
 
     /**
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
      */
     public static function get_default_catalog(): array {
         $path = RFQ_INTAKE_PLUGIN_DIR . 'assets/materials/default.json';
@@ -26,7 +26,7 @@ class RFQ_Material_Catalog {
     }
 
     /**
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
      */
     public static function get_effective_catalog(): array {
         $catalog       = self::get_default_catalog();
@@ -46,9 +46,9 @@ class RFQ_Material_Catalog {
     }
 
     /**
-     * @param list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool}> $catalog
+     * @param list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}> $catalog
      * @param array<string, mixed> $overrides
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
      */
     private static function apply_overrides( array $catalog, array $overrides ): array {
         $disabled = self::collect_disabled_ids( $overrides );
@@ -159,10 +159,51 @@ class RFQ_Material_Catalog {
                         }
                     }
                 }
+
+                foreach ( [ 'group', 'type', 'guidance' ] as $text_field ) {
+                    if ( isset( $entry[ $text_field ] ) && ! is_string( $entry[ $text_field ] ) ) {
+                        return false;
+                    }
+                }
+
+                foreach ( [ 'finishes', 'colors' ] as $list_field ) {
+                    if ( ! isset( $entry[ $list_field ] ) ) {
+                        continue;
+                    }
+
+                    if ( ! is_array( $entry[ $list_field ] ) ) {
+                        return false;
+                    }
+
+                    foreach ( $entry[ $list_field ] as $item ) {
+                        if ( ! is_string( $item ) || $item === '' ) {
+                            return false;
+                        }
+                    }
+                }
             }
         }
 
         return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function normalize_string_list( mixed $value ): array {
+        $list = [];
+
+        if ( ! is_array( $value ) ) {
+            return $list;
+        }
+
+        foreach ( $value as $item ) {
+            if ( is_string( $item ) && $item !== '' ) {
+                $list[] = $item;
+            }
+        }
+
+        return $list;
     }
 
     /**
@@ -229,7 +270,7 @@ class RFQ_Material_Catalog {
 
     /**
      * @param list<mixed> $entries
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
      */
     private static function normalize_entries( array $entries ): array {
         $normalized = [];
@@ -261,6 +302,11 @@ class RFQ_Material_Catalog {
                 'label'            => $label,
                 'aliases'          => $aliases,
                 'show_in_dropdown' => ! empty( $entry['show_in_dropdown'] ),
+                'group'            => isset( $entry['group'] ) && is_string( $entry['group'] ) ? $entry['group'] : '',
+                'type'             => isset( $entry['type'] ) && is_string( $entry['type'] ) ? $entry['type'] : '',
+                'guidance'         => isset( $entry['guidance'] ) && is_string( $entry['guidance'] ) ? $entry['guidance'] : '',
+                'finishes'         => self::normalize_string_list( $entry['finishes'] ?? null ),
+                'colors'           => self::normalize_string_list( $entry['colors'] ?? null ),
             ];
         }
 

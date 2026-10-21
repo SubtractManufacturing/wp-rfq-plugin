@@ -30,6 +30,11 @@ Milestones: M1 (Phase 0–2) → M2 (Phase 3) → M3 (Phase 4) → M4–M5 (Phas
 - Frontend: TypeScript + React 18 + Vite + Tailwind only
 - JWT: `firebase/php-jwt`; S3: `aws/aws-sdk-php`
 
+## Manifest versioning (must follow)
+
+- The submit manifest is versioned: `manifest_version` is its first field (current **2**; absent = legacy v1). See `docs/adr/0003-manifest-versioning.md`.
+- **Any manifest shape change, or change to the meaning/format of an existing field, must bump `manifest_version`** in the same PR: bump `MANIFEST_VERSION` in `frontend/src/lib/manifest.ts`, document the new version in ADR 0003, keep `RFQ_Manifest_Validator` accepting all older versions, and update `Planning/PRD.md`.
+
 ## Agent workflow
 
 - One GitHub issue per PR when using Sandcastle

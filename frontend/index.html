@@ -13,7 +13,24 @@
         salesContactEmail: "sales@example.test",
         maxParts: 20,
         materials: [
-          { id: "1018-steel", label: "1018 Steel", aliases: ["1018"], show_in_dropdown: true }
+          {
+            id: "1018-steel",
+            label: "1018 Steel",
+            aliases: ["1018"],
+            show_in_dropdown: true,
+            group: "Metal",
+            type: "Carbon steel",
+            finishes: ["As-machined"]
+          },
+          {
+            id: "6061-al",
+            label: "6061-T6 Aluminum",
+            aliases: ["6061"],
+            show_in_dropdown: true,
+            group: "Metal",
+            type: "Aluminum",
+            finishes: ["As-machined"]
+          }
         ]
       };
     </script>
