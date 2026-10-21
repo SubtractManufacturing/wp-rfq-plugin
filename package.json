@@ -27,7 +27,7 @@
     "test:a11y": "playwright test tests/e2e/specs/a11y.spec.ts",
     "test:package": "node scripts/test-plugin-package.mjs",
     "package:plugin": "node scripts/build-plugin-package.mjs",
-    "dev:restore-s3": "bash scripts/restore-dev-s3-from-env.sh",
+    "dev:restore-s3": "node scripts/restore-dev-s3.mjs",
     "qa:upload-urls": "bash scripts/qa-upload-urls.sh",
     "qa:s3-upload": "bash scripts/qa-s3-upload.sh",
     "qa:s3-spike": "bash scripts/qa-s3-spike.sh",

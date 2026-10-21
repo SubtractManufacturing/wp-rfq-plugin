@@ -61,8 +61,8 @@ Fork PRs from outside collaborators do not receive repository secrets.
 | `npm run test:integration` | PHP integration via wp-env | M1 |
 | `npm run test:smoke` | REST smoke only | M1 |
 | `npm run test:acceptance-coverage` | AC-WP-* mapping gate (M1–M3 backend scope) | M1+ |
-| `npm run wp-env start` | Start local WordPress | M1 |
-| `npm run dev:restore-s3` | Restore S3 admin settings from env | M2+ |
+| `npm run wp-env start` | Start local WordPress (auto-restores dev S3 settings via `afterStart` → `scripts/restore-dev-s3.mjs`) | M1 |
+| `npm run dev:restore-s3` | Restore S3 admin settings from `config/dev.env.local` | M2+ |
 | `npm run qa:upload-urls` | Upload-url REST QA | M2+ |
 | `npm run qa:s3-upload` | Presigned PUT E2E with `config/PlaceHolder.step` | M2+ |
 | `npm run qa:s3-spike` | TESTING.md §5.1 supplementary S3 checks | M2+ |
