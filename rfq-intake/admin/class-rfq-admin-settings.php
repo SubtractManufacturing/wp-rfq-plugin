@@ -492,7 +492,7 @@ class RFQ_Admin_Settings {
             esc_attr( $option ),
             esc_attr(
                 $configured
-                    ? __( 'Configured — enter a new value to rotate', 'rfq-intake' )
+                    ? __( 'Configured - enter a new value to rotate', 'rfq-intake' )
                     : ''
             )
         );

@@ -1,7 +1,18 @@
 import type { ContactState, GlobalState, LeadTimePreference, PartRow, RfqManifest } from "../types/manifest";
 import { getPhoneValidationError, normalizePhone } from "./phone";
+import { manifestToleranceForPart } from "./tolerances";
+import type { MaterialOption } from "../types/config";
 
-export function buildManifest(sessionId: string, contact: ContactState, parts: PartRow[], global: GlobalState): RfqManifest {
+/** Current manifest format version. Legacy manifests without this field are v1. See docs/adr/0003-manifest-versioning.md. */
+export const MANIFEST_VERSION = 2 as const;
+
+export function buildManifest(
+  sessionId: string,
+  contact: ContactState,
+  parts: PartRow[],
+  global: GlobalState,
+  materials: MaterialOption[] = [],
+): RfqManifest {
   const phoneError = getPhoneValidationError(contact.phone, contact.phone_country);
   const normalizedPhone =
     phoneError === null && contact.phone.trim() !== ""
@@ -9,6 +20,7 @@ export function buildManifest(sessionId: string, contact: ContactState, parts: P
       : { phone: null, phone_country_code: null };
 
   return {
+    manifest_version: MANIFEST_VERSION,
     session_id: sessionId,
     contact: {
       first_name: contact.first_name,
@@ -28,8 +40,12 @@ export function buildManifest(sessionId: string, contact: ContactState, parts: P
           .filter((drawing) => drawing.status === "confirmed")
           .map((drawing) => drawing.file_key),
         material: part.material,
-        tolerance: part.tolerance,
-        tolerance_detail: part.tolerance === "custom" ? part.tolerance_detail : null,
+        finish: part.finish ?? null,
+        finish_color: part.finish_color ?? null,
+        finish_specification: part.finish_specification ?? null,
+        plastic_color: part.plastic_color ?? null,
+        tolerance: manifestToleranceForPart(part, materials),
+        tolerance_detail: null,
         threads_features: part.threads_features,
         quantity: part.quantity,
         target_unit_price: part.target_unit_price,

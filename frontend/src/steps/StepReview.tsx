@@ -7,10 +7,12 @@ import { formatPhoneSummary } from "../lib/phone";
 import { useForm } from "../state/FormContext";
 import type { SubmitResponse } from "../types/api";
 import { leadTimeLabels } from "../lib/leadTime";
+import { customToleranceDisplay, toleranceLabel } from "../lib/tolerances";
 import type { StepId } from "../types/manifest";
 
 export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) {
   const {
+    config,
     contact,
     global,
     parts,
@@ -28,7 +30,7 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
       return;
     }
 
-    const manifest = buildManifest(sessionId, contact, parts, global);
+    const manifest = buildManifest(sessionId, contact, parts, global, config.materials);
     try {
       const response = await apiFetch<SubmitResponse>(`/sessions/${sessionId}/submit`, {
         method: "POST",
@@ -68,7 +70,22 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
             </p>
             <p>Drawings: {part.drawings.filter((drawing) => drawing.status === "confirmed").map((drawing) => drawing.filename).join(", ") || "None"}</p>
             <p>Material: {part.material}</p>
-            <p>Tolerance: {part.tolerance}{part.tolerance === "custom" && part.tolerance_detail ? ` (${part.tolerance_detail})` : ""}</p>
+            {part.plastic_color ? <p>Plastic color: {part.plastic_color}</p> : null}
+            {part.finish ? (
+              <p>
+                Finish: {part.finish}
+                {part.finish_color ? ` - ${part.finish_color}` : ""}
+                {part.finish_specification ? ` - ${part.finish_specification}` : ""}
+              </p>
+            ) : null}
+            <p>
+              Global tolerance: {toleranceLabel(part.tolerance, part.material, config.materials)}
+              {part.tolerance === "custom" && customToleranceDisplay(part.tolerance_value, part.tolerance_unit)
+                ? ` (${customToleranceDisplay(part.tolerance_value, part.tolerance_unit)})`
+                : part.tolerance === "custom" && part.tolerance_detail
+                  ? ` (${part.tolerance_detail})`
+                  : ""}
+            </p>
             <p>Quantity: {part.quantity}</p>
             {part.threads_features ? <p>Threads/features: {part.threads_features}</p> : null}
             {part.target_unit_price !== null ? <p>Target unit price: ${part.target_unit_price.toFixed(2)}</p> : null}
@@ -79,7 +96,7 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
 
       <ReviewSection onEdit={edit("global")} title="RFQ details">
         <p>Shipping postal code: {global.shipping_destination.postal_code}</p>
-        <p>Lead time: {global.lead_time_preference ? leadTimeLabels[global.lead_time_preference] : "—"}</p>
+        <p>Lead time: {global.lead_time_preference ? leadTimeLabels[global.lead_time_preference] : "-"}</p>
         {global.lead_time_preference === "target_date" && global.required_delivery_date ? (
           <p>Target date: {global.required_delivery_date}</p>
         ) : null}

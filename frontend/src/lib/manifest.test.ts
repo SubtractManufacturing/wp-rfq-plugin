@@ -41,10 +41,72 @@ describe("buildManifest", () => {
         shipping_destination: { postal_code: "90210" },
       }),
     ).toMatchObject({
+      manifest_version: 2,
       session_id: "session",
-      parts: [{ part_file_key: "intake/session/parts/file.step", drawing_file_keys: ["intake/session/drawings/file.pdf"], material: "1018 Steel", quantity: 2 }],
+      parts: [
+        {
+          part_file_key: "intake/session/parts/file.step",
+          drawing_file_keys: ["intake/session/drawings/file.pdf"],
+          material: "1018 Steel",
+          tolerance: '+/- 0.005"',
+          tolerance_detail: null,
+          quantity: 2,
+        },
+      ],
       global: { lead_time_preference: "standard", required_delivery_date: null },
     });
+  });
+
+  // @covers AC-WP-035
+  it("puts manifest_version first in the manifest", () => {
+    const manifest = buildManifest("session", emptyContact, [confirmedPart], emptyGlobal);
+    expect(Object.keys(manifest)[0]).toBe("manifest_version");
+    expect(manifest.manifest_version).toBe(2);
+  });
+
+  it("includes finish and plastic color selections on each part", () => {
+    const manifest = buildManifest(
+      "session",
+      emptyContact,
+      [
+        {
+          ...confirmedPart,
+          finish: "Anodize Type II",
+          finish_color: "Black",
+          finish_specification: null,
+          plastic_color: "Black",
+        },
+      ],
+      emptyGlobal,
+    );
+
+    expect(manifest.parts[0]).toMatchObject({
+      finish: "Anodize Type II",
+      finish_color: "Black",
+      finish_specification: null,
+      plastic_color: "Black",
+    });
+  });
+
+  it("converts a typed custom-material tolerance from millimeters to inches in the manifest", () => {
+    const manifest = buildManifest(
+      "session",
+      emptyContact,
+      [
+        {
+          ...confirmedPart,
+          material: "Customer-supplied brass",
+          tolerance: "custom",
+          tolerance_detail: null,
+          tolerance_value: "0.1",
+          tolerance_unit: "mm",
+        },
+      ],
+      emptyGlobal,
+    );
+
+    expect(manifest.parts[0]?.tolerance).toBe('+/- 0.00394"');
+    expect(manifest.parts[0]?.tolerance_detail).toBeNull();
   });
 
   it("includes target date only when lead time is Meet Target Date", () => {
@@ -116,7 +178,9 @@ describe("buildManifest", () => {
       [{ ...customPart, partFile: confirmedPart.partFile }],
       emptyGlobal,
     );
-    expect(customOnly.parts[0]?.tolerance_detail).toBe("±0.001 in");
+    // In v2 the custom tolerance text itself is sent as the tolerance, verbatim.
+    expect(customOnly.parts[0]?.tolerance).toBe("±0.001 in");
+    expect(customOnly.parts[0]?.tolerance_detail).toBeNull();
   });
 
   it("defaults missing part file keys to an empty string in the manifest", () => {

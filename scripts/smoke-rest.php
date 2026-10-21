@@ -219,6 +219,7 @@ $submit_manifest = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id
 $submit_manifest->set_header('Authorization', 'Bearer ' . $new_token);
 $submit_manifest->set_header('Content-Type', 'application/json');
 $submit_manifest->set_body(wp_json_encode([
+    'manifest_version' => 2,
     'session_id' => $session_id,
     'contact' => [
         'first_name' => 'Jane',
@@ -235,7 +236,11 @@ $submit_manifest->set_body(wp_json_encode([
             'part_file_key' => $part_file_key,
             'drawing_file_keys' => [$drawing_key],
             'material' => 'Aluminum 6061',
-            'tolerance' => 'standard',
+            'finish' => 'As-machined',
+            'finish_color' => null,
+            'finish_specification' => null,
+            'plastic_color' => null,
+            'tolerance' => '+/- 0.005"',
             'tolerance_detail' => null,
             'quantity' => 10,
             'target_unit_price' => 12.5,

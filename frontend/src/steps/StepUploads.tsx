@@ -24,6 +24,10 @@ function createPart(partFile: UploadedFile): PartRow {
     partFile,
     drawings: [],
     material: "",
+    finish: null,
+    finish_color: null,
+    finish_specification: null,
+    plastic_color: null,
     tolerance: "standard",
     tolerance_detail: null,
     threads_features: null,
@@ -128,7 +132,7 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
 
     setNotice(
       skipped > 0
-        ? `Only ${accepted.length} of ${files.length} files were added — RFQs are limited to ${config.maxParts} parts. Email ${config.internationalRfqEmail} for larger RFQs.`
+        ? `Only ${accepted.length} of ${files.length} files were added - RFQs are limited to ${config.maxParts} parts. Email ${config.internationalRfqEmail} for larger RFQs.`
         : null,
     );
 
@@ -430,7 +434,7 @@ function isInFlight(file: UploadedFile | null): boolean {
   return file?.status === "pending" || file?.status === "uploading";
 }
 
-/** Size/type rejections can't be fixed by retrying — the customer must remove the file. */
+/** Size/type rejections can't be fixed by retrying - the customer must remove the file. */
 function isValidationError(file: UploadedFile): boolean {
   return (file.error ?? UPLOAD_FAILED) !== UPLOAD_FAILED;
 }

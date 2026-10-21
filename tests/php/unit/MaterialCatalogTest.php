@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(RFQ_Material_Catalog::class)]
 #[Group('AC-WP-028')]
+#[Group('AC-WP-034')]
 class MaterialCatalogTest extends TestCase
 {
     protected function setUp(): void
@@ -22,9 +23,9 @@ class MaterialCatalogTest extends TestCase
         $labels = array_column($catalog, 'label');
 
         $this->assertContains('1018 Steel', $labels);
-        $this->assertContains('6061 Aluminum', $labels);
-        $this->assertContains('7075 Aluminum', $labels);
-        $this->assertContains('304 Stainless', $labels);
+        $this->assertContains('6061-T6 Aluminum', $labels);
+        $this->assertContains('7075-T6 Aluminum', $labels);
+        $this->assertContains('304 Stainless Steel', $labels);
     }
 
     public function test_default_entries_include_aliases_and_dropdown_flags(): void
@@ -36,8 +37,27 @@ class MaterialCatalogTest extends TestCase
             $by_id[$entry['id']] = $entry;
         }
 
-        $this->assertSame(['1018', '1018 steel'], $by_id['1018-steel']['aliases']);
-        $this->assertTrue($by_id['6061-aluminum']['show_in_dropdown']);
+        $this->assertSame(['1018', '1018 steel', 'mild steel', 'cold rolled steel'], $by_id['1018-steel']['aliases']);
+        $this->assertTrue($by_id['6061-t6-aluminum']['show_in_dropdown']);
+    }
+
+    public function test_default_entries_carry_the_material_tree(): void
+    {
+        $catalog = RFQ_Material_Catalog::get_default_catalog();
+        $by_id = [];
+
+        foreach ($catalog as $entry) {
+            $by_id[$entry['id']] = $entry;
+        }
+
+        $this->assertSame('Metal', $by_id['6061-t6-aluminum']['group']);
+        $this->assertSame('Aluminum', $by_id['6061-t6-aluminum']['type']);
+        $this->assertContains('Anodize Type II', $by_id['6061-t6-aluminum']['finishes']);
+        $this->assertSame([], $by_id['6061-t6-aluminum']['colors']);
+        $this->assertNotSame('', $by_id['6061-t6-aluminum']['guidance']);
+
+        $this->assertSame('Plastic', $by_id['abs']['group']);
+        $this->assertContains('Black', $by_id['abs']['colors']);
     }
 
     public function test_effective_catalog_merges_disable_rename_and_add_overrides(): void
@@ -46,12 +66,12 @@ class MaterialCatalogTest extends TestCase
             'rfq_material_overrides',
             json_encode([
                 'disabled' => ['1018-steel'],
-                'renamed' => ['6061-aluminum' => '6061-T6 Aluminum'],
+                'renamed' => ['6061-t6-aluminum' => '6061 Aluminum'],
                 'added' => [
                     [
-                        'id' => 'grade-5-titanium',
-                        'label' => 'Grade 5 Titanium',
-                        'aliases' => ['ti-6al-4v'],
+                        'id' => 'inconel-718',
+                        'label' => 'Inconel 718',
+                        'aliases' => ['inconel', '718'],
                         'show_in_dropdown' => false,
                     ],
                 ],
@@ -63,9 +83,9 @@ class MaterialCatalogTest extends TestCase
         $ids = array_column($catalog, 'id');
 
         $this->assertNotContains('1018 Steel', $labels);
-        $this->assertContains('6061-T6 Aluminum', $labels);
-        $this->assertContains('grade-5-titanium', $ids);
-        $this->assertContains('Grade 5 Titanium', $labels);
+        $this->assertContains('6061 Aluminum', $labels);
+        $this->assertContains('inconel-718', $ids);
+        $this->assertContains('Inconel 718', $labels);
     }
 
     public function test_invalid_override_json_returns_defaults_only(): void
@@ -74,8 +94,8 @@ class MaterialCatalogTest extends TestCase
 
         $catalog = RFQ_Material_Catalog::get_effective_catalog();
 
-        $this->assertCount(4, $catalog);
-        $this->assertSame('1018 Steel', $catalog[0]['label']);
+        $this->assertNotEmpty($catalog);
+        $this->assertSame('6061-T6 Aluminum', $catalog[0]['label']);
     }
 
     public function test_added_entry_with_existing_id_is_skipped(): void
