@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.3.0...0.4.0) (2026-10-21)
+
+
+### Features
+
+* guided material selection, global tolerance tiers, and manifest v2 ([#72](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/72)) ([3ea428e](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/3ea428edb1cb0d65872774151b044e299211fbbd))
+
 ## [0.3.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.2.0...0.3.0) (2026-10-09)
 
 
