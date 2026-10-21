@@ -67,7 +67,11 @@ read/write access and allow GitHub Actions to create pull requests.
 Release Please creates a draft Release; the workflow attaches the package and
 then publishes it. Enable GitHub's repository-level immutable Releases setting
 after this draft-first workflow is on `main` and before merging the first
-updater-enabled Release Please PR.
+updater-enabled Release Please PR. Merge Release Please PRs while they are
+current (do not let them sit open across other `main` merges). The Release
+workflow skips opening the *next* release PR on the same push that merges a
+`chore(main): release` commit, so draft-first tagging does not spawn bogus
+follow-up release PRs.
 
 Plugin Packages that include the bundled update checker discover newer stable
 Releases from this public repository and use only the attached
