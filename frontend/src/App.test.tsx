@@ -130,6 +130,97 @@ describe("App startup", () => {
     expect(await screen.findByText(/RFQ-20260626-000001/)).toBeInTheDocument();
   });
 
+  // @covers AC-WP-014
+  it("shows the email address the customer entered on the success view", async () => {
+    const user = userEvent.setup();
+
+    function Completer() {
+      const { setContact, setReceiptNumber, contact } = useForm();
+      return (
+        <button
+          onClick={() => {
+            setContact({ ...contact, email: "jane@example.test" });
+            setReceiptNumber("RFQ-20260626-000001");
+          }}
+          type="button"
+        >
+          Complete
+        </button>
+      );
+    }
+
+    render(
+      <FormProvider config={config} sessionId="session-1" token="jwt">
+        <Completer />
+        <FormShell fetchImpl={fetch} />
+      </FormProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /complete/i }));
+    expect(await screen.findByTestId("success-email")).toHaveTextContent("jane@example.test");
+    expect(screen.getByRole("link", { name: "sales@example.test" })).toHaveAttribute(
+      "href",
+      "mailto:sales@example.test",
+    );
+  });
+
+  it("starts a new request from the success view, keeping contact info but dropping the old session", async () => {
+    const user = userEvent.setup();
+
+    function Probe() {
+      const { sessionId, parts, setContact, setParts, setReceiptNumber, contact, setExportControlAcknowledged } =
+        useForm();
+      return (
+        <>
+          <button
+            onClick={() => {
+              setContact({ ...contact, first_name: "Jane", last_name: "Doe", email: "jane@example.test" });
+              setParts([
+                {
+                  part_id: "part-1",
+                  partFile: null,
+                  drawings: [],
+                  material: "",
+                  tolerance: "standard",
+                  tolerance_detail: null,
+                  threads_features: null,
+                  quantity: 1,
+                  target_unit_price: null,
+                  notes: null,
+                },
+              ]);
+              setExportControlAcknowledged(true);
+              setReceiptNumber("RFQ-20260626-000001");
+            }}
+            type="button"
+          >
+            Complete
+          </button>
+          <output data-testid="probe">{`${sessionId ?? "no-session"}|${parts.length}`}</output>
+        </>
+      );
+    }
+
+    render(
+      <FormProvider config={config} sessionId="session-1" token="jwt">
+        <Probe />
+        <FormShell fetchImpl={vi.fn()} />
+      </FormProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /complete/i }));
+    expect(screen.getByTestId("probe")).toHaveTextContent("session-1|1");
+
+    await user.click(await screen.findByRole("button", { name: /start a new quote request/i }));
+
+    expect(await screen.findByRole("heading", { name: /contact information/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/first name/i)).toHaveValue("Jane");
+    expect(screen.getByLabelText(/last name/i)).toHaveValue("Doe");
+    expect(screen.getByLabelText(/^email/i)).toHaveValue("jane@example.test");
+    expect(screen.getByTestId("probe")).toHaveTextContent("no-session|0");
+    expect(screen.queryByText(/RFQ-20260626-000001/)).not.toBeInTheDocument();
+  });
+
   it("renders each step shell when the active step changes", async () => {
     const user = userEvent.setup();
 

@@ -67,6 +67,10 @@ git worktree add .worktrees/<name>
 
 The submit manifest is versioned: `manifest_version` is its first field (current version **2**; no field = legacy v1). **Any change to the manifest's shape, or to the meaning/format of an existing field, must bump `manifest_version`.** When you change the manifest: bump `MANIFEST_VERSION` in `frontend/src/lib/manifest.ts`, add the new version to `docs/adr/0003-manifest-versioning.md`, keep `RFQ_Manifest_Validator` accepting every older version, and update the PRD manifest spec in the same PR.
 
+## Local preview (wp-env) — rebuild after frontend changes
+
+The user previews the plugin at <http://localhost:8888/> via `wp-env`, which serves the **compiled** bundle in `rfq-intake/build/`. After changing anything under `frontend/`, check whether wp-env is running (`docker ps --filter "publish=8888" --format "{{.Names}}"`) and, if it is, run `npm --prefix frontend run build` before reporting the work done, then tell the user to hard-refresh. Never commit the `rfq-intake/build/.gitkeep` deletion the build causes. Skip all of this in Sandcastle runs. Full procedure and gotchas: [`docs/agents/local-dev.md`](docs/agents/local-dev.md) (single source of truth; do not duplicate it elsewhere).
+
 ## Testing & QA
 
 | Doc | Purpose |

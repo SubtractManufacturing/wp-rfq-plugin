@@ -15,6 +15,7 @@ alwaysApply: true
 | `Planning/TESTING.md` | `AC-WP-*` registry and CI gates |
 | `.cursor/skills/jm-sandcastle-pr-fixes/qa-reference.md` | Runnable QA scripts index — update when adding/changing test scripts |
 | `CONTEXT.md` | Domain glossary |
+| `docs/agents/local-dev.md` | **wp-env preview — after `frontend/` changes, if wp-env is running, run `npm --prefix frontend run build`** (skip in Sandcastle) |
 | `Planning/FUTURE.md` | **Out of scope** — do not implement |
 
 ## Build order

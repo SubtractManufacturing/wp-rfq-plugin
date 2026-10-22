@@ -39,12 +39,19 @@ export function App({
 }
 
 export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
-  const { receiptNumber, setToken, setTokenWarning, token, sessionId, step } = useForm();
+  const { config, contact, receiptNumber, setToken, setTokenWarning, startNewRequest, token, sessionId, step } = useForm();
   useJwtRefresh({ token, sessionId, onToken: setToken, onWarning: setTokenWarning });
   useAutosave({ fetchImpl });
 
   if (receiptNumber) {
-    return <SuccessView receiptNumber={receiptNumber} />;
+    return (
+      <SuccessView
+        email={contact.email}
+        onStartNew={startNewRequest}
+        receiptNumber={receiptNumber}
+        supportEmail={config.salesContactEmail || undefined}
+      />
+    );
   }
 
   return (

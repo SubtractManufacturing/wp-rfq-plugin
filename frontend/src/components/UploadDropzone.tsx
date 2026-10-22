@@ -1,5 +1,7 @@
 import { useRef, useState, type DragEvent } from "react";
+import { useFilePicker } from "../hooks/useFilePicker";
 import { btnPrimaryClasses, btnSecondaryClasses } from "./buttonStyles";
+import { Spinner } from "./Spinner";
 
 interface UploadDropzoneProps {
   onFiles: (files: File[]) => void;
@@ -11,10 +13,11 @@ interface UploadDropzoneProps {
 export function UploadDropzone({ onFiles, inputLabel, disabled = false, compact = false }: UploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
+  const { picking, open: openPicker } = useFilePicker(inputRef);
 
   const open = () => {
-    if (!disabled) {
-      inputRef.current?.click();
+    if (!disabled && !picking) {
+      openPicker();
     }
   };
 
@@ -78,11 +81,13 @@ export function UploadDropzone({ onFiles, inputLabel, disabled = false, compact 
         <>
           <p className="text-sm text-slate-600">Drag &amp; drop more files here, or</p>
           <button
-            className={`${btnSecondaryClasses} font-medium text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white`}
+            aria-busy={picking}
+            className={`${btnSecondaryClasses} inline-flex items-center gap-2 font-medium text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white`}
             disabled={disabled}
             type="button"
           >
-            Add more parts
+            {picking ? <Spinner /> : null}
+            {picking ? "Waiting for files…" : "Add more parts"}
           </button>
         </>
       ) : (
@@ -105,10 +110,12 @@ export function UploadDropzone({ onFiles, inputLabel, disabled = false, compact 
           <p className="mt-1 text-sm text-slate-600">Drag &amp; drop or click to browse</p>
           <p className="mt-1 text-xs text-slate-500">STEP, IGES, STL, SLDPRT, etc.</p>
           <button
-            className={`${btnPrimaryClasses} mt-5 px-5`}
+            aria-busy={picking}
+            className={`${btnPrimaryClasses} mt-5 inline-flex items-center gap-2 px-5`}
             type="button"
           >
-            Select files
+            {picking ? <Spinner /> : null}
+            {picking ? "Waiting for files…" : "Select files"}
           </button>
         </>
       )}
