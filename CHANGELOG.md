@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.0...0.4.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **ci:** quote release workflow expression for valid YAML ([#76](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/76)) ([84c1177](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/84c117722bcf330581717828a3b0fc7bcef0fd77))
+* improve success screen, busy states, and wp-env agent docs ([#75](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/75)) ([4537083](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/45370830f945c74e0ea8d4066de27b291aabe86a))
+
 ## [0.4.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.3.0...0.4.0) (2026-10-21)
 
 
