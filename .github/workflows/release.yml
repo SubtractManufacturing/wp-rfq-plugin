@@ -40,7 +40,7 @@ jobs:
           # Draft releases do not get a git tag until later in this job. If Release
           # Please opens the *next* release PR in the same run, it cannot see the
           # release we just merged and may propose a bogus downgrade (e.g. 0.0.1).
-          skip-github-pull-request: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'chore(main): release') }}
+          skip-github-pull-request: "${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'chore(main): release') }}"
 
       - name: Ensure the draft release tag exists
         if: ${{ steps.release.outputs.release_created == 'true' }}
