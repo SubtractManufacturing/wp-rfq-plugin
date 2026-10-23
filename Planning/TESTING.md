@@ -88,7 +88,7 @@ A planned build artifact `scripts/check-acceptance-coverage.php` (introduced at 
 | AC-WP-011 | Secrets write-only, encrypted at rest | Plugin | M2 | Unit + integration | — |
 | AC-WP-012 | `GET /health` 200 only when S3 reachable | Plugin | M1 | Integration | — |
 | AC-WP-013 | Full happy path through receipt | Plugin | M5 | E2E | — |
-| AC-WP-014 | Success screen SVG, copy, muted receipt ref | Plugin | M5 | E2E / Vitest | — |
+| AC-WP-014 | Success screen SVG, copy, entered email, start-new-request button, muted receipt ref | Plugin | M5 | E2E / Vitest | — |
 | AC-WP-015 | Page refresh → new session; prior Step 1 contact record retained | Plugin | M5 | E2E + integration | — |
 | AC-WP-016 | >20 parts blocked in UI and on submit | Plugin | M3–M5 | Unit + Vitest + E2E | — |
 | AC-WP-017 | Invalid manifest → 422 field errors | Plugin | M3 | PHP unit + integration | — |

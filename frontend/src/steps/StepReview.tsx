@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { apiFetch } from "../api/client";
 import { btnPrimaryClasses, btnSecondaryClasses, btnTextLinkClasses } from "../components/buttonStyles";
 import { FieldError } from "../components/FieldError";
+import { Spinner } from "../components/Spinner";
 import { buildManifest } from "../lib/manifest";
 import { formatPhoneSummary } from "../lib/phone";
 import { useForm } from "../state/FormContext";
@@ -24,12 +25,22 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
     token,
   } = useForm();
 
+  const [submitting, setSubmitting] = useState(false);
+  // Ref guard: state updates are async, so rapid double-clicks could otherwise slip through.
+  const submittingRef = useRef(false);
+
   const submit = async () => {
+    if (submittingRef.current) {
+      return;
+    }
+
     if (!sessionId || !token) {
       setSubmitError("Session expired. Return to contact and continue again.");
       return;
     }
 
+    submittingRef.current = true;
+    setSubmitting(true);
     const manifest = buildManifest(sessionId, contact, parts, global, config.materials);
     try {
       const response = await apiFetch<SubmitResponse>(`/sessions/${sessionId}/submit`, {
@@ -42,6 +53,9 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
       setReceiptNumber(response.receipt_number);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Submission failed. Please retry.");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -110,11 +124,24 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
         <p className="text-sm text-slate-600">Submission failed, but your work is saved. Retry submission without re-uploading files.</p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button className={btnSecondaryClasses} onClick={() => setStep("global")} type="button">
+        <button
+          className={`${btnSecondaryClasses} disabled:cursor-not-allowed disabled:opacity-50`}
+          disabled={submitting}
+          onClick={() => setStep("global")}
+          type="button"
+        >
           Back
         </button>
-        <button className={btnPrimaryClasses} onClick={() => void submit()} type="button">
-          {submitError ? "Retry Submission" : "Submit RFQ"}
+        {/* aria-disabled (not disabled) keeps the button dark while busy, so it reads as "working", not "unavailable". */}
+        <button
+          aria-busy={submitting}
+          aria-disabled={submitting}
+          className={`${btnPrimaryClasses} inline-flex items-center gap-2${submitting ? " cursor-wait" : ""}`}
+          onClick={() => void submit()}
+          type="button"
+        >
+          {submitting ? <Spinner /> : null}
+          {submitting ? "Submitting…" : submitError ? "Retry Submission" : "Submit RFQ"}
         </button>
       </div>
     </section>

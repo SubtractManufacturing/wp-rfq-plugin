@@ -406,7 +406,7 @@ Do **not** pass secrets or JWT in localized config.
 | StepPartMeta | `steps/StepPartMeta.tsx` | Material dropdown + typeahead; tolerance |
 | StepGlobal | `steps/StepGlobal.tsx` | Delivery date, lead time, postal code, NDA checkbox + notice |
 | StepReview | `steps/StepReview.tsx` | Summary + submit |
-| SuccessView | `SuccessView.tsx` | SVG + copy + `Ref: {receipt}`; muted ref line via Tailwind (e.g. `text-sm text-gray-500`) |
+| SuccessView | `SuccessView.tsx` | SVG + copy + entered contact email + "Start a new quote request" button (keeps contact, resets session) + `Ref: {receipt}`; muted ref line via Tailwind (e.g. `text-sm text-gray-500`) |
 
 Style every step component with Tailwind classes only. Do not add CSS modules, styled-components, or hand-written stylesheets.
 
@@ -645,7 +645,7 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-028** — Admin can view a read-only intake list showing every session row with combined name, company, email, phone, ZIP/postal code, created date, raw DB status, and submitted part count for completed RFQs
 - [ ] **AC-WP-012** — `GET /health` returns 200 only when S3 credentials work
 - [ ] **AC-WP-013** — Full happy path: contact → upload part file → metadata → global → submit → receipt number
-- [ ] **AC-WP-014** — Success screen shows SVG, thank-you copy, muted `Ref: RFQ-...`
+- [ ] **AC-WP-014** — Success screen shows SVG, thank-you copy, entered email address, start-new-request button, muted `Ref: RFQ-...`
 - [ ] **AC-WP-001** — Submit retry after simulated network failure returns same receipt number (idempotent)
 - [ ] **AC-WP-015** — Page refresh starts new session; prior Step 1 contact row remains in DB
 - [ ] **AC-WP-002** — Health failure within 10s shows Airtable embed

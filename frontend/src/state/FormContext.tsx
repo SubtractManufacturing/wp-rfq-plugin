@@ -47,6 +47,11 @@ interface FormContextValue extends FormState {
   setDraftStatus: (status: FormState["draftStatus"]) => void;
   setReceiptNumber: (receiptNumber: string | null) => void;
   setExportControlAcknowledged: (acknowledged: boolean) => void;
+  /**
+   * Begin a fresh RFQ after a successful submit. Drops the old session, parts, and
+   * RFQ details; keeps the contact fields so the customer only has to confirm them.
+   */
+  startNewRequest: () => void;
 }
 
 const FormContext = createContext<FormContextValue | null>(null);
@@ -80,6 +85,22 @@ export function FormProvider({
     setToken(nextToken);
   };
 
+  const startNewRequest = () => {
+    // The submitted session is finished; the next one is created when the customer
+    // continues from the contact step (which re-saves their contact info).
+    setSessionId(null);
+    setToken(null);
+    setStep("contact");
+    setContactSaved(false);
+    setParts([]);
+    setGlobal(emptyGlobal);
+    setSubmitError(null);
+    setTokenWarning(false);
+    setDraftStatus("idle");
+    setReceiptNumber(null);
+    setExportControlAcknowledged(false);
+  };
+
   const value = useMemo<FormContextValue>(
     () => ({
       config,
@@ -107,6 +128,7 @@ export function FormProvider({
       setDraftStatus,
       setReceiptNumber,
       setExportControlAcknowledged,
+      startNewRequest,
     }),
     [
       config,

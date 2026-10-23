@@ -546,10 +546,12 @@ Shown only after submit returns a `receipt_number`. Replace the form with a simp
 
 1. **Success icon** — custom inline SVG, centered, visually prominent (e.g. checkmark, document, or brand-appropriate illustration). Bundled with the plugin.
 2. **Primary heading** — e.g. *Thank you for submitting your quote request.*
-3. **Supporting copy** — e.g. *Our team is reviewing your files. We'll send your quote to the email address you provided.* Keep tone professional and plain; do not promise a specific turnaround time.
-4. **Reference line (footer of the view)** — `Ref: {receipt_number}` in **low visual hierarchy** (e.g. Tailwind `text-sm text-gray-500 font-normal`). Copyable is a plus but not required.
+3. **Supporting copy** — e.g. *Our team is reviewing your files. We'll send your quote to:* Keep tone professional and plain; do not promise a specific turnaround time.
+4. **Entered email address** — the contact email the customer typed in Step 1, shown prominently under the supporting copy so they can spot a typo. When the plugin's sales contact email is configured, a short "Wrong address?" line links to it (mailto) and asks them to include the reference number.
+5. **Start a new quote request button** — returns the customer to Step 1 for another RFQ. It discards the submitted session, parts, uploads, RFQ details, and the export-control acknowledgement, but **keeps the contact fields pre-filled** so the customer only confirms them and clicks **Continue to uploads** (which creates a new session and re-saves contact info). Nothing is persisted in `localStorage`/`sessionStorage`.
+6. **Reference line (footer of the view)** — `Ref: {receipt_number}` in **low visual hierarchy** (e.g. Tailwind `text-sm text-gray-500 font-normal`). Copyable is a plus but not required.
 
-**V1 exclusions:** No manifest summary, no PDF, no "confirmation email sent" claim (customer email on receipt is not implemented in V1). No call-to-action button.
+**V1 exclusions:** No manifest summary, no PDF, no "confirmation email sent" claim (customer email on receipt is not implemented in V1). No other call-to-action buttons.
 
 **Note:** V1 does not send automated email to the customer; the supporting copy sets the business expectation that follow-up happens by email. Fulfillment may be manual until a notification feature ships.
 

@@ -7,7 +7,9 @@ import {
 } from "../components/buttonStyles";
 import { ExportControlModal } from "../components/ExportControlModal";
 import { UploadDropzone } from "../components/UploadDropzone";
+import { Spinner } from "../components/Spinner";
 import { UploadProgress } from "../components/UploadProgress";
+import { useFilePicker } from "../hooks/useFilePicker";
 import { DRAWING_MAX_BYTES, PART_MAX_BYTES, resolveDrawingContentType } from "../lib/drawingContentType";
 import { uploadFile } from "../lib/uploadFile";
 import { createUploadQueue } from "../lib/uploadQueue";
@@ -313,6 +315,7 @@ function PartUploadRow({
   onRetryDrawing,
 }: PartUploadRowProps) {
   const drawingInputRef = useRef<HTMLInputElement | null>(null);
+  const { picking: pickingDrawings, open: openDrawingPicker } = useFilePicker(drawingInputRef);
   const partFile = part.partFile;
   const filename = partFile?.filename ?? `Part ${index + 1}`;
 
@@ -376,11 +379,17 @@ function PartUploadRow({
           type="file"
         />
         <button
-          className={btnSecondaryCompactClasses}
-          onClick={() => drawingInputRef.current?.click()}
+          aria-busy={pickingDrawings}
+          className={`${btnSecondaryCompactClasses} inline-flex items-center gap-2`}
+          onClick={() => {
+            if (!pickingDrawings) {
+              openDrawingPicker();
+            }
+          }}
           type="button"
         >
-          + Add supporting files
+          {pickingDrawings ? <Spinner className="h-3.5 w-3.5" /> : null}
+          {pickingDrawings ? "Waiting for files…" : "+ Add supporting files"}
         </button>
         <span className="ml-2 text-xs text-slate-500">Optional · PDF, PNG, or JPEG up to 50 MB each</span>
       </div>
