@@ -101,10 +101,11 @@ intake/
 
 ### Manifest
 
-Written once, at submit, with the payload the customer confirmed. Shape:
+Written once, at submit, with the payload the customer confirmed. Current submissions are manifest **v3** (`manifest_version` first). v3 sends `global.reference_number` and does not send `global.po_number`. v1 (no `manifest_version`) and v2 still use `po_number`. See `docs/adr/0003-manifest-versioning.md`. Shape:
 
 ```json
 {
+  "manifest_version": 3,
   "session_id": "550e8400-e29b-41d4-a716-446655440000",
   "contact": {
     "first_name": "Jane",
@@ -123,7 +124,7 @@ Written once, at submit, with the payload the customer confirmed. Shape:
         "intake/{session_id}/drawings/{file_id}_bracket.pdf"
       ],
       "material": "6061 Aluminum",
-      "tolerance": "standard",
+      "tolerance": "+/- 0.005\"",
       "tolerance_detail": null,
       "threads_features": null,
       "quantity": 25,
@@ -135,7 +136,7 @@ Written once, at submit, with the payload the customer confirmed. Shape:
     "required_delivery_date": "2026-07-15",
     "lead_time_preference": "standard",
     "shipping_destination": { "postal_code": "97201" },
-    "po_number": null,
+    "reference_number": null,
     "nda_required": false,
     "notes": null
   }
@@ -161,8 +162,8 @@ Written once, at submit, with the payload the customer confirmed. Shape:
 | `drawing_file_keys` | Yes, may be `[]` | Zero or more drawings for this part. Folder is `drawings/`. Content type is `application/pdf`, `image/png`, or `image/jpeg`. Max 50 MiB (52,428,800 bytes) each. |
 | `material` | Yes | Free-text string. The form suggests a catalog (`1018 Steel`, `6061 Aluminum`, `7075 Aluminum`, `304 Stainless`, plus admin overrides) but the customer can type anything. Store the string. Do not require a catalog id; the manifest has none. |
 | `quantity` | Yes | Integer ≥ 1. |
-| `tolerance` | Yes | `standard`, `precision`, or `custom`. |
-| `tolerance_detail` | When `custom` | Non-empty string. `null` otherwise. |
+| `tolerance` | Yes | v2 and v3: the actual tolerance string (for example `+/- 0.005"`). v1: `standard`, `precision`, or `custom`. |
+| `tolerance_detail` | When `custom` | v1: non-empty string when `tolerance` is `custom`; `null` otherwise. Always `null` in v2 and v3. |
 | `threads_features` | No | String or `null`. |
 | `target_unit_price` | No | Number ≥ 0 with at most 2 decimal places, or `null` / omitted. Customer target, not a quoted price. |
 | `notes` | No | String or `null`. |
@@ -174,7 +175,8 @@ Written once, at submit, with the payload the customer confirmed. Shape:
 | `required_delivery_date` | Yes | `YYYY-MM-DD`. The customer's requested need-by date for quoting. Not a promised ship date. Validated as today or later in UTC at submit time. |
 | `lead_time_preference` | Yes | `no_rush`, `standard`, `target_date`, `expedited`, or `economy`. `target_date` means meet `required_delivery_date`. |
 | `shipping_destination.postal_code` | Yes | US ZIP (`97201` or 9 digits `972011234`) or Canadian postal code with the space removed (`K1A0B1`). V1 has no street address and no destinations outside the US and Canada. |
-| `po_number` | No | String or `null`. |
+| `reference_number` | No | **v3.** String or `null`. Customer reference to print on quotes and other documents. Not a purchase order. |
+| `po_number` | No | **v1 and v2.** String or `null`. Purchase order number. Not sent in v3. |
 | `nda_required` | Yes | Boolean. `true` means exclude the parts from marketing use. It is not a signed NDA. |
 | `notes` | No | String or `null`. |
 

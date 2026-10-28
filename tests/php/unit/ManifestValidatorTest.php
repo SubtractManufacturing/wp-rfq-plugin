@@ -242,10 +242,33 @@ class ManifestValidatorTest extends TestCase
         $this->assertArrayHasKey('parts[0].tolerance', $this->fieldErrors($result));
 
         $manifest = $this->validManifest();
-        $manifest['manifest_version'] = 3;
+        $manifest['manifest_version'] = 4;
         $result = RFQ_Manifest_Validator::validate($manifest);
         $this->assertInstanceOf(WP_Error::class, $result);
         $this->assertArrayHasKey('manifest_version', $this->fieldErrors($result));
+    }
+
+    public function test_v3_uses_reference_number_and_v2_still_uses_po_number(): void
+    {
+        $v3 = $this->validManifest();
+        $v3['manifest_version'] = 3;
+        $v3['parts'][0]['tolerance'] = '+/- 0.005"';
+        $v3['parts'][0]['tolerance_detail'] = null;
+        unset($v3['global']['po_number']);
+        $v3['global']['reference_number'] = 'JOB-42';
+        $this->assertTrue(RFQ_Manifest_Validator::validate($v3));
+
+        $v3['global']['reference_number'] = 42;
+        $invalid = RFQ_Manifest_Validator::validate($v3);
+        $this->assertInstanceOf(WP_Error::class, $invalid);
+        $this->assertArrayHasKey('global.reference_number', $this->fieldErrors($invalid));
+
+        $v2 = $this->validManifest();
+        $v2['manifest_version'] = 2;
+        $v2['parts'][0]['tolerance'] = '+/- 0.005"';
+        $v2['parts'][0]['tolerance_detail'] = null;
+        $v2['global']['po_number'] = 'PO-100';
+        $this->assertTrue(RFQ_Manifest_Validator::validate($v2));
     }
 
     public function test_v1_manifest_without_version_still_uses_tier_labels(): void

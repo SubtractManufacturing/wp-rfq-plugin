@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { btnPrimaryClasses } from "../components/buttonStyles";
+import { ChevronIcon } from "../components/ChevronIcon";
 import { FieldError } from "../components/FieldError";
 import { Select } from "../components/Select";
 import { leadTimeOptions } from "../lib/leadTime";
@@ -8,6 +10,8 @@ import type { LeadTimePreference } from "../types/manifest";
 
 export function StepGlobal() {
   const { config, global, setGlobal, setStep } = useForm();
+  const [moreDetailsOpen, setMoreDetailsOpen] = useState<boolean | null>(null);
+  const moreOpen = moreDetailsOpen ?? Boolean(global.reference_number);
   const postalValid = isValidPostalCode(global.shipping_destination.postal_code);
   const needsTargetDate = global.lead_time_preference === "target_date";
   const canContinue =
@@ -62,14 +66,6 @@ export function StepGlobal() {
           />
         </label>
       ) : null}
-      <label className="block text-sm font-medium text-slate-800">
-        Purchase order number
-        <input
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-          onChange={(event) => setGlobal({ ...global, po_number: event.target.value || null })}
-          value={global.po_number ?? ""}
-        />
-      </label>
       <label className="flex gap-2 text-sm text-slate-800">
         <input
           checked={global.nda_required}
@@ -91,6 +87,33 @@ export function StepGlobal() {
           value={global.notes ?? ""}
         />
       </label>
+      <div className="border-t border-slate-200 pt-3">
+        <button
+          aria-controls="rfq-more-details"
+          aria-expanded={moreOpen}
+          className="flex items-center gap-1 text-sm font-medium text-slate-700 transition-colors duration-150 hover:text-slate-950"
+          onClick={() => setMoreDetailsOpen(!moreOpen)}
+          type="button"
+        >
+          <ChevronIcon className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+          More details
+        </button>
+        {moreOpen ? (
+          <div className="mt-3" id="rfq-more-details">
+            <label className="block text-sm font-medium text-slate-800">
+              Reference number
+              <input
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                onChange={(event) => setGlobal({ ...global, reference_number: event.target.value || null })}
+                value={global.reference_number ?? ""}
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Optional - any reference you want us to use on quotes and other documents.
+              </span>
+            </label>
+          </div>
+        ) : null}
+      </div>
       <button
         className={btnPrimaryClasses}
         disabled={!canContinue}

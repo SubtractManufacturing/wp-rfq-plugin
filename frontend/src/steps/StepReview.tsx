@@ -114,7 +114,7 @@ export function StepReview({ fetchImpl = fetch }: { fetchImpl?: typeof fetch }) 
         {global.lead_time_preference === "target_date" && global.required_delivery_date ? (
           <p>Target date: {global.required_delivery_date}</p>
         ) : null}
-        {global.po_number ? <p>PO number: {global.po_number}</p> : null}
+        {global.reference_number ? <p>Reference number: {global.reference_number}</p> : null}
         <p>NDA required: {global.nda_required ? "Yes" : "No"}</p>
         {global.notes ? <p>Notes: {global.notes}</p> : null}
       </ReviewSection>

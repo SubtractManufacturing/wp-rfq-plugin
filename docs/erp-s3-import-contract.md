@@ -21,16 +21,18 @@
 
 ## 1. Recent form / manifest changes (summary)
 
-Most recent **manifest-impacting** change: commit `d865840` (2026-09-29), *feat: refine RFQ details flow and theme-safe buttons*.
+Most recent **manifest-impacting** change: manifest **v3** replaces `global.po_number` with `global.reference_number`.
 
 | Change | Detail | Source |
 |--------|--------|--------|
+| **v3 field** | New submits send `global.reference_number` (optional string): a customer reference for quotes and other documents, not a purchase order. They do not send `global.po_number`. v1 and v2 receipts still have `po_number`. | `frontend/src/lib/manifest.ts` (`MANIFEST_VERSION`); `class-rfq-manifest-validator.php` |
+| **UI** | RFQ details: reference number is under a collapsed “More details” section after notes | `frontend/src/steps/StepGlobal.tsx` |
 | **REMOVED** | `no_rush` from allowed `lead_time_preference` | `class-rfq-manifest-validator.php` `LEAD_TIME_PREFERENCES`; `frontend/src/types/manifest.ts` `LeadTimePreference` |
 | **RETYPED / rules** | `global.required_delivery_date` | Required only when `lead_time_preference === "target_date"`; otherwise optional (`null` or omitted). If a non-empty string is sent for other lead times, still validated as `YYYY-MM-DD` and not before today (UTC) | `class-rfq-manifest-validator.php`; `frontend/src/lib/manifest.ts` `buildManifest()` |
 | **UI** | Global step field order; target date only for “Meet Target Date”; labels in `leadTime.ts` | `frontend/src/steps/StepGlobal.tsx`, `frontend/src/lib/leadTime.ts` |
 | **UI only** (commit `6792805`) | Part meta: quantity/material/tolerance/notes first; threads + target price under collapsible “More details” | `frontend/src/steps/StepPartMeta.tsx` |
 
-No manifest JSON key renames in those commits.
+v3 is the one manifest key change: `global.po_number` on v1 and v2, `global.reference_number` on v3. Older rows below did not rename keys.
 
 ---
 
@@ -91,7 +93,7 @@ Exact fields written in `RFQ_Receipt_Service::submit` (`receipt_payload`). `subm
 
 ### 3.2 `manifest.json` (2 parts: one with 2 drawings, one with none)
 
-Matches validator/submit test shapes; keys use `{file_id}_{sanitized_name}` as server generates.
+The sample matches the unversioned submit-test fixture (v1: `po_number`, tier `tolerance`). The form currently submits **v3**: `manifest_version` first, actual tolerance strings, and `global.reference_number` instead of `po_number`. Keys use `{file_id}_{sanitized_name}` as the server generates them.
 
 ```json
 {
@@ -220,6 +222,7 @@ If receipt put fails after manifest → partial state (logged). If receipt exist
 
 | Path | Type | Required | Null / empty | Allowed / notes |
 |------|------|----------|--------------|-----------------|
+| `manifest_version` | number | no | absent means v1 | `1`, `2`, or `3`. Current client sends `3` as the first field. |
 | `session_id` | string | yes | UUID v4 | Must match URL session |
 | `contact` | object | yes | — | |
 | `parts` | array | yes | length 1–`RFQ_MAX_PARTS` (20) | |
@@ -274,7 +277,8 @@ Official client (`buildManifest`) includes only parts with confirmed part upload
 | `required_delivery_date` | string | conditional | `YYYY-MM-DD`; required + not past UTC if `target_date`; else null/omit OK; if non-empty string otherwise, still validated | compared to **UTC today** |
 | `shipping_destination` | object | yes | — | |
 | `shipping_destination.postal_code` | string | yes | non-empty; US ZIP or CA postal | `RFQ_Postal_Code::is_valid`; DB index normalized, manifest as submitted |
-| `po_number` | string | no | null/omit | |
+| `reference_number` | string | no | null/omit | **v3.** Customer reference for quotes and other documents. Not a purchase order. |
+| `po_number` | string | no | null/omit | **v1 and v2 only.** Not sent on v3. |
 | `nda_required` | boolean | yes | must be JSON **boolean** | not `"true"`, `1`, etc. |
 | `notes` | string | no | null/omit | |
 
