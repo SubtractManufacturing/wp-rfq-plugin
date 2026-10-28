@@ -256,6 +256,40 @@ describe("App startup", () => {
     expect(await screen.findByRole("heading", { name: /review and submit/i })).toBeInTheDocument();
   });
 
+  it("scrolls the form to the top when the step changes", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    function StepNavigator() {
+      const { setStep } = useForm();
+      return (
+        <button onClick={() => setStep("global")} type="button">
+          Go global
+        </button>
+      );
+    }
+
+    try {
+      render(
+        <FormProvider config={config} sessionId="session-1" token="jwt">
+          <StepNavigator />
+          <FormShell fetchImpl={vi.fn()} />
+        </FormProvider>,
+      );
+
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: /go global/i }));
+      expect(await screen.findByRole("heading", { name: /rfq details/i })).toBeInTheDocument();
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "instant" });
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+  });
+
   it("keeps the uploads step visible when crypto.randomUUID is unavailable", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("crypto", {
