@@ -11,7 +11,6 @@ on:
         type: string
 
 permissions:
-  actions: write
   contents: write
   pull-requests: write
 
@@ -35,6 +34,9 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v4
         with:
+          # PRs opened with the default GITHUB_TOKEN need a manual "Approve workflows"
+          # click before their pull_request checks run, and only those checks gate merge.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           # Draft releases do not get a git tag until later in this job. If Release
@@ -59,21 +61,6 @@ jobs:
             git tag "$TAG_NAME" "$GITHUB_SHA"
             git push origin "refs/tags/$TAG_NAME"
           fi
-
-      - name: Run checks on the release pull request
-        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_JSON: ${{ steps.release.outputs.pr }}
-        run: |
-          pr_number="$(jq -r '.number // empty' <<< "$PR_JSON")"
-          if [[ -z "$pr_number" ]]; then
-            echo "Release Please did not return a pull request number; skipping dispatch."
-            exit 0
-          fi
-
-          release_branch="$(gh pr view "$pr_number" --json headRefName --jq .headRefName)"
-          gh workflow run test.yml --ref "$release_branch"
 
       - name: Resolve the release for packaging
         id: package
