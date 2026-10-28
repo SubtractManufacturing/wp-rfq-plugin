@@ -67,3 +67,26 @@ describe("StepGlobal reference number", () => {
     expect(screen.getByLabelText(/reference number/i)).toHaveValue("JOB-42");
   });
 });
+
+describe("StepGlobal navigation", () => {
+  // @covers AC-WP-036
+  it("goes back to part details even before the RFQ details are complete", async () => {
+    const user = userEvent.setup();
+
+    function StepProbe() {
+      const { step } = useForm();
+      return <p data-testid="step">{step}</p>;
+    }
+
+    render(
+      <FormProvider config={config}>
+        <StepGlobal />
+        <StepProbe />
+      </FormProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Continue to review" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByTestId("step")).toHaveTextContent("partMeta");
+  });
+});

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { FormProvider, useForm } from "../state/FormContext";
 import type { RfqFormConfig } from "../types/config";
@@ -254,5 +255,32 @@ describe("StepUploads export control notice", () => {
 
     expect(screen.getByRole("heading", { name: /part uploads/i })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // @covers AC-WP-036
+  it("goes back to the contact step", async () => {
+    const user = userEvent.setup();
+    const { mock } = createFetchMock();
+
+    function StartOnUploads() {
+      const { setStep, setExportControlAcknowledged } = useForm();
+      useEffect(() => {
+        setStep("uploads");
+        setExportControlAcknowledged(true);
+      }, [setStep, setExportControlAcknowledged]);
+      return null;
+    }
+
+    render(
+      <FormProvider config={config} sessionId="session-1" token="jwt">
+        <StartOnUploads />
+        <StepUploads fetchImpl={mock as unknown as typeof fetch} />
+        <StepProbe />
+      </FormProvider>,
+    );
+
+    expect(screen.getByTestId("step")).toHaveTextContent("uploads");
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByTestId("step")).toHaveTextContent("contact");
   });
 });

@@ -229,7 +229,7 @@ In-memory storage limits exposure to the active page lifetime. An XSS attack can
 
 **Why we chose this:** Rehydrating after refresh requires either persisting the JWT (rejected in Decision 12) or a new server endpoint to re-bind an old session without the original token. Partial rehydration (metadata without files) creates a broken state: the form shows progress but submit fails because file keys belong to the old unfinished session.
 
-Starting fresh on refresh is honest UX: the customer knows they must re-enter data and re-upload files. Step 1 contact information on the old `draft` session is still captured in WP DB. Server-side autosave drafts remain for operations recovery, not customer resume.
+Starting fresh on refresh is honest UX: the customer knows they must re-enter data and re-upload files. To make accidental loss rarer without storing anything, the form gives each step a browser history entry (so browser Back moves between steps instead of leaving the page) and shows the browser's native leave confirmation while an RFQ is in progress. Step 1 contact information on the old `draft` session is still captured in WP DB. Server-side autosave drafts remain for operations recovery, not customer resume.
 
 Orphaned S3 objects under unfinished session prefixes are cleaned up by lifecycle rules.
 

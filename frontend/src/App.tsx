@@ -7,6 +7,8 @@ import { Stepper } from "./components/Stepper";
 import { useAppHealthStartup } from "./hooks/useAppHealthStartup";
 import { useAutosave } from "./hooks/useAutosave";
 import { useJwtRefresh } from "./hooks/useJwtRefresh";
+import { useLeaveWarning } from "./hooks/useLeaveWarning";
+import { useStepHistory } from "./hooks/useStepHistory";
 import { FormProvider, useForm } from "./state/FormContext";
 import { StepContact } from "./steps/StepContact";
 import { StepGlobal } from "./steps/StepGlobal";
@@ -43,11 +45,24 @@ export function App({
 }
 
 export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
-  const { config, contact, receiptNumber, setToken, setTokenWarning, startNewRequest, token, sessionId, step } = useForm();
+  const {
+    config,
+    contact,
+    contactSaved,
+    receiptNumber,
+    setToken,
+    setTokenWarning,
+    startNewRequest,
+    token,
+    sessionId,
+    step,
+  } = useForm();
   const formRef = useRef<HTMLDivElement>(null);
   const previousStep = useRef(step);
   useJwtRefresh({ token, sessionId, onToken: setToken, onWarning: setTokenWarning });
   useAutosave({ fetchImpl });
+  useStepHistory();
+  useLeaveWarning(contactSaved && !receiptNumber);
 
   useLayoutEffect(() => {
     if (previousStep.current === step) {

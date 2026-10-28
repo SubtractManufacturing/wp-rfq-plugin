@@ -221,6 +221,39 @@ describe("App startup", () => {
     expect(screen.queryByText(/RFQ-20260626-000001/)).not.toBeInTheDocument();
   });
 
+  // @covers AC-WP-036
+  it("asks before leaving the page only while an RFQ is in progress", async () => {
+    const user = userEvent.setup();
+    const leaveIsBlocked = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+
+    function Probe() {
+      const { setContactSaved, setReceiptNumber } = useForm();
+      return (
+        <>
+          <button onClick={() => setContactSaved(true)} type="button">Start</button>
+          <button onClick={() => setReceiptNumber("RFQ-20260626-000001")} type="button">Finish</button>
+        </>
+      );
+    }
+
+    render(
+      <FormProvider config={config} sessionId="session-1" token="jwt">
+        <Probe />
+        <FormShell fetchImpl={vi.fn()} />
+      </FormProvider>,
+    );
+
+    expect(leaveIsBlocked()).toBe(false);
+    await user.click(screen.getByRole("button", { name: /^start$/i }));
+    expect(leaveIsBlocked()).toBe(true);
+    await user.click(screen.getByRole("button", { name: /^finish$/i }));
+    expect(leaveIsBlocked()).toBe(false);
+  });
+
   it("renders each step shell when the active step changes", async () => {
     const user = userEvent.setup();
 

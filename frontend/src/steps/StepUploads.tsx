@@ -3,6 +3,7 @@ import { apiFetch } from "../api/client";
 import {
   btnDangerCompactClasses,
   btnPrimaryBlockClasses,
+  btnSecondaryClasses,
   btnSecondaryCompactClasses,
 } from "../components/buttonStyles";
 import { ExportControlModal } from "../components/ExportControlModal";
@@ -281,6 +282,9 @@ export function StepUploads({ fetchImpl = fetch }: { fetchImpl?: typeof fetch })
       {notice ? <p className="text-sm text-amber-700">{notice}</p> : null}
 
       <div className="flex flex-wrap items-center gap-3">
+        <button className={btnSecondaryClasses} onClick={() => setStep("contact")} type="button">
+          Back
+        </button>
         <button
           className={btnPrimaryBlockClasses}
           disabled={!canContinue}

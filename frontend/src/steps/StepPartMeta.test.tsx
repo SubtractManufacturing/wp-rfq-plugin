@@ -259,4 +259,26 @@ describe("StepPartMeta", () => {
 
     expect(screen.getByLabelText(/target unit price/i)).toHaveValue(12.5);
   });
+
+  // @covers AC-WP-036
+  it("goes back to uploads even before the part details are complete", async () => {
+    const user = userEvent.setup();
+
+    function StepProbe() {
+      const { step } = useForm();
+      return <p data-testid="step">{step}</p>;
+    }
+
+    render(
+      <FormProvider config={config}>
+        <Seed rows={[part("1", "a.step")]} />
+        <StepPartMeta />
+        <StepProbe />
+      </FormProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Continue to RFQ details" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByTestId("step")).toHaveTextContent("uploads");
+  });
 });
