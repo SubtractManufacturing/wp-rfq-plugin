@@ -375,6 +375,8 @@ This check runs once on mount. There is no polling after the form has loaded.
 
 The form is divided into the following steps. Customers cannot proceed past Step 2 until Step 1 is complete. All other steps can be navigated freely once a session exists.
 
+Every step after Step 1 has a **Back** button that returns to the previous step without losing any entered data or uploads. Each step change also adds a browser history entry (same page URL), so the browser Back and Forward buttons move between steps instead of leaving the page. Back or Forward to a step that is no longer reachable (for example, after removing every part) is ignored.
+
 **Step 0 — Health check (background, not visible to user)**
 - On form mount, call `GET /health` once. If healthy, render the form; otherwise show the Airtable fallback embed.
 - Do **not** call `POST /sessions` on mount. Session creation is deferred until Step 1 completes (see below).
@@ -537,6 +539,7 @@ Server validation: `global.lead_time_preference` must be one of the values above
 - Do not persist form state, `session_id`, or JWT in `localStorage` or `sessionStorage`.
 - Uploaded files under the previous session's S3 prefix are not recoverable in the new session. Orphan prefixes are cleaned up per lifecycle rules (see 3.3.3).
 - If the customer completed Step 1 before refreshing, their contact info remains captured on the old `draft` session row in WP DB.
+- From the moment the intake session is created (first **Continue to uploads**) until a receipt is shown, including while the customer edits contact fields afterward, the form registers a `beforeunload` handler, so refresh, tab close, or navigating away (including browser Back from Step 1) first shows the browser's native "Leave site?" confirmation. Browsers do not allow custom wording in this prompt.
 
 #### 3.2.6 Success Screen
 
@@ -681,7 +684,7 @@ Before creating a quote record, check whether a quote with `source_receipt_numbe
 |------------------|-------------------|
 | WordPress down when user visits the RFQ page | Health check fails; Airtable iframe renders automatically |
 | WordPress goes down mid-session | Files already uploaded to S3 are safe. In-memory form state is preserved while the tab stays open. User sees a submit error with retry guidance. Submit succeeds once WP recovers. |
-| Customer refreshes the page mid-session | Current in-browser session is lost. New session starts from Step 1. Prior uploads are not carried over. Step 1 contact information on the old `draft` session is retained in WP DB. |
+| Customer refreshes the page mid-session | Browser asks to confirm leaving first. If confirmed, the current in-browser session is lost. New session starts from Step 1. Prior uploads are not carried over. Step 1 contact information on the old `draft` session is retained in WP DB. |
 | S3 unavailable for a file upload | Per-file upload error with inline retry button. User cannot proceed to submit until all required files are confirmed uploaded. |
 | S3 unavailable at submit time | `HeadObject` check fails; WP returns an error; user sees "submission failed, your work is saved, try again." Files are already in S3 and will not need re-uploading. |
 | ERP is down at submit time | No user impact. Receipt is written by WordPress. Webhook may fail silently. ERP S3 poll worker imports on the next cycle once ERP recovers. |
@@ -835,3 +838,4 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-033** — Intake sessions older than the configurable retention window (default 180 days, `0` disables) are auto-deleted from the WP DB daily, and admins can delete a session from the intake list, only when S3 confirms no object remains under `intake/{session_id}/`. Non-draft sessions still in S3, or whose S3 check fails, are kept and the batch continues; `draft` sessions are deleted without an S3 check.
 - **AC-WP-034** — Material selection walks the customer through group → type → alloy/grade, offers only the finishes and plastic stock colors that apply to the chosen material, keeps a search shortcut and an unblocked free-text custom material, and stores the material string plus optional finish/color fields in the manifest.
 - **AC-WP-035** — Every submitted manifest carries `manifest_version` as its first field (current version 3; absence means legacy v1). In v2 and later, each part's `tolerance` is the actual tolerance string (e.g. `+/- 0.005"`) rather than a tier label. v3 stores the optional customer reference as `global.reference_number` and does not send `global.po_number` (v1 and v2 still use `po_number`). The validator accepts v1, v2, and v3 manifests and rejects other versions.
+- **AC-WP-036** — Browser Back and Forward move between form steps without losing entered data, every step after Step 1 has an in-form Back button, and once the intake session exists (until a receipt is shown) leaving or reloading the page triggers the browser's leave confirmation.

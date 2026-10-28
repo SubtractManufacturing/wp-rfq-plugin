@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { btnPrimaryClasses } from "../components/buttonStyles";
+import { btnPrimaryClasses, btnSecondaryClasses } from "../components/buttonStyles";
 import { ChevronIcon } from "../components/ChevronIcon";
 import { FieldError } from "../components/FieldError";
 import { Select } from "../components/Select";
@@ -114,14 +114,19 @@ export function StepGlobal() {
           </div>
         ) : null}
       </div>
-      <button
-        className={btnPrimaryClasses}
-        disabled={!canContinue}
-        onClick={() => setStep("review")}
-        type="button"
-      >
-        Continue to review
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button className={btnSecondaryClasses} onClick={() => setStep("partMeta")} type="button">
+          Back
+        </button>
+        <button
+          className={btnPrimaryClasses}
+          disabled={!canContinue}
+          onClick={() => setStep("review")}
+          type="button"
+        >
+          Continue to review
+        </button>
+      </div>
     </section>
   );
 }

@@ -438,7 +438,13 @@ export async function uploadFile(
 - On success → SuccessView
 - On failure → keep all state, show retry button
 
-**Step 6.8** Build pipeline:
+**Step 6.8** Step navigation (`hooks/useStepHistory.ts`, `hooks/useLeaveWarning.ts`, PRD §3.2.2 and §3.2.5):
+
+- Every step after Contact has a **Back** button to the previous step
+- Each step change adds a browser history entry on the same URL; `popstate` restores the step if `canReachStep` allows it. Merge into `history.state` instead of replacing it: WordPress's Interactivity API reloads the page on Back when its `wpInteractivityId` is missing
+- Register `beforeunload` while a session exists and no receipt is shown (not tied to `contactSaved`, which turns false on any contact edit)
+
+**Step 6.9** Build pipeline:
 
 ```bash
 cd frontend && npm ci && npm run build
@@ -607,7 +613,7 @@ HTTP 401
 
 2. **Partial write alert:** If `manifest.json` exists but `receipt.json` does not after 15 minutes, ops must investigate. Do not let ERP import manifest-only packages (ADD §10).
 
-3. **Page refresh:** Never persist JWT or form state in browser storage. New session on every full reload.
+3. **Page refresh:** Never persist JWT or form state in browser storage. New session on every full reload. The browser leave confirmation (Step 6.8) is the only guard.
 
 4. **Orphan S3 objects:** Expected when users remove part rows. Manifest is authoritative; ERP deletes whole prefix after import.
 
@@ -648,6 +654,7 @@ Each plugin checkbox maps to a stable ID in [Planning/TESTING.md](TESTING.md) §
 - [ ] **AC-WP-014** — Success screen shows SVG, thank-you copy, entered email address, start-new-request button, muted `Ref: RFQ-...`
 - [ ] **AC-WP-001** — Submit retry after simulated network failure returns same receipt number (idempotent)
 - [ ] **AC-WP-015** — Page refresh starts new session; prior Step 1 contact row remains in DB
+- [ ] **AC-WP-036** — Browser Back/Forward move between steps without losing data; in-form Back on every step after Contact; leave confirmation while a session is in progress
 - [ ] **AC-WP-002** — Health failure within 10s shows Airtable embed
 - [ ] **AC-WP-016** — >20 parts blocked in UI and rejected on submit
 - [ ] **AC-WP-006** — Rate limit: 11th session from same IP in 1 hour → 429

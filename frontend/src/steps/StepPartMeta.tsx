@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { btnPrimaryClasses } from "../components/buttonStyles";
+import { btnPrimaryClasses, btnSecondaryClasses } from "../components/buttonStyles";
 import { ChevronIcon } from "../components/ChevronIcon";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { MaterialPicker } from "../components/MaterialPicker";
@@ -284,14 +284,19 @@ export function StepPartMeta() {
           </div>
         );
       })}
-      <button
-        className={btnPrimaryClasses}
-        disabled={!canContinue}
-        onClick={() => setStep("global")}
-        type="button"
-      >
-        Continue to RFQ details
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button className={btnSecondaryClasses} onClick={() => setStep("uploads")} type="button">
+          Back
+        </button>
+        <button
+          className={btnPrimaryClasses}
+          disabled={!canContinue}
+          onClick={() => setStep("global")}
+          type="button"
+        >
+          Continue to RFQ details
+        </button>
+      </div>
     </section>
   );
 }

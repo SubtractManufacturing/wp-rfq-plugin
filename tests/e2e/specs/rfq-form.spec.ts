@@ -100,6 +100,60 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
   await expect(page.getByText("Ref: RFQ-20260626-000001")).toBeVisible();
 });
 
+// @covers AC-WP-036
+test("AC-WP-036 browser Back moves between steps and leaving the page asks first", async ({ page }) => {
+  await page.route("https://wp.test/wp-json/rfq/v1/health", (route) =>
+    route.fulfill({ status: 200, body: JSON.stringify({ status: "ok" }) }),
+  );
+  await page.route("https://wp.test/wp-json/rfq/v1/sessions", (route) =>
+    route.fulfill({ status: 200, body: JSON.stringify({ session_id: "session-1", token: "jwt" }) }),
+  );
+  await page.route("https://wp.test/wp-json/rfq/v1/sessions/session-1/contact", (route) =>
+    route.fulfill({ status: 200, body: JSON.stringify({ first_name: "Jane" }) }),
+  );
+  await page.route("https://wp.test/wp-json/rfq/v1/sessions/session-1/draft", (route) =>
+    route.fulfill({ status: 200, body: JSON.stringify({ saved: true }) }),
+  );
+
+  // Same listener WordPress's Interactivity API (loaded by the Navigation block) adds to every page.
+  await page.addInitScript(() => {
+    window.history.replaceState({ ...window.history.state, wpInteractivityId: "wp" }, "");
+    window.addEventListener("popstate", (event) => {
+      if (event.state !== null && event.state?.wpInteractivityId !== "wp") {
+        window.location.reload();
+      }
+    });
+  });
+  const unexpectedDialogs: string[] = [];
+  const recordDialog = (dialog: { type: () => string; dismiss: () => Promise<void> }) => {
+    unexpectedDialogs.push(dialog.type());
+    void dialog.dismiss();
+  };
+  page.on("dialog", recordDialog);
+
+  await page.goto("/");
+  await page.getByLabel("First name").fill("Jane");
+  await page.getByLabel("Last name").fill("Smith");
+  await page.getByLabel("Email").fill("jane@example.com");
+  await page.getByRole("button", { name: "Continue to uploads" }).click();
+  await expect(page.getByRole("heading", { name: "Part uploads" })).toBeVisible();
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Contact information" })).toBeVisible();
+  await expect(page.getByLabel("First name")).toHaveValue("Jane");
+
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "Part uploads" })).toBeVisible();
+  expect(unexpectedDialogs).toEqual([]);
+
+  page.off("dialog", recordDialog);
+  const dialog = page.waitForEvent("dialog");
+  await page.close({ runBeforeUnload: true });
+  const prompt = await dialog;
+  expect(prompt.type()).toBe("beforeunload");
+  await prompt.accept();
+});
+
 test("AC-WP-013 accepts an international phone number on contact step", async ({ page }) => {
   let contactBody = "";
 
