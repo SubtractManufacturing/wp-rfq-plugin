@@ -5,11 +5,6 @@ import { App, FormShell } from "./App";
 import { FormProvider, useForm } from "./state/FormContext";
 import type { RfqFormConfig } from "./types/config";
 
-// jsdom does not implement Element.scrollIntoView.
-if (typeof HTMLElement.prototype.scrollIntoView !== "function") {
-  HTMLElement.prototype.scrollIntoView = vi.fn();
-}
-
 const config: RfqFormConfig = {
   restBase: "https://example.test/wp-json/rfq/v1",
   nonce: "nonce",
