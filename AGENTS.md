@@ -65,7 +65,7 @@ git worktree add .worktrees/<name>
 
 ## Manifest versioning (must follow)
 
-The submit manifest is versioned: `manifest_version` is its first field (current version **2**; no field = legacy v1). **Any change to the manifest's shape, or to the meaning/format of an existing field, must bump `manifest_version`.** When you change the manifest: bump `MANIFEST_VERSION` in `frontend/src/lib/manifest.ts`, add the new version to `docs/adr/0003-manifest-versioning.md`, keep `RFQ_Manifest_Validator` accepting every older version, and update the PRD manifest spec in the same PR.
+The submit manifest is versioned: `manifest_version` is its first field (current version **3**; no field = legacy v1). **Any change to the manifest's shape, or to the meaning/format of an existing field, must bump `manifest_version`.** When you change the manifest: bump `MANIFEST_VERSION` in `frontend/src/lib/manifest.ts`, add the new version to `docs/adr/0003-manifest-versioning.md`, keep `RFQ_Manifest_Validator` accepting every older version, and update the PRD manifest spec in the same PR.
 
 ## Local preview (wp-env) — rebuild after frontend changes
 

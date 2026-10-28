@@ -453,7 +453,7 @@ V1 online intake assumes **shipping within the US and Canada only**.
 
 Server validation: `global.lead_time_preference` must be one of the values above.
 - **Shipping postal code** (single field, required) — US ZIP (5 or 9 digit) or Canadian postal code (`A1A 1A1`). No country/state/city fields in V1.
-- Purchase order number (optional free text).
+- **Reference number** (optional free text) — a customer-chosen reference to print on quotes and other documents. This is not a purchase order. Stored as `global.reference_number` (string or `null`). Shown inside a collapsed **More details** section below Additional notes (auto-expanded when a value is already set). v1 and v2 manifests used `global.po_number` for a purchase order number; v3 does not send that field.
 - **Treat as NDA** (checkbox, optional, default unchecked):
   - **Label / description:** *Treat as NDA — These parts will be completely excluded from posting on social media or being used in any marketing materials.*
   - **When checked:** Set `global.nda_required: true` in the manifest. Show an inline notice below the checkbox: *If you require a formal NDA signed by both parties before sharing any IP, please email {{sales_contact_email}}.* The email address comes from plugin settings (see 5.2). Display only — the plugin does not send email or generate NDA documents.
@@ -472,7 +472,7 @@ Server validation: `global.lead_time_preference` must be one of the values above
 
 ```json
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "session_id": "...",
   "contact": {
     "first_name": "Jane",
@@ -506,14 +506,14 @@ Server validation: `global.lead_time_preference` must be one of the values above
     "shipping_destination": {
       "postal_code": "90210"
     },
-    "po_number": null,
+    "reference_number": null,
     "nda_required": false,
     "notes": "..."
   }
 }
 ```
 
-**Manifest versioning:** `manifest_version` is always the first field. A manifest without it is **v1 (legacy)**. The current version is **2** (adds the per-part finish/color fields and sends `tolerance` as the actual tolerance string, e.g. `+/- 0.005"`, instead of a tier label). **Any change to the manifest's shape or to the meaning/format of an existing field must bump `manifest_version`** and follow [ADR 0003](../docs/adr/0003-manifest-versioning.md): bump the version constant, document the new version there, and keep the WordPress validator and ERP importer accepting every older version.
+**Manifest versioning:** `manifest_version` is always the first field. A manifest without it is **v1 (legacy)**. The current version is **3**. v2 adds the per-part finish/color fields and sends `tolerance` as the actual tolerance string, e.g. `+/- 0.005"`, instead of a tier label. v3 replaces `global.po_number` with `global.reference_number`, a customer reference for quotes and other documents rather than a purchase order. **Any change to the manifest's shape or to the meaning/format of an existing field must bump `manifest_version`** and follow [ADR 0003](../docs/adr/0003-manifest-versioning.md): bump the version constant, document the new version there, and keep the WordPress validator and ERP importer accepting every older version.
 
 2. React sends this manifest to `POST /sessions/{session_id}/submit`.
 3. If the request succeeds and returns a `receipt_number`, React shows the [success screen](#326-success-screen). **This is the only condition under which a success screen is shown.**
@@ -618,7 +618,7 @@ When `POST /sessions/{session_id}/submit` is called, the WordPress plugin must e
 
 1. **Validate JWT.** Verify signature, expiry, and that `session_id` in the JWT matches the URL parameter.
 2. **Validate session state.** Check the WP DB `rfq_sessions` row. If `status` is already `submitted`, return the existing `receipt_number` (idempotent re-submission is safe).
-3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. If `manifest_version` is present it must be `1` or `2` (absent means v1). In v2, each part `tolerance` must be a non-empty actual-tolerance string (e.g. `+/- 0.005"`); in v1, each part `tolerance` must be `economy`, `standard`, `tight`, `precision` (legacy), or `custom`, and if it is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required when `lead_time_preference` is `target_date` (ISO date, not before today UTC); otherwise omit or `null`.
+3. **Validate manifest fields.** Check all required fields are present and valid. Return field-level errors if not. `contact.email` must pass the same standard email validation as `PATCH /contact`. If `contact.phone` is set, `contact.phone_country_code` must be present and the combined number must pass the same libphonenumber validation as `PATCH /contact`. If `contact.phone` is null, `phone_country_code` must be null. `parts` array length must be ≥ 1 and ≤ `RFQ_MAX_PARTS` (20 in V1). Each part `material` must be a non-empty string. Each entry in `parts` must include a unique `part_id`, a `part_file_key`, and valid metadata; `drawing_file_keys` must be an array (empty allowed). Each part `quantity` must be an integer ≥ 1. If `manifest_version` is present it must be `1`, `2`, or `3` (absent means v1). In v3, `global.reference_number` is an optional string or `null` (a customer reference for quotes and other documents, not a purchase order); v1 and v2 use optional `global.po_number` instead. In v2, each part `tolerance` must be a non-empty actual-tolerance string (e.g. `+/- 0.005"`); in v1, each part `tolerance` must be `economy`, `standard`, `tight`, `precision` (legacy), or `custom`, and if it is `custom`, `tolerance_detail` is required (non-empty string). `target_unit_price`, if present, must be a number ≥ 0 with at most 2 decimal places; omit or `null` if not provided. `global.lead_time_preference` must be one of: `standard`, `target_date`, `expedited`, `economy`. `global.nda_required` must be a boolean. `global.shipping_destination.postal_code` is required and must match US ZIP or Canadian postal code format. `global.required_delivery_date` is required when `lead_time_preference` is `target_date` (ISO date, not before today UTC); otherwise omit or `null`.
 4. **Confirm S3 objects exist and match declared constraints.** For every `part_file_key` and `drawing_file_key` declared in the manifest, call S3 `HeadObject` or equivalent metadata lookup. If any declared key is missing, returns an error, exceeds the file-category size limit, or has available content-type metadata that conflicts with the declared file category, abort and return an error identifying which files failed validation. Objects in the session prefix that are **not** listed in the manifest are not validated and are not an error — they are ignored until ERP import cleanup.
 5. **Write `manifest.json` to S3** at `intake/{session_id}/meta/manifest.json`.
 6. **Generate receipt number** using the daily sequence.
@@ -834,4 +834,4 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-032** — Plugin Updates run idempotent additive schema migrations; a failed migration is not marked complete and makes plugin health unavailable until recovery.
 - **AC-WP-033** — Intake sessions older than the configurable retention window (default 180 days, `0` disables) are auto-deleted from the WP DB daily, and admins can delete a session from the intake list, only when S3 confirms no object remains under `intake/{session_id}/`. Non-draft sessions still in S3, or whose S3 check fails, are kept and the batch continues; `draft` sessions are deleted without an S3 check.
 - **AC-WP-034** — Material selection walks the customer through group → type → alloy/grade, offers only the finishes and plastic stock colors that apply to the chosen material, keeps a search shortcut and an unblocked free-text custom material, and stores the material string plus optional finish/color fields in the manifest.
-- **AC-WP-035** — Every submitted manifest carries `manifest_version` as its first field (current version 2; absence means legacy v1), and in v2 each part's `tolerance` is the actual tolerance string (e.g. `+/- 0.005"`) rather than a tier label. The validator accepts v1 and v2 manifests and rejects other versions.
+- **AC-WP-035** — Every submitted manifest carries `manifest_version` as its first field (current version 3; absence means legacy v1). In v2 and later, each part's `tolerance` is the actual tolerance string (e.g. `+/- 0.005"`) rather than a tier label. v3 stores the optional customer reference as `global.reference_number` and does not send `global.po_number` (v1 and v2 still use `po_number`). The validator accepts v1, v2, and v3 manifests and rejects other versions.

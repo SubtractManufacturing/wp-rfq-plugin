@@ -491,7 +491,7 @@ async function importReceipt(receiptKey: string) {
 
 ```typescript
 export interface RfqManifest {
-  manifest_version: 2; // first field; absent = legacy v1. Bump on ANY manifest shape/meaning change - see docs/adr/0003-manifest-versioning.md
+  manifest_version: 3; // first field; absent = legacy v1. Bump on ANY manifest shape/meaning change - see docs/adr/0003-manifest-versioning.md
   session_id: string;
   contact: {
     first_name: string;
@@ -511,8 +511,8 @@ export interface RfqManifest {
     finish_color: string | null;
     finish_specification: string | null;
     plastic_color: string | null;
-    tolerance: string; // v2: actual tolerance verbatim, e.g. '+/- 0.005"'; never a tier label
-    tolerance_detail: string | null; // always null in v2 (kept for v1 shape)
+    tolerance: string; // v2+: actual tolerance verbatim, e.g. '+/- 0.005"'; never a tier label
+    tolerance_detail: string | null; // always null in v2+ (kept for v1 shape)
     threads_features?: string | null;
     quantity: number;
     target_unit_price: number | null;
@@ -522,7 +522,7 @@ export interface RfqManifest {
     required_delivery_date: string; // YYYY-MM-DD
     lead_time_preference: 'standard' | 'target_date' | 'expedited' | 'economy';
     shipping_destination: { postal_code: string };
-    po_number: string | null;
+    reference_number: string | null; // v3: customer reference, not a purchase order. v1/v2 used po_number
     nda_required: boolean;
     notes: string | null;
   };

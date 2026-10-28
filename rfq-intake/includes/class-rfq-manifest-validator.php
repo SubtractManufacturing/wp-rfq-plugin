@@ -31,7 +31,7 @@ class RFQ_Manifest_Validator {
         self::validate_top_level_structure( $manifest, $fields );
         self::validate_contact( $manifest['contact'] ?? null, $fields );
         self::validate_parts( $manifest['parts'] ?? null, $fields, self::manifest_version( $manifest ) );
-        self::validate_global( $manifest['global'] ?? null, $fields );
+        self::validate_global( $manifest['global'] ?? null, $fields, self::manifest_version( $manifest ) );
 
         if ( $fields !== [] ) {
             return new WP_Error(
@@ -66,8 +66,8 @@ class RFQ_Manifest_Validator {
         if ( array_key_exists( 'manifest_version', $manifest ) ) {
             $version = $manifest['manifest_version'];
 
-            if ( ! is_int( $version ) || ! in_array( $version, [ 1, 2 ], true ) ) {
-                $fields['manifest_version'] = __( 'manifest_version must be 1 or 2.', 'rfq-intake' );
+            if ( ! is_int( $version ) || ! in_array( $version, [ 1, 2, 3 ], true ) ) {
+                $fields['manifest_version'] = __( 'manifest_version must be 1, 2, or 3.', 'rfq-intake' );
             }
         }
 
@@ -103,7 +103,7 @@ class RFQ_Manifest_Validator {
     private static function manifest_version( array $manifest ): int {
         $version = $manifest['manifest_version'] ?? 1;
 
-        return is_int( $version ) && in_array( $version, [ 1, 2 ], true ) ? $version : 1;
+        return is_int( $version ) && in_array( $version, [ 1, 2, 3 ], true ) ? $version : 1;
     }
 
     /**
@@ -233,7 +233,7 @@ class RFQ_Manifest_Validator {
     /**
      * @param array<string, string> $fields
      */
-    private static function validate_global( mixed $global_data, array &$fields ): void {
+    private static function validate_global( mixed $global_data, array &$fields, int $manifest_version = 1 ): void {
         if ( ! is_array( $global_data ) ) {
             $fields['global'] = __( 'Global metadata must be an object.', 'rfq-intake' );
 
@@ -308,7 +308,11 @@ class RFQ_Manifest_Validator {
             $fields['global.nda_required'] = __( 'nda_required must be a boolean.', 'rfq-intake' );
         }
 
-        self::validate_optional_string_field( $global_data, 'po_number', 'global.po_number', $fields );
+        if ( $manifest_version >= 3 ) {
+            self::validate_optional_string_field( $global_data, 'reference_number', 'global.reference_number', $fields );
+        } else {
+            self::validate_optional_string_field( $global_data, 'po_number', 'global.po_number', $fields );
+        }
         self::validate_optional_string_field( $global_data, 'notes', 'global.notes', $fields );
     }
 

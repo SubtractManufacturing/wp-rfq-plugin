@@ -41,7 +41,7 @@ describe("buildManifest", () => {
         shipping_destination: { postal_code: "90210" },
       }),
     ).toMatchObject({
-      manifest_version: 2,
+      manifest_version: 3,
       session_id: "session",
       parts: [
         {
@@ -61,7 +61,17 @@ describe("buildManifest", () => {
   it("puts manifest_version first in the manifest", () => {
     const manifest = buildManifest("session", emptyContact, [confirmedPart], emptyGlobal);
     expect(Object.keys(manifest)[0]).toBe("manifest_version");
-    expect(manifest.manifest_version).toBe(2);
+    expect(manifest.manifest_version).toBe(3);
+  });
+
+  it("sends a customer reference number instead of a purchase order", () => {
+    const manifest = buildManifest("session", emptyContact, [confirmedPart], {
+      ...emptyGlobal,
+      reference_number: "JOB-42",
+    });
+
+    expect(manifest.global.reference_number).toBe("JOB-42");
+    expect(manifest.global).not.toHaveProperty("po_number");
   });
 
   it("includes finish and plastic color selections on each part", () => {

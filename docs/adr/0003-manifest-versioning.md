@@ -9,7 +9,8 @@ Every submitted manifest carries `manifest_version` as its **first field**. A ma
 ## Versions
 
 - **v1 (legacy, implicit):** No `manifest_version`. Per part: `material` string, `tolerance` is a tier label (`standard`, `precision`, `custom`; later also `economy`/`tight` in pre-v2 builds), `tolerance_detail` required when `tolerance` is `custom`. No `finish`, `finish_color`, `finish_specification`, or `plastic_color` fields.
-- **v2 (current):** `manifest_version: 2` first in the manifest. Adds per-part `finish`, `finish_color`, `finish_specification`, and `plastic_color` (all nullable). Per-part `tolerance` is the **actual tolerance string** for ERP import verbatim (e.g. `+/- 0.005"`), never a tier label; `tolerance_detail` is always `null` in v2.
+- **v2:** `manifest_version: 2` first in the manifest. Adds per-part `finish`, `finish_color`, `finish_specification`, and `plastic_color` (all nullable). Per-part `tolerance` is the **actual tolerance string** for ERP import verbatim (e.g. `+/- 0.005"`), never a tier label; `tolerance_detail` is always `null` in v2. `global.po_number` is an optional purchase-order string.
+- **v3 (current):** `manifest_version: 3` first in the manifest. Replaces `global.po_number` with `global.reference_number` (nullable string): a customer-chosen reference to print on quotes and other documents. It is not a purchase order. v1 and v2 manifests still use `po_number`. Every other v2 field is unchanged.
 
 ## Rule for future changes
 

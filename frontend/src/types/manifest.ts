@@ -57,14 +57,14 @@ export interface GlobalState {
   required_delivery_date: string;
   lead_time_preference: LeadTimePreference | "";
   shipping_destination: { postal_code: string };
-  po_number: string | null;
+  reference_number: string | null;
   nda_required: boolean;
   notes: string | null;
 }
 
 export interface RfqManifest {
   /** Manifest format version. Absence means v1 (legacy). Bump on any manifest shape/meaning change - see docs/adr/0003-manifest-versioning.md. */
-  manifest_version: 2;
+  manifest_version: 3;
   session_id: string;
   contact: {
     first_name: string;
@@ -84,9 +84,9 @@ export interface RfqManifest {
     finish_color?: string | null;
     finish_specification?: string | null;
     plastic_color?: string | null;
-    /** Actual global tolerance, verbatim for ERP import, e.g. `+/- 0.005"`. Never a tier label in v2. */
+    /** Actual global tolerance, verbatim for ERP import, e.g. `+/- 0.005"`. Never a tier label in v2 or later. */
     tolerance: string;
-    /** Kept for v1 shape compatibility; always null in v2 (custom tolerance text lives in `tolerance`). */
+    /** Kept for v1 shape compatibility; always null in v2 and later (custom tolerance text lives in `tolerance`). */
     tolerance_detail: string | null;
     threads_features?: string | null;
     quantity: number;
@@ -97,7 +97,7 @@ export interface RfqManifest {
     required_delivery_date: string | null;
     lead_time_preference: LeadTimePreference;
     shipping_destination: { postal_code: string };
-    po_number: string | null;
+    reference_number: string | null;
     nda_required: boolean;
     notes: string | null;
   };
@@ -118,7 +118,7 @@ export const emptyGlobal: GlobalState = {
   required_delivery_date: "",
   lead_time_preference: "",
   shipping_destination: { postal_code: "" },
-  po_number: null,
+  reference_number: null,
   nda_required: false,
   notes: null,
 };

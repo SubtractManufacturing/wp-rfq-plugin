@@ -4,7 +4,7 @@ import { manifestToleranceForPart } from "./tolerances";
 import type { MaterialOption } from "../types/config";
 
 /** Current manifest format version. Legacy manifests without this field are v1. See docs/adr/0003-manifest-versioning.md. */
-export const MANIFEST_VERSION = 2 as const;
+export const MANIFEST_VERSION = 3 as const;
 
 export function buildManifest(
   sessionId: string,
@@ -58,7 +58,7 @@ export function buildManifest(
           : null,
       lead_time_preference: global.lead_time_preference as LeadTimePreference,
       shipping_destination: global.shipping_destination,
-      po_number: global.po_number,
+      reference_number: global.reference_number,
       nda_required: global.nda_required,
       notes: global.notes,
     },

@@ -33,7 +33,7 @@ The ERP process that reads a receipt and manifest from S3, creates a Quote in Po
 _Avoid_: Sync, processing, ingest job
 
 **Manifest**:
-The complete structured payload (contact, parts, files, global metadata) written at final submit. Lists exactly which S3 objects belong to the RFQ; unlisted objects in the session prefix are ignored. A manifest without a receipt is an incomplete submission, not a customer-facing success. The manifest is versioned: `manifest_version` is its first field (current 2; a manifest without it is legacy v1), and any change to its shape or field meanings must bump that version. See `docs/adr/0003-manifest-versioning.md`.
+The complete structured payload (contact, parts, files, global metadata) written at final submit. Lists exactly which S3 objects belong to the RFQ; unlisted objects in the session prefix are ignored. A manifest without a receipt is an incomplete submission, not a customer-facing success. The manifest is versioned: `manifest_version` is its first field (current 3; a manifest without it is legacy v1), and any change to its shape or field meanings must bump that version. See `docs/adr/0003-manifest-versioning.md`.
 _Avoid_: Submission payload, form data export
 
 **Quote**:

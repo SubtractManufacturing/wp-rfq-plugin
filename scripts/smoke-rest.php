@@ -219,7 +219,7 @@ $submit_manifest = new WP_REST_Request('POST', '/rfq/v1/sessions/' . $session_id
 $submit_manifest->set_header('Authorization', 'Bearer ' . $new_token);
 $submit_manifest->set_header('Content-Type', 'application/json');
 $submit_manifest->set_body(wp_json_encode([
-    'manifest_version' => 2,
+    'manifest_version' => 3,
     'session_id' => $session_id,
     'contact' => [
         'first_name' => 'Jane',
@@ -253,7 +253,7 @@ $submit_manifest->set_body(wp_json_encode([
         'shipping_destination' => [
             'postal_code' => '90210',
         ],
-        'po_number' => null,
+        'reference_number' => null,
         'nda_required' => false,
         'notes' => null,
     ],
