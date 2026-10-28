@@ -15,6 +15,9 @@ import { StepReview } from "./steps/StepReview";
 import { StepUploads } from "./steps/StepUploads";
 import type { RfqFormConfig } from "./types/config";
 
+/** Gap left above the card when a step change has scrolled it off the top of the window. */
+const FORM_TOP_MARGIN = 16;
+
 export function App({
   config,
   fetchImpl = fetch,
@@ -51,7 +54,27 @@ export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
       return;
     }
     previousStep.current = step;
-    formRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+
+    const form = formRef.current;
+    if (!form) {
+      return;
+    }
+    // A shorter step clamps the window toward the footer. If the card is still
+    // on screen, leave the scroll position alone.
+    const top = form.getBoundingClientRect().top;
+    if (top >= 0) {
+      return;
+    }
+
+    const root = document.documentElement;
+    const previous = root.style.scrollBehavior;
+    // Inline `auto` wins over a theme's `html { scroll-behavior: smooth }`.
+    root.style.scrollBehavior = "auto";
+    try {
+      window.scrollBy(0, top - FORM_TOP_MARGIN);
+    } finally {
+      root.style.scrollBehavior = previous;
+    }
   }, [step]);
 
   if (receiptNumber) {

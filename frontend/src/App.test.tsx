@@ -256,11 +256,50 @@ describe("App startup", () => {
     expect(await screen.findByRole("heading", { name: /review and submit/i })).toBeInTheDocument();
   });
 
-  it("scrolls the form to the top when the step changes", async () => {
+  function formCard() {
+    const card = screen.getByRole("navigation", { name: /rfq progress/i }).parentElement;
+    if (!card) {
+      throw new Error("form card missing");
+    }
+    return card;
+  }
+
+  it("leaves the page where it is when the form is already on screen", async () => {
     const user = userEvent.setup();
-    const scrollIntoView = vi.fn();
-    const original = HTMLElement.prototype.scrollIntoView;
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => undefined);
+
+    function StepNavigator() {
+      const { setStep } = useForm();
+      return (
+        <button onClick={() => setStep("global")} type="button">
+          Go global
+        </button>
+      );
+    }
+
+    render(
+      <FormProvider config={config} sessionId="session-1" token="jwt">
+        <StepNavigator />
+        <FormShell fetchImpl={vi.fn()} />
+      </FormProvider>,
+    );
+
+    vi.spyOn(formCard(), "getBoundingClientRect").mockReturnValue({ top: 240 } as DOMRect);
+
+    expect(scrollBy).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /go global/i }));
+    expect(await screen.findByRole("heading", { name: /rfq details/i })).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+    scrollBy.mockRestore();
+  });
+
+  it("brings the form back into view when a step change leaves it above the window", async () => {
+    const user = userEvent.setup();
+    document.documentElement.style.scrollBehavior = "smooth";
+    let behaviorDuringScroll = "";
+    const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => {
+      behaviorDuringScroll = document.documentElement.style.scrollBehavior;
+    });
 
     function StepNavigator() {
       const { setStep } = useForm();
@@ -279,14 +318,17 @@ describe("App startup", () => {
         </FormProvider>,
       );
 
-      expect(scrollIntoView).not.toHaveBeenCalled();
+      vi.spyOn(formCard(), "getBoundingClientRect").mockReturnValue({ top: -400 } as DOMRect);
 
       await user.click(screen.getByRole("button", { name: /go global/i }));
       expect(await screen.findByRole("heading", { name: /rfq details/i })).toBeInTheDocument();
-      expect(scrollIntoView).toHaveBeenCalledTimes(1);
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "instant" });
+      // 400px above the window, plus a 16px margin.
+      expect(scrollBy).toHaveBeenCalledWith(0, -416);
+      expect(behaviorDuringScroll).toBe("auto");
+      expect(document.documentElement.style.scrollBehavior).toBe("smooth");
     } finally {
-      HTMLElement.prototype.scrollIntoView = original;
+      document.documentElement.style.scrollBehavior = "";
+      scrollBy.mockRestore();
     }
   });
 
