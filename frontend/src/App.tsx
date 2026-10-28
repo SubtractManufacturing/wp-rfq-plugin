@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import { SuccessView } from "./SuccessView";
 import { AirtableFallback } from "./components/AirtableFallback";
 import { DraftSaveIndicator } from "./components/DraftSaveIndicator";
@@ -40,8 +41,18 @@ export function App({
 
 export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
   const { config, contact, receiptNumber, setToken, setTokenWarning, startNewRequest, token, sessionId, step } = useForm();
+  const formRef = useRef<HTMLDivElement>(null);
+  const previousStep = useRef(step);
   useJwtRefresh({ token, sessionId, onToken: setToken, onWarning: setTokenWarning });
   useAutosave({ fetchImpl });
+
+  useLayoutEffect(() => {
+    if (previousStep.current === step) {
+      return;
+    }
+    previousStep.current = step;
+    formRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [step]);
 
   if (receiptNumber) {
     return (
@@ -55,7 +66,7 @@ export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div ref={formRef} className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <Stepper />
       <DraftSaveIndicator />
       {step === "contact" ? <StepContact fetchImpl={fetchImpl} /> : null}
