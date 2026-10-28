@@ -48,7 +48,6 @@ export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
   const {
     config,
     contact,
-    contactSaved,
     receiptNumber,
     setToken,
     setTokenWarning,
@@ -62,7 +61,7 @@ export function FormShell({ fetchImpl }: { fetchImpl: typeof fetch }) {
   useJwtRefresh({ token, sessionId, onToken: setToken, onWarning: setTokenWarning });
   useAutosave({ fetchImpl });
   useStepHistory();
-  useLeaveWarning(contactSaved && !receiptNumber);
+  useLeaveWarning(sessionId !== null && !receiptNumber);
 
   useLayoutEffect(() => {
     if (previousStep.current === step) {

@@ -231,24 +231,28 @@ describe("App startup", () => {
     };
 
     function Probe() {
-      const { setContactSaved, setReceiptNumber } = useForm();
+      const { setSession, setReceiptNumber } = useForm();
       return (
         <>
-          <button onClick={() => setContactSaved(true)} type="button">Start</button>
+          <button onClick={() => setSession("session-1", "jwt")} type="button">Start</button>
           <button onClick={() => setReceiptNumber("RFQ-20260626-000001")} type="button">Finish</button>
         </>
       );
     }
 
     render(
-      <FormProvider config={config} sessionId="session-1" token="jwt">
+      <FormProvider config={config}>
         <Probe />
         <FormShell fetchImpl={vi.fn()} />
       </FormProvider>,
     );
 
+    await user.type(screen.getByLabelText(/first name/i), "Jane");
     expect(leaveIsBlocked()).toBe(false);
     await user.click(screen.getByRole("button", { name: /^start$/i }));
+    expect(leaveIsBlocked()).toBe(true);
+    // Editing contact after the session exists marks it unsaved, but the RFQ is still in progress.
+    await user.type(screen.getByLabelText(/first name/i), "t");
     expect(leaveIsBlocked()).toBe(true);
     await user.click(screen.getByRole("button", { name: /^finish$/i }));
     expect(leaveIsBlocked()).toBe(false);
