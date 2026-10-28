@@ -115,6 +115,22 @@ test("AC-WP-036 browser Back moves between steps and leaving the page asks first
     route.fulfill({ status: 200, body: JSON.stringify({ saved: true }) }),
   );
 
+  // Same listener WordPress's Interactivity API (loaded by the Navigation block) adds to every page.
+  await page.addInitScript(() => {
+    window.history.replaceState({ ...window.history.state, wpInteractivityId: "wp" }, "");
+    window.addEventListener("popstate", (event) => {
+      if (event.state !== null && event.state?.wpInteractivityId !== "wp") {
+        window.location.reload();
+      }
+    });
+  });
+  const unexpectedDialogs: string[] = [];
+  const recordDialog = (dialog: { type: () => string; dismiss: () => Promise<void> }) => {
+    unexpectedDialogs.push(dialog.type());
+    void dialog.dismiss();
+  };
+  page.on("dialog", recordDialog);
+
   await page.goto("/");
   await page.getByLabel("First name").fill("Jane");
   await page.getByLabel("Last name").fill("Smith");
@@ -128,7 +144,9 @@ test("AC-WP-036 browser Back moves between steps and leaving the page asks first
 
   await page.goForward();
   await expect(page.getByRole("heading", { name: "Part uploads" })).toBeVisible();
+  expect(unexpectedDialogs).toEqual([]);
 
+  page.off("dialog", recordDialog);
   const dialog = page.waitForEvent("dialog");
   await page.close({ runBeforeUnload: true });
   const prompt = await dialog;

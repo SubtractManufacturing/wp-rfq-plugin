@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { FormProvider, useForm } from "../state/FormContext";
 import type { RfqFormConfig } from "../types/config";
 import { useStepHistory } from "./useStepHistory";
@@ -46,6 +46,10 @@ function renderHarness() {
 }
 
 describe("useStepHistory", () => {
+  beforeEach(() => {
+    window.history.replaceState(null, "");
+  });
+
   it("replaces the current history entry on mount instead of adding one", () => {
     const lengthBefore = window.history.length;
 
@@ -53,6 +57,17 @@ describe("useStepHistory", () => {
 
     expect(window.history.length).toBe(lengthBefore);
     expect(window.history.state).toEqual({ rfqStep: "contact" });
+  });
+
+  it("keeps history state that other scripts on the page rely on", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({ wpInteractivityId: "wp-session" }, "");
+
+    renderHarness();
+    expect(window.history.state).toEqual({ wpInteractivityId: "wp-session", rfqStep: "contact" });
+
+    await user.click(screen.getByRole("button", { name: /go uploads/i }));
+    expect(window.history.state).toEqual({ wpInteractivityId: "wp-session", rfqStep: "uploads" });
   });
 
   // @covers AC-WP-036

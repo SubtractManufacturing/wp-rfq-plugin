@@ -12,7 +12,9 @@ export function useStepHistory() {
   const mounted = useRef(false);
 
   useEffect(() => {
-    const entry = { rfqStep: step };
+    // Keep other scripts' history state: WordPress's Interactivity API reloads the page
+    // on Back when its wpInteractivityId is missing from the entry.
+    const entry = { ...window.history.state, rfqStep: step };
     if (!mounted.current) {
       mounted.current = true;
       window.history.replaceState(entry, "");
