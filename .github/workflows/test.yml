@@ -32,6 +32,7 @@ jobs:
 
   acceptance-coverage:
     name: acceptance-coverage
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -47,6 +48,7 @@ jobs:
 
   contract:
     name: contract
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -62,6 +64,7 @@ jobs:
 
   php-unit:
     name: php-unit
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -80,6 +83,7 @@ jobs:
 
   frontend-build:
     name: frontend-build
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -130,6 +134,7 @@ jobs:
 
   frontend-unit:
     name: frontend-unit
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -146,6 +151,7 @@ jobs:
 
   e2e-mocked:
     name: e2e-mocked
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -167,6 +173,7 @@ jobs:
 
   a11y-smoke:
     name: a11y-smoke
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -188,6 +195,7 @@ jobs:
 
   pre-merge:
     name: pre-merge
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -222,6 +230,7 @@ jobs:
 
   webhook-e2e:
     name: webhook-e2e
+    if: ${{ !startsWith(github.head_ref || github.ref_name, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

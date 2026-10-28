@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.3](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.2...0.4.3) (2026-10-28)
+
+
+### Bug Fixes
+
+* keep RFQ progress when customers use browser Back ([#83](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/83)) ([e93a379](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/e93a37943289926432223b77834dd53592f599f4))
+* scroll the RFQ form only when a step leaves it off screen ([#81](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/81)) ([964d419](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/964d419b4b75fb200d19cd4f9a82c28f4cebfb29))
+
 ## [0.4.2](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.1...0.4.2) (2026-10-28)
 
 
