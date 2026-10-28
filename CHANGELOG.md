@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.2](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.1...0.4.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* keep the RFQ form in view when advancing a step ([19b5243](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/19b52432f3fbd613044eecbfde1ae1dd624d1a8f))
+* keep the RFQ form in view when advancing a step ([d99ef2c](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/d99ef2c8d45355d196a5ff27b056346c486832da))
+* replace the purchase order field with a customer reference number ([#80](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/80)) ([cba9843](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/cba98432bc854198beb615222bb256faaec440e8))
+
 ## [0.4.1](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.0...0.4.1) (2026-10-23)
 
 
