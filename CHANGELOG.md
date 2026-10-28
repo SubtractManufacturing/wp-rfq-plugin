@@ -1,11 +1,6 @@
 # Changelog
 
-## [0.5.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.1...0.5.0) (2026-10-28)
-
-
-### Features
-
-* replace the purchase order field with a customer reference number ([4207d06](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/4207d06ade8f574570febdedb6dbcbf213be0175))
+## [0.4.2](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.1...0.4.2) (2026-10-28)
 
 
 ### Bug Fixes
