@@ -152,7 +152,7 @@ Ship `default.json` with at least: 1018 Steel, 6061 Aluminum, 7075 Aluminum, 304
 **Step 1.5** `admin/class-rfq-admin-intake-list.php` + `admin/views/intake-list-page.php`:
 
 - Add a WordPress admin submenu for the RFQ intake ledger.
-- Use the same standard administrator permission model as the plugin settings page; do not introduce custom capabilities/RBAC in V1.
+- Gate the list on `rfq_view_intake_sessions` and Delete on `rfq_delete_intake_sessions` (administrators get both at runtime; the RFQ Intake Viewer role gets view only). Settings stay on `manage_options`. See PRD §3.1.8 and `docs/adr/0004-intake-viewer-role.md`.
 - Query `rfq_sessions` rows ordered by `created_at DESC`; do not use `updated_at` for default ordering.
 - Include every `rfq_sessions` row; do not hide incomplete, empty, or suspected bot/session-spam rows in V1.
 - Add pagination with a default page size of 25 rows and selectable page sizes of 50 or 75 rows.

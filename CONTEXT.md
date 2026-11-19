@@ -24,6 +24,10 @@ _Avoid_: CRM lead, sales pipeline stage, lead status
 The customer's identity fields for an RFQ (`first_name`, `last_name`, `email`, `company`, `phone`, `job_title`). Mirrored on the Step 1 contact row, autosave draft, and submit manifest. Only the first five are collected in V1 UI; `job_title` is schema-only.
 _Avoid_: Lead, customer profile
 
+**Intake Viewer**:
+A WordPress user with the plugin's `rfq_intake_viewer` role. They can read the Intake Sessions list in wp-admin and nothing else: no delete, no plugin Settings, no Dashboard, no profile editing.
+_Avoid_: Read-only admin, sales user
+
 **Receipt**:
 The durable proof that a submitted RFQ passed full validation. Identified by a receipt number (e.g. `RFQ-20260623-000042`). The customer sees success only after a receipt exists. WordPress final state is `submitted`; the ERP imports from S3 without updating WordPress.
 _Avoid_: Confirmation, submission ID, quote number

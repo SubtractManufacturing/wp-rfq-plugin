@@ -45,6 +45,7 @@ $required_ids = [
     'AC-WP-030',
     'AC-WP-031',
     'AC-WP-032',
+    'AC-WP-037',
 ];
 
 $covered = [];
