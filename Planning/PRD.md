@@ -290,7 +290,13 @@ Data source rules:
 V1 admin list behavior:
 
 - Read-only; operators cannot edit intake rows from this screen.
-- Access uses standard WordPress administrator permissions in V1; do not add custom RBAC or custom capabilities.
+- Administrators (`manage_options`) can view the list and delete sessions. The plugin also registers an **RFQ Intake Viewer** role for staff who only need the list (see `docs/adr/0004-intake-viewer-role.md`):
+  - Capabilities: `read` plus `rfq_view_intake_sessions`. Delete requires `rfq_delete_intake_sessions`, which only administrators get (mapped at runtime to the effective `manage_options` check), so viewers never see the Actions column.
+  - Lockdown applies when the viewer role is the user's only role; adding it to another role grants list access without removing that role's access. Single-site only.
+  - Viewers cannot open Settings, the Dashboard, their profile, or any other wp-admin screen; every other admin URL redirects to the Intake Sessions list, and login lands there.
+  - Viewers cannot edit their own account (profile screen, REST user updates, application passwords, admin color scheme).
+  - Viewers do see the orphaned-manifest admin notice.
+  - The role is created on activation and on the first request after an update, and removed when the plugin is deleted.
 - Sort by `created_at DESC` so back-to-back intake starts remain in creation order. Do not use `updated_at` for default ordering.
 - Paginate the list using WordPress admin conventions. Default page size is 25 rows; operators may choose 50 or 75 rows per page.
 - No filtering in V1.
@@ -839,3 +845,4 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-034** — Material selection walks the customer through group → type → alloy/grade, offers only the finishes and plastic stock colors that apply to the chosen material, keeps a search shortcut and an unblocked free-text custom material, and stores the material string plus optional finish/color fields in the manifest.
 - **AC-WP-035** — Every submitted manifest carries `manifest_version` as its first field (current version 3; absence means legacy v1). In v2 and later, each part's `tolerance` is the actual tolerance string (e.g. `+/- 0.005"`) rather than a tier label. v3 stores the optional customer reference as `global.reference_number` and does not send `global.po_number` (v1 and v2 still use `po_number`). The validator accepts v1, v2, and v3 manifests and rejects other versions.
 - **AC-WP-036** — Browser Back and Forward move between form steps without losing entered data, every step after Step 1 has an in-form Back button, and once the intake session exists (until a receipt is shown) leaving or reloading the page triggers the browser's leave confirmation.
+- **AC-WP-037** — The RFQ Intake Viewer role can see the Intake Sessions list (and the orphaned-manifest notice) but cannot delete sessions, open Settings, the Dashboard, or any other wp-admin screen, or edit its own profile; administrators keep full access.

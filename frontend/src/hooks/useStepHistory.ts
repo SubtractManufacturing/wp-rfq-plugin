@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { canReachStep } from "../lib/navigation";
 import { useForm } from "../state/FormContext";
 import type { StepId } from "../types/manifest";
@@ -11,7 +11,9 @@ export function useStepHistory() {
   const { step, setStep, contactSaved, parts } = useForm();
   const mounted = useRef(false);
 
-  useEffect(() => {
+  // A layout effect, so the entry exists before the new step is painted: with a
+  // passive effect, Back pressed right after a step appears could leave the page.
+  useLayoutEffect(() => {
     // Keep other scripts' history state: WordPress's Interactivity API reloads the page
     // on Back when its wpInteractivityId is missing from the entry.
     const entry = { ...window.history.state, rfqStep: step };

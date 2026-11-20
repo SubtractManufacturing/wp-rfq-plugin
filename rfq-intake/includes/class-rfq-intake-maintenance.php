@@ -197,7 +197,7 @@ class RFQ_Intake_Maintenance {
     }
 
     public static function render_admin_notice(): void {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( RFQ_Roles::VIEW_CAP ) ) {
             return;
         }
 
