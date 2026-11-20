@@ -44,13 +44,15 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th><?php esc_html_e( 'Created', 'rfq-intake' ); ?></th>
                 <th><?php esc_html_e( 'Status', 'rfq-intake' ); ?></th>
                 <th><?php esc_html_e( 'Parts submitted', 'rfq-intake' ); ?></th>
-                <th><?php esc_html_e( 'Actions', 'rfq-intake' ); ?></th>
+                <?php if ( $can_delete ) : ?>
+                    <th><?php esc_html_e( 'Actions', 'rfq-intake' ); ?></th>
+                <?php endif; ?>
             </tr>
         </thead>
         <tbody>
             <?php if ( $sessions === [] ) : ?>
                 <tr>
-                    <td colspan="9"></td>
+                    <td colspan="<?php echo esc_attr( $can_delete ? '9' : '8' ); ?>"></td>
                 </tr>
             <?php else : ?>
                 <?php foreach ( $sessions as $session ) : ?>
@@ -63,6 +65,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <td><?php echo esc_html( RFQ_Admin_Intake_List::format_created_at( $session->created_at ) ); ?></td>
                         <td><?php echo esc_html( (string) ( $session->status ?? '' ) ); ?></td>
                         <td><?php echo esc_html( RFQ_Admin_Intake_List::format_part_count( (string) ( $session->status ?? '' ), $session->submitted_part_count ) ); ?></td>
+                        <?php if ( $can_delete ) : ?>
                         <td>
                             <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
                                 onsubmit="return confirm('<?php echo esc_js( __( 'Delete this intake session? Submitted sessions can only be deleted once their files have been removed from S3.', 'rfq-intake' ) ); ?>');">
@@ -88,6 +91,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                                 </button>
                             </form>
                         </td>
+                        <?php endif; ?>
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>

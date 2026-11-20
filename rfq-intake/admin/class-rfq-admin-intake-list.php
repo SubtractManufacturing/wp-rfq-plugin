@@ -78,7 +78,7 @@ class RFQ_Admin_Intake_List {
     }
 
     public static function handle_delete(): void {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( RFQ_Roles::DELETE_CAP ) ) {
             wp_die( esc_html__( 'You do not have permission to delete intake sessions.', 'rfq-intake' ), '', [ 'response' => 403 ] );
         }
 
@@ -124,7 +124,7 @@ class RFQ_Admin_Intake_List {
         add_menu_page(
             __( 'Intake Sessions', 'rfq-intake' ),
             __( 'RFQ Intake', 'rfq-intake' ),
-            'manage_options',
+            RFQ_Roles::VIEW_CAP,
             self::MENU_SLUG,
             [ self::class, 'render_page' ],
             'dashicons-clipboard',
@@ -136,7 +136,7 @@ class RFQ_Admin_Intake_List {
             self::MENU_SLUG,
             __( 'Intake Sessions', 'rfq-intake' ),
             __( 'Intake Sessions', 'rfq-intake' ),
-            'manage_options',
+            RFQ_Roles::VIEW_CAP,
             self::MENU_SLUG,
             [ self::class, 'render_page' ]
         );
@@ -251,10 +251,11 @@ class RFQ_Admin_Intake_List {
     }
 
     public static function render_page(): void {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( RFQ_Roles::VIEW_CAP ) ) {
             return;
         }
 
+        $can_delete  = current_user_can( RFQ_Roles::DELETE_CAP );
         $per_page    = self::resolve_per_page();
         $total       = self::count_sessions();
         $total_pages = max( 1, (int) ceil( $total / $per_page ) );

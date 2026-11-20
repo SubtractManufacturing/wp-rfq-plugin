@@ -10,6 +10,7 @@ class RFQ_Activator {
         self::create_tables();
         self::bootstrap_secrets();
         RFQ_Upgrade_Manager::maybe_upgrade();
+        RFQ_Roles::install();
         RFQ_Intake_Maintenance::schedule();
     }
 
