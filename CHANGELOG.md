@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.3...0.5.0) (2026-11-20)
+
+
+### Features
+
+* add an RFQ Intake Viewer role limited to the intake list ([e49ed75](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/e49ed75395763250e4b717114a92075526f5ce93))
+* add an RFQ Intake Viewer role limited to the intake list ([e49ed75](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/e49ed75395763250e4b717114a92075526f5ce93))
+
+
+### Bug Fixes
+
+* record a step's history entry before the step is painted ([#85](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/85)) ([2512018](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/25120183d6e19867b575fd20e821f47185ce6a24))
+
 ## [0.4.3](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.2...0.4.3) (2026-10-28)
 
 
