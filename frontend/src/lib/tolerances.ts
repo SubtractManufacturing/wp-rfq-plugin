@@ -17,6 +17,9 @@ export const TOLERANCE_VALUES: Record<ToleranceCategory, Record<ToleranceTier, s
   plastic: { economy: '±0.020"', standard: '±0.010"', tight: '±0.005"' },
 };
 
+/** Catalog groups whose materials use the plastic tolerance table ("Plastic" is the pre-Quoting2.0 name). */
+const PLASTIC_GROUPS = new Set(["Plastics", "Plastic"]);
+
 const PLASTIC_KEYWORDS = [
   "plastic",
   "abs",
@@ -46,11 +49,9 @@ const PLASTIC_KEYWORDS = [
  */
 export function toleranceCategoryForMaterial(material: string, materials: MaterialOption[]): ToleranceCategory {
   const leaf = findMaterialByLabel(material, materials);
-  if (leaf?.group === "Plastic") {
-    return "plastic";
-  }
-  if (leaf?.group === "Metal") {
-    return "metal";
+  if (leaf?.group) {
+    // Every catalog group other than plastics is a metal group (Steels, Non-Ferrous, Exotics).
+    return PLASTIC_GROUPS.has(leaf.group) ? "plastic" : "metal";
   }
   const text = material.toLowerCase();
   return PLASTIC_KEYWORDS.some((keyword) => text.includes(keyword)) ? "plastic" : "metal";

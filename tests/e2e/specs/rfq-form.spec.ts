@@ -1,4 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+/** Walk the Material group → type → alloy chips on one part card (part cards render in order). */
+async function pickMaterial(page: Page, partIndex: number, group: string, type: string, alloy: string) {
+  await page.getByRole("group", { name: "Material group" }).nth(partIndex).getByRole("button", { name: group, exact: true }).click();
+  await page.getByRole("group", { name: "Material type" }).nth(partIndex).getByRole("button", { name: type, exact: true }).click();
+  await page.getByRole("group", { name: "Alloy / grade" }).nth(partIndex).getByRole("button", { name: alloy, exact: true }).click();
+}
 
 // @covers AC-WP-002
 test("AC-WP-002 shows Airtable fallback when health fails", async ({ page }) => {
@@ -81,10 +88,8 @@ test("AC-WP-013 completes mocked RFQ happy path", async ({ page }) => {
   await expect(page.getByText("Uploaded")).toHaveCount(2);
   await expect(page.getByTitle("part.step", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Continue to part details" }).click();
-  await page.getByLabel(/Know the exact material/).nth(0).fill("1018");
-  await page.locator("ul[role='listbox'] button").first().click();
-  await page.getByLabel(/Know the exact material/).nth(1).fill("6061");
-  await page.locator("ul[role='listbox'] button").first().click();
+  await pickMaterial(page, 0, "Steels", "Carbon & alloy steel", "1018 Steel");
+  await pickMaterial(page, 1, "Non-Ferrous", "Aluminum", "6061-T6 Aluminum");
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
   await page.getByLabel("Shipping ZIP or postal code").fill("90210");
   await page.getByLabel("Lead time preference").selectOption("standard");

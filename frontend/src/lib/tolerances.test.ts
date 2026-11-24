@@ -33,6 +33,14 @@ describe("global tolerance values", () => {
   it("picks the category from the catalog group, then custom-text keywords", () => {
     expect(toleranceCategoryForMaterial("6061-T6 Aluminum", catalog)).toBe("metal");
     expect(toleranceCategoryForMaterial("ABS", catalog)).toBe("plastic");
+    const quotingGroups: MaterialOption[] = [
+      { id: "1018-steel", label: "1018 Steel", aliases: [], show_in_dropdown: false, group: "Steels", type: "Carbon & alloy steel" },
+      { id: "inconel-718", label: "Inconel 718", aliases: [], show_in_dropdown: false, group: "Exotics", type: "Nickel alloys" },
+      { id: "pps", label: "PPS", aliases: [], show_in_dropdown: false, group: "Plastics", type: "PPS" },
+    ];
+    expect(toleranceCategoryForMaterial("1018 Steel", quotingGroups)).toBe("metal");
+    expect(toleranceCategoryForMaterial("Inconel 718", quotingGroups)).toBe("metal");
+    expect(toleranceCategoryForMaterial("PPS", quotingGroups)).toBe("plastic");
     expect(toleranceCategoryForMaterial("Customer-supplied nylon bar", catalog)).toBe("plastic");
     expect(toleranceCategoryForMaterial("Customer-supplied brass", catalog)).toBe("metal");
     expect(toleranceCategoryForMaterial("", catalog)).toBe("metal");

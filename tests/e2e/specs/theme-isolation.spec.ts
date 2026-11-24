@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Walk the Material group → type → alloy chips on one part card (part cards render in order). */
+async function pickMaterial(page: Page, partIndex: number, group: string, type: string, alloy: string) {
+  await page.getByRole("group", { name: "Material group" }).nth(partIndex).getByRole("button", { name: group, exact: true }).click();
+  await page.getByRole("group", { name: "Material type" }).nth(partIndex).getByRole("button", { name: type, exact: true }).click();
+  await page.getByRole("group", { name: "Alloy / grade" }).nth(partIndex).getByRole("button", { name: alloy, exact: true }).click();
+}
+
 /**
  * The form is embedded in arbitrary WordPress themes, which routinely restyle
  * bare inputs, buttons, headings, paragraphs and lists. These tests load the form
@@ -141,12 +148,12 @@ async function walkSteps(page: Page): Promise<Record<string, string[]>> {
   await page.getByRole("heading", { name: "Part details" }).waitFor();
   shots.partDetails = await snapshotForm(page);
 
-  await page.getByLabel(/Know the exact material/).first().fill("1018");
-  await expect(page.getByRole("listbox")).toBeVisible();
+  await page.getByRole("group", { name: "Material group" }).first().getByRole("button", { name: "Steels", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Material type" }).first()).toBeVisible();
   shots.materialOpen = await snapshotForm(page);
-  await page.locator("ul[role='listbox'] button").first().click();
-  await page.getByLabel(/Know the exact material/).nth(1).fill("6061");
-  await page.locator("ul[role='listbox'] button").first().click();
+  await page.getByRole("group", { name: "Material type" }).first().getByRole("button", { name: "Carbon & alloy steel", exact: true }).click();
+  await page.getByRole("group", { name: "Alloy / grade" }).first().getByRole("button", { name: "1018 Steel", exact: true }).click();
+  await pickMaterial(page, 1, "Non-Ferrous", "Aluminum", "6061-T6 Aluminum");
   await page.getByRole("button", { name: "Continue to RFQ details" }).click();
   await page.getByRole("heading", { name: "RFQ details" }).waitFor();
   shots.rfqDetails = await snapshotForm(page);

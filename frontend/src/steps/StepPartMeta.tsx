@@ -109,7 +109,7 @@ export function StepPartMeta() {
         <h1 className="text-2xl font-semibold text-slate-950">Part details</h1>
         <p className="mt-2 text-sm text-slate-600">
           Add quantity, material, finish, and global tolerance for each uploaded part. Pick a material group to get started,
-          or search if you already know the alloy you need.
+          or choose Other to describe a material that is not listed.
         </p>
       </div>
       {parts.map((part, index) => {

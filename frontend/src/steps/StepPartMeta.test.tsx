@@ -91,7 +91,7 @@ describe("StepPartMeta", () => {
     );
 
     const quantity = screen.getByLabelText("Quantity");
-    const material = screen.getByLabelText(/know the exact material/i);
+    const material = screen.getByRole("group", { name: "Material group" });
     const notes = screen.getByLabelText("Notes & Details");
     expect(quantity.compareDocumentPosition(material) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(material.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -217,7 +217,7 @@ describe("StepPartMeta", () => {
     );
 
     const continueButton = screen.getByRole("button", { name: "Continue to RFQ details" });
-    await user.click(screen.getByRole("button", { name: "Other / custom" }));
+    await user.click(screen.getByRole("button", { name: "Other" }));
     await user.type(screen.getByLabelText("Specify material"), "Customer-supplied brass");
 
     // No tier dropdown for custom materials; a typed amount with a unit choice instead.
