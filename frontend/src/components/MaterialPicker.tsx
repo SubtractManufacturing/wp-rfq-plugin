@@ -34,11 +34,10 @@ const chipSelectedClasses = "border-slate-900 bg-slate-900 text-white";
 const chipUnselectedClasses = "border-slate-300 bg-white text-slate-800 hover:bg-slate-50";
 
 /**
- * Guided material selection, ported from the Quoting 2.0 material menus:
- * group → type → alloy/grade, then the stock colors (some plastics) and finishes
- * that apply to the chosen material. The picked grade shows its typical use and
- * relative material/machining cost. "Other" keeps the free-text escape hatch the
- * manifest has always allowed.
+ * Guided material selection: group → type → alloy/grade, then the stock colors
+ * (some plastics) and finishes that apply to the chosen material. The picked grade
+ * shows its typical use and relative material/machining cost. "Other" keeps the
+ * free-text escape hatch the manifest has always allowed.
  */
 export function MaterialPicker({ idPrefix, materials, value, onChange }: MaterialPickerProps) {
   const leaf = findMaterialByLabel(value.material, materials);
@@ -186,7 +185,6 @@ export function MaterialPicker({ idPrefix, materials, value, onChange }: Materia
             placeholder="Material, grade, and condition"
             value={customText}
           />
-          <p className="mt-1 text-xs text-amber-800">This material requires manual quoting.</p>
         </div>
       ) : null}
 

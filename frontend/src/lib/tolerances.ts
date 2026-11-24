@@ -17,7 +17,7 @@ export const TOLERANCE_VALUES: Record<ToleranceCategory, Record<ToleranceTier, s
   plastic: { economy: '±0.020"', standard: '±0.010"', tight: '±0.005"' },
 };
 
-/** Catalog groups whose materials use the plastic tolerance table ("Plastic" is the pre-Quoting2.0 name). */
+/** Catalog groups whose materials use the plastic tolerance table ("Plastic" is the group name used by earlier catalogs and admin overrides). */
 const PLASTIC_GROUPS = new Set(["Plastics", "Plastic"]);
 
 const PLASTIC_KEYWORDS = [
