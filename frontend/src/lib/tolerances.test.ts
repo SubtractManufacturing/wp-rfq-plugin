@@ -38,6 +38,32 @@ describe("global tolerance values", () => {
     expect(toleranceCategoryForMaterial("", catalog)).toBe("metal");
   });
 
+  it("knows the current catalog groups and uses keywords for any other group", () => {
+    const entry = (label: string, group: string): MaterialOption => ({
+      id: label,
+      label,
+      aliases: [],
+      show_in_dropdown: false,
+      group,
+      type: "Any",
+    });
+    const grouped = [
+      entry("1018 Steel", "Steels"),
+      entry("C360 Brass", "Non-Ferrous"),
+      entry("Inconel 718", "Exotics"),
+      entry("PPS", "Plastics"),
+      entry("Cast Nylon", "Polymers"),
+      entry("Monel 400", "Specialty"),
+    ];
+
+    expect(toleranceCategoryForMaterial("1018 Steel", grouped)).toBe("metal");
+    expect(toleranceCategoryForMaterial("C360 Brass", grouped)).toBe("metal");
+    expect(toleranceCategoryForMaterial("Inconel 718", grouped)).toBe("metal");
+    expect(toleranceCategoryForMaterial("PPS", grouped)).toBe("plastic");
+    expect(toleranceCategoryForMaterial("Cast Nylon", grouped)).toBe("plastic");
+    expect(toleranceCategoryForMaterial("Monel 400", grouped)).toBe("metal");
+  });
+
   it("converts a typed custom tolerance to inches for the manifest, keeping the typed value for display", () => {
     expect(parseToleranceValue("0.005")).toBe(0.005);
     expect(parseToleranceValue("±0.005")).toBe(0.005);

@@ -14,9 +14,11 @@ const catalog: MaterialOption[] = [
     label: "6061-T6 Aluminum",
     aliases: ["6061"],
     show_in_dropdown: true,
-    group: "Metal",
+    group: "Non-Ferrous",
     type: "Aluminum",
     guidance: "The general-purpose default.",
+    material_cost: 1,
+    machining_cost: 2,
     finishes: ["As-machined", "Anodize Type II", "Other: specify"],
   },
   {
@@ -24,11 +26,21 @@ const catalog: MaterialOption[] = [
     label: "ABS",
     aliases: ["abs plastic"],
     show_in_dropdown: false,
-    group: "Plastic",
+    group: "Plastics",
     type: "ABS",
     guidance: "Low-cost and tough.",
     finishes: ["As-machined", "Other: specify"],
     colors: ["Black", "White"],
+  },
+  {
+    id: "pei-ultem",
+    label: "PEI (Ultem)",
+    aliases: ["ultem"],
+    show_in_dropdown: false,
+    group: "Plastics",
+    type: "Ultem / PEI",
+    finishes: ["As-machined", "Other: specify"],
+    colors: ["Amber"],
   },
 ];
 
@@ -63,7 +75,7 @@ describe("MaterialPicker", () => {
     render(<Harness />);
 
     expect(screen.queryByRole("button", { name: "Aluminum" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Metal" }));
+    await user.click(screen.getByRole("button", { name: "Non-Ferrous" }));
     await user.click(screen.getByRole("button", { name: "Aluminum" }));
     await user.click(screen.getByRole("button", { name: "6061-T6 Aluminum" }));
 
@@ -71,6 +83,18 @@ describe("MaterialPicker", () => {
     expect(screen.getByTestId("finish")).toHaveTextContent("As-machined");
     expect(screen.getByText("The general-purpose default.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Anodize Type II" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows the picked grade's relative material and machining cost", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "Non-Ferrous" }));
+    await user.click(screen.getByRole("button", { name: "Aluminum" }));
+    await user.click(screen.getByRole("button", { name: "6061-T6 Aluminum" }));
+
+    expect(screen.getByRole("meter", { name: "Material cost" })).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("meter", { name: "Machining cost" })).toHaveAttribute("aria-valuenow", "2");
   });
 
   it("jumps straight to a material from search", async () => {
@@ -81,14 +105,14 @@ describe("MaterialPicker", () => {
     await user.click(screen.getByRole("button", { name: /6061-T6 Aluminum/ }));
 
     expect(screen.getByTestId("material")).toHaveTextContent("6061-T6 Aluminum");
-    expect(screen.getByRole("button", { name: "Metal" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Non-Ferrous" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("offers stock colors only for plastics that have them, with No preference first", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    await user.click(screen.getByRole("button", { name: "Plastic" }));
+    await user.click(screen.getByRole("button", { name: "Plastics" }));
     await user.click(screen.getByRole("button", { name: "ABS" }));
     // Single-leaf type: the alloy step still confirms the pick.
     await user.click(within(screen.getByRole("group", { name: /Alloy \/ grade/ })).getByRole("button", { name: "ABS" }));
@@ -99,6 +123,19 @@ describe("MaterialPicker", () => {
     expect(screen.getByTestId("color")).toHaveTextContent("Black");
   });
 
+  it("omits No preference when a plastic comes in one stock color", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "Plastics" }));
+    await user.click(screen.getByRole("button", { name: "Ultem / PEI" }));
+    await user.click(screen.getByRole("button", { name: "PEI (Ultem)" }));
+
+    const colorGroup = screen.getByRole("group", { name: /Plastic color/ });
+    expect(within(colorGroup).queryByRole("button", { name: "No preference" })).not.toBeInTheDocument();
+    expect(within(colorGroup).getByRole("button", { name: "Amber" })).toBeInTheDocument();
+  });
+
   it("asks for a specification when the Other finish is chosen", async () => {
     const user = userEvent.setup();
     render(<Harness initial={{ material: "6061-T6 Aluminum", finish: "As-machined" }} />);
@@ -107,11 +144,11 @@ describe("MaterialPicker", () => {
     expect(screen.getByLabelText("Specify finish")).toBeInTheDocument();
   });
 
-  it("keeps a free-text material through Other / custom", async () => {
+  it("keeps a free-text material through Other", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    await user.click(screen.getByRole("button", { name: "Other / custom" }));
+    await user.click(screen.getByRole("button", { name: "Other" }));
     await user.type(screen.getByLabelText("Specify material"), "Customer-supplied brass");
 
     expect(screen.getByTestId("material")).toHaveTextContent("Customer-supplied brass");

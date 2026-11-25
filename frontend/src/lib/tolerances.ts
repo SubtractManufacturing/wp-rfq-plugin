@@ -17,6 +17,10 @@ export const TOLERANCE_VALUES: Record<ToleranceCategory, Record<ToleranceTier, s
   plastic: { economy: '±0.020"', standard: '±0.010"', tight: '±0.005"' },
 };
 
+/** Catalog groups with a known tolerance table. "Metal" and "Plastic" cover earlier catalogs and admin overrides. */
+const METAL_GROUPS = new Set(["Steels", "Non-Ferrous", "Exotics", "Metal"]);
+const PLASTIC_GROUPS = new Set(["Plastics", "Plastic"]);
+
 const PLASTIC_KEYWORDS = [
   "plastic",
   "abs",
@@ -41,15 +45,16 @@ const PLASTIC_KEYWORDS = [
 
 /**
  * Whether global tolerance values should use the metal or plastic table.
- * Catalog materials know their group; custom text falls back to keyword
- * matching, then metal (the tighter, safer default to quote against).
+ * Catalog materials in a known group use that group's table; custom text and
+ * other groups fall back to keyword matching, then metal (the tighter, safer
+ * default to quote against).
  */
 export function toleranceCategoryForMaterial(material: string, materials: MaterialOption[]): ToleranceCategory {
-  const leaf = findMaterialByLabel(material, materials);
-  if (leaf?.group === "Plastic") {
+  const group = findMaterialByLabel(material, materials)?.group ?? "";
+  if (PLASTIC_GROUPS.has(group)) {
     return "plastic";
   }
-  if (leaf?.group === "Metal") {
+  if (METAL_GROUPS.has(group)) {
     return "metal";
   }
   const text = material.toLowerCase();

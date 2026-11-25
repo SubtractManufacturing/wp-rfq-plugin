@@ -50,14 +50,42 @@ class MaterialCatalogTest extends TestCase
             $by_id[$entry['id']] = $entry;
         }
 
-        $this->assertSame('Metal', $by_id['6061-t6-aluminum']['group']);
+        $this->assertSame('Non-Ferrous', $by_id['6061-t6-aluminum']['group']);
         $this->assertSame('Aluminum', $by_id['6061-t6-aluminum']['type']);
         $this->assertContains('Anodize Type II', $by_id['6061-t6-aluminum']['finishes']);
         $this->assertSame([], $by_id['6061-t6-aluminum']['colors']);
         $this->assertNotSame('', $by_id['6061-t6-aluminum']['guidance']);
+        $this->assertSame(1, $by_id['6061-t6-aluminum']['material_cost']);
+        $this->assertSame(1, $by_id['6061-t6-aluminum']['machining_cost']);
 
-        $this->assertSame('Plastic', $by_id['abs']['group']);
+        $this->assertSame('Plastics', $by_id['abs']['group']);
         $this->assertContains('Black', $by_id['abs']['colors']);
+
+        $this->assertSame('Exotics', $by_id['inconel-718']['group']);
+        $this->assertSame('Nickel alloys', $by_id['inconel-718']['type']);
+    }
+
+    public function test_cost_ratings_outside_one_to_five_are_rejected_or_dropped(): void
+    {
+        $this->assertFalse(RFQ_Material_Catalog::is_valid_override_shape([
+            'added' => [['id' => 'x', 'label' => 'X', 'material_cost' => 6]],
+        ]));
+        $this->assertTrue(RFQ_Material_Catalog::is_valid_override_shape([
+            'added' => [['id' => 'x', 'label' => 'X', 'material_cost' => 3, 'machining_cost' => 5]],
+        ]));
+
+        update_option(
+            'rfq_material_overrides',
+            json_encode(['added' => [['id' => 'monel-400', 'label' => 'Monel 400', 'machining_cost' => 0]]], JSON_THROW_ON_ERROR)
+        );
+
+        $by_id = [];
+        foreach (RFQ_Material_Catalog::get_effective_catalog() as $entry) {
+            $by_id[$entry['id']] = $entry;
+        }
+
+        $this->assertNull($by_id['monel-400']['material_cost']);
+        $this->assertNull($by_id['monel-400']['machining_cost']);
     }
 
     public function test_effective_catalog_merges_disable_rename_and_add_overrides(): void
@@ -69,9 +97,9 @@ class MaterialCatalogTest extends TestCase
                 'renamed' => ['6061-t6-aluminum' => '6061 Aluminum'],
                 'added' => [
                     [
-                        'id' => 'inconel-718',
-                        'label' => 'Inconel 718',
-                        'aliases' => ['inconel', '718'],
+                        'id' => 'monel-400',
+                        'label' => 'Monel 400',
+                        'aliases' => ['monel', '400'],
                         'show_in_dropdown' => false,
                     ],
                 ],
@@ -84,8 +112,8 @@ class MaterialCatalogTest extends TestCase
 
         $this->assertNotContains('1018 Steel', $labels);
         $this->assertContains('6061 Aluminum', $labels);
-        $this->assertContains('inconel-718', $ids);
-        $this->assertContains('Inconel 718', $labels);
+        $this->assertContains('monel-400', $ids);
+        $this->assertContains('Monel 400', $labels);
     }
 
     public function test_invalid_override_json_returns_defaults_only(): void
@@ -95,7 +123,7 @@ class MaterialCatalogTest extends TestCase
         $catalog = RFQ_Material_Catalog::get_effective_catalog();
 
         $this->assertNotEmpty($catalog);
-        $this->assertSame('6061-T6 Aluminum', $catalog[0]['label']);
+        $this->assertSame('1018 Steel', $catalog[0]['label']);
     }
 
     public function test_added_entry_with_existing_id_is_skipped(): void

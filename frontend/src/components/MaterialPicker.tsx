@@ -35,10 +35,11 @@ const chipSelectedClasses = "border-slate-900 bg-slate-900 text-white";
 const chipUnselectedClasses = "border-slate-300 bg-white text-slate-800 hover:bg-slate-50";
 
 /**
- * Guided material selection: group → type → alloy/grade, then the finishes and
- * (for some plastics) stock colors that actually apply to the chosen material.
- * A search shortcut jumps straight to a known alloy, and "Other / custom" keeps
- * the free-text escape hatch the manifest has always allowed.
+ * Guided material selection: group → type → alloy/grade, then the stock colors
+ * (some plastics) and finishes that apply to the chosen material. The picked grade
+ * shows its typical use and relative material/machining cost. A search shortcut
+ * jumps straight to a known alloy, and "Other" keeps the free-text escape hatch
+ * the manifest has always allowed.
  */
 export function MaterialPicker({ idPrefix, materials, value, onChange }: MaterialPickerProps) {
   const leaf = findMaterialByLabel(value.material, materials);
@@ -204,20 +205,20 @@ export function MaterialPicker({ idPrefix, materials, value, onChange }: Materia
             </ul>
           ) : (
             <p className="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-lg">
-              No catalog match - use "Other / custom" below to describe it.
+              No catalog match - use "Other" below to describe it.
             </p>
           )
         ) : null}
       </div>
 
-      <ChoiceStep step={1} title="Material group">
+      <ChoiceStep title="Material group">
         {groups.map((name) => (
           <Chip key={name} label={name} selected={group === name} onClick={() => selectGroup(name)} />
         ))}
         {hasUngrouped ? (
           <Chip label="More materials" selected={group === MORE_GROUP} onClick={() => selectGroup(MORE_GROUP)} />
         ) : null}
-        <Chip label="Other / custom" selected={group === CUSTOM_GROUP} onClick={() => selectGroup(CUSTOM_GROUP)} />
+        <Chip label="Other" selected={group === CUSTOM_GROUP} onClick={() => selectGroup(CUSTOM_GROUP)} />
       </ChoiceStep>
 
       {group === CUSTOM_GROUP ? (
@@ -244,7 +245,7 @@ export function MaterialPicker({ idPrefix, materials, value, onChange }: Materia
       ) : null}
 
       {types.length > 0 ? (
-        <ChoiceStep step={2} title="Material type">
+        <ChoiceStep title="Material type">
           {types.map((name) => (
             <Chip key={name} label={name} selected={type === name} onClick={() => selectType(name)} />
           ))}
@@ -252,7 +253,7 @@ export function MaterialPicker({ idPrefix, materials, value, onChange }: Materia
       ) : null}
 
       {showLeafStep ? (
-        <ChoiceStep step={types.length > 0 ? 3 : 2} title="Alloy / grade">
+        <ChoiceStep title="Alloy / grade">
           {leaves.map((entry) => (
             <Chip
               key={entry.id}
@@ -264,24 +265,16 @@ export function MaterialPicker({ idPrefix, materials, value, onChange }: Materia
         </ChoiceStep>
       ) : null}
 
-      {group !== "" && group !== CUSTOM_GROUP && !showLeafStep && types.length > 0 && type === "" ? (
-        <p className="mt-2 text-xs text-slate-500">Choose a material type to see its alloys and grades.</p>
-      ) : null}
-
-      {leaf?.guidance ? (
-        <div aria-atomic="true" aria-live="polite" className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-          <p className="text-sm font-medium text-slate-900">{leaf.label}</p>
-          <p className="mt-0.5 text-sm text-slate-600">{leaf.guidance}</p>
-        </div>
-      ) : null}
-
       {leaf && colors.length > 0 ? (
         <ChoiceStep title="Plastic color">
-          <Chip
-            label="No preference"
-            selected={(value.plastic_color ?? null) === null}
-            onClick={() => onChange({ plastic_color: null })}
-          />
+          {/* A single stock color is the only choice, so "No preference" adds nothing. */}
+          {colors.length > 1 ? (
+            <Chip
+              label="No preference"
+              selected={(value.plastic_color ?? null) === null}
+              onClick={() => onChange({ plastic_color: null })}
+            />
+          ) : null}
           {colors.map((color) => (
             <Chip
               key={color}
@@ -291,6 +284,18 @@ export function MaterialPicker({ idPrefix, materials, value, onChange }: Materia
             />
           ))}
         </ChoiceStep>
+      ) : null}
+
+      {leaf && (leaf.guidance || hasCostRatings(leaf)) ? (
+        <div aria-atomic="true" aria-live="polite" className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+          {leaf.guidance ? <p className="text-sm text-slate-700">{leaf.guidance}</p> : null}
+          {hasCostRatings(leaf) ? (
+            <div className="mt-2 grid grid-cols-1 gap-3 min-[421px]:grid-cols-2 min-[421px]:gap-x-5">
+              {leaf.material_cost ? <CostRating label="Material cost" value={leaf.material_cost} /> : null}
+              {leaf.machining_cost ? <CostRating label="Machining cost" value={leaf.machining_cost} /> : null}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {leaf && finishes.length > 0 ? (
@@ -356,21 +361,36 @@ function leafGroup(entry: MaterialOption, materials: MaterialOption[]): string {
   return ungroupedMaterials(materials).some((candidate) => candidate.id === entry.id) ? MORE_GROUP : (entry.group ?? "");
 }
 
-function ChoiceStep({
-  step,
-  title,
-  children,
-}: {
-  step?: number;
-  title: string;
-  children: React.ReactNode;
-}) {
+function hasCostRatings(entry: MaterialOption): boolean {
+  return Boolean(entry.material_cost) || Boolean(entry.machining_cost);
+}
+
+/** One-to-five dollar-sign meter, e.g. "$$$" with two ghosted signs. */
+function CostRating({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <span className="block text-xs font-medium text-slate-600">{label}</span>
+      <div
+        aria-label={label}
+        aria-valuemax={5}
+        aria-valuemin={1}
+        aria-valuenow={value}
+        aria-valuetext={`${value} of 5 dollar signs`}
+        role="meter"
+      >
+        <strong aria-hidden="true" className="whitespace-nowrap text-2xl leading-none tracking-wide text-slate-900">
+          {"$".repeat(value)}
+          <span className="text-slate-300">{"$".repeat(5 - value)}</span>
+        </strong>
+      </div>
+    </div>
+  );
+}
+
+function ChoiceStep({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="mt-4">
-      <legend className="text-sm font-medium text-slate-800">
-        {step ? <span className="text-slate-400">{step}. </span> : null}
-        {title}
-      </legend>
+      <legend className="text-sm font-medium text-slate-800">{title}</legend>
       <div className="mt-2 flex flex-wrap gap-2">{children}</div>
     </fieldset>
   );
