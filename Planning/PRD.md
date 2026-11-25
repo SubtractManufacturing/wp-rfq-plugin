@@ -241,9 +241,11 @@ Materials are **suggestions, not constraints**. The manifest always stores the c
 | `label` | Display name (e.g. `1018 Steel`, `6061-T6 Aluminum`) |
 | `aliases` | Optional match strings for type-ahead (e.g. `1018`, `1018 steel`) |
 | `show_in_dropdown` | If true, include in the simple dropdown; if false, type-ahead only |
-| `group` | Optional tree level 1 for guided selection (e.g. `Metal`, `Plastic`) |
-| `type` | Optional tree level 2 within the group (e.g. `Aluminum`, `Acetal`) |
-| `guidance` | Optional short plain-language note shown after the material is picked |
+| `group` | Optional tree level 1 for guided selection (`Steels`, `Non-Ferrous`, `Exotics`, `Plastics`) |
+| `type` | Optional tree level 2 within the group (e.g. `Aluminum`, `Delrin / Acetal`) |
+| `guidance` | Optional short plain-language typical-use note shown after the material is picked |
+| `material_cost` | Optional relative raw-material cost, integer 1 (lower) to 5 (higher), shown as `$`–`$$$$$` |
+| `machining_cost` | Optional relative machining cost, integer 1 (lower) to 5 (higher), shown as `$`–`$$$$$` |
 | `finishes` | Optional list of finishes offered for this material |
 | `colors` | Optional list of stock colors offered for this material (some plastics) |
 
@@ -433,11 +435,11 @@ For each part row from Step 2 (same `part_id`), collect:
 
 - Quantity (integer, required, minimum **1**; no maximum — large production quantities are valid).
 - **Material** (required, non-empty) — guided selection, always stored as a free-text string in the manifest:
-  - **Guided tree** — the customer picks a material group (e.g. Metal, Plastic), then a type within it (e.g. Aluminum, Acetal), then an alloy/grade. Only the next step is shown, and each catalog entry may carry short guidance text shown after it is picked.
+  - **Guided tree** — the customer picks a material group (Steels, Non-Ferrous, Exotics, Plastics, Other), then a type within it (e.g. Aluminum, Red metals, Delrin / Acetal), then an alloy/grade. Only the next step is shown. After a grade is picked, its typical-use guidance and relative material and machining cost (`$`–`$$$$$`) are shown.
   - **Search shortcut** — a type-ahead field matches the effective material catalog (label, aliases, group, and type) and jumps straight to that alloy/grade. Example: typing `1018` suggests and can select `1018 Steel`.
   - **Finish** — after a catalog material is picked, the finishes that apply to that material are offered (defaulting to `As-machined` when available). Finishes that need a color (e.g. anodize, powder coat) show an optional finish-color field; `Other: specify` requires a free-text finish specification. Stored as optional manifest fields `finish`, `finish_color`, and `finish_specification` alongside the material string.
-  - **Plastic color** — catalog plastics that offer stock colors show a color choice with a `No preference` default. Stored as the optional manifest field `plastic_color`.
-  - **Custom entry** — via `Other / custom`, the user may describe any material (exotic alloy, customer-supplied material, or "not sure") and submit that string. Never block submit for a material not in the catalog.
+  - **Plastic color** — catalog plastics that offer stock colors show a color choice with a `No preference` default; a plastic that comes in a single stock color shows only that color. Stored as the optional manifest field `plastic_color`.
+  - **Custom entry** — via `Other`, the user may describe any material (exotic alloy, customer-supplied material, or "not sure") and submit that string. Never block submit for a material not in the catalog.
   - **Same material for all parts** — when a part has a complete material/finish selection and the RFQ has more than one part, the customer can apply it to every part in one click.
   - Catalog source: see [Material catalog](#317-material-catalog). Flat admin-added entries without tree fields remain searchable and pickable under `More materials`.
 - **Global Tolerance** (required) — shown only once a material is completely selected. For catalog materials, a dropdown shows inch values that adjust to the material category (Economy / Standard / Tight). Metal: Economy ±0.010", Standard ±0.005", Tight ±0.003". Plastic: Economy ±0.020", Standard ±0.010", Tight ±0.005". The v2 manifest sends the **actual tolerance string** (e.g. `+/- 0.005"`) in `tolerance`, never the tier label, so the ERP imports it verbatim; `tolerance_detail` is always `null` in v2. Choosing Custom in the dropdown requires a free-text **tolerance detail**, which is sent as the `tolerance` string itself. For custom (non-catalog) materials, the customer instead types a tolerance amount (prefilled with the ± symbol) and picks inches or millimeters; the client converts it to inches (e.g. `+/- 0.00394"`) without showing the conversion and sends that as `tolerance`. (v1 sent tier labels such as `standard`/`precision`/`custom`, with the detail in `tolerance_detail`.)
@@ -842,7 +844,7 @@ _Verification: see §5.4; full registry in [Planning/TESTING.md](TESTING.md) §3
 - **AC-WP-031** — The installable Plugin Package contains Plugin Update Checker and performs public update checks without a GitHub token or live-GitHub test dependency.
 - **AC-WP-032** — Plugin Updates run idempotent additive schema migrations; a failed migration is not marked complete and makes plugin health unavailable until recovery.
 - **AC-WP-033** — Intake sessions older than the configurable retention window (default 180 days, `0` disables) are auto-deleted from the WP DB daily, and admins can delete a session from the intake list, only when S3 confirms no object remains under `intake/{session_id}/`. Non-draft sessions still in S3, or whose S3 check fails, are kept and the batch continues; `draft` sessions are deleted without an S3 check.
-- **AC-WP-034** — Material selection walks the customer through group → type → alloy/grade, offers only the finishes and plastic stock colors that apply to the chosen material, keeps a search shortcut and an unblocked free-text custom material, and stores the material string plus optional finish/color fields in the manifest.
+- **AC-WP-034** — Material selection walks the customer through group → type → alloy/grade, offers only the finishes and plastic stock colors that apply to the chosen material, shows the picked grade's typical use and relative material/machining cost, keeps a search shortcut and an unblocked free-text custom material, and stores the material string plus optional finish/color fields in the manifest.
 - **AC-WP-035** — Every submitted manifest carries `manifest_version` as its first field (current version 3; absence means legacy v1). In v2 and later, each part's `tolerance` is the actual tolerance string (e.g. `+/- 0.005"`) rather than a tier label. v3 stores the optional customer reference as `global.reference_number` and does not send `global.po_number` (v1 and v2 still use `po_number`). The validator accepts v1, v2, and v3 manifests and rejects other versions.
 - **AC-WP-036** — Browser Back and Forward move between form steps without losing entered data, every step after Step 1 has an in-form Back button, and once the intake session exists (until a receipt is shown) leaving or reloading the page triggers the browser's leave confirmation.
 - **AC-WP-037** — The RFQ Intake Viewer role can see the Intake Sessions list (and the orphaned-manifest notice) but cannot delete sessions, open Settings, the Dashboard, or any other wp-admin screen, or edit its own profile; administrators keep full access.

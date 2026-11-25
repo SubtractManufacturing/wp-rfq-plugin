@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class RFQ_Material_Catalog {
 
     /**
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, material_cost: int|null, machining_cost: int|null, finishes: list<string>, colors: list<string>}>
      */
     public static function get_default_catalog(): array {
         $path = RFQ_INTAKE_PLUGIN_DIR . 'assets/materials/default.json';
@@ -26,7 +26,7 @@ class RFQ_Material_Catalog {
     }
 
     /**
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, material_cost: int|null, machining_cost: int|null, finishes: list<string>, colors: list<string>}>
      */
     public static function get_effective_catalog(): array {
         $catalog       = self::get_default_catalog();
@@ -46,9 +46,9 @@ class RFQ_Material_Catalog {
     }
 
     /**
-     * @param list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}> $catalog
+     * @param list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, material_cost: int|null, machining_cost: int|null, finishes: list<string>, colors: list<string>}> $catalog
      * @param array<string, mixed> $overrides
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, material_cost: int|null, machining_cost: int|null, finishes: list<string>, colors: list<string>}>
      */
     private static function apply_overrides( array $catalog, array $overrides ): array {
         $disabled = self::collect_disabled_ids( $overrides );
@@ -166,6 +166,12 @@ class RFQ_Material_Catalog {
                     }
                 }
 
+                foreach ( [ 'material_cost', 'machining_cost' ] as $rating_field ) {
+                    if ( isset( $entry[ $rating_field ] ) && self::normalize_cost_rating( $entry[ $rating_field ] ) === null ) {
+                        return false;
+                    }
+                }
+
                 foreach ( [ 'finishes', 'colors' ] as $list_field ) {
                     if ( ! isset( $entry[ $list_field ] ) ) {
                         continue;
@@ -204,6 +210,17 @@ class RFQ_Material_Catalog {
         }
 
         return $list;
+    }
+
+    /**
+     * Relative cost rating: an integer from 1 (lower) to 5 (higher), or null when absent or invalid.
+     */
+    private static function normalize_cost_rating( mixed $value ): ?int {
+        if ( ! is_int( $value ) || $value < 1 || $value > 5 ) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**
@@ -270,7 +287,7 @@ class RFQ_Material_Catalog {
 
     /**
      * @param list<mixed> $entries
-     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
+     * @return list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, material_cost: int|null, machining_cost: int|null, finishes: list<string>, colors: list<string>}>
      */
     private static function normalize_entries( array $entries ): array {
         $normalized = [];
@@ -305,6 +322,8 @@ class RFQ_Material_Catalog {
                 'group'            => isset( $entry['group'] ) && is_string( $entry['group'] ) ? $entry['group'] : '',
                 'type'             => isset( $entry['type'] ) && is_string( $entry['type'] ) ? $entry['type'] : '',
                 'guidance'         => isset( $entry['guidance'] ) && is_string( $entry['guidance'] ) ? $entry['guidance'] : '',
+                'material_cost'    => self::normalize_cost_rating( $entry['material_cost'] ?? null ),
+                'machining_cost'   => self::normalize_cost_rating( $entry['machining_cost'] ?? null ),
                 'finishes'         => self::normalize_string_list( $entry['finishes'] ?? null ),
                 'colors'           => self::normalize_string_list( $entry['colors'] ?? null ),
             ];

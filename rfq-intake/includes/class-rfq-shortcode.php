@@ -68,7 +68,7 @@ class RFQ_Shortcode {
      *   internationalRfqEmail: string,
      *   salesContactEmail: string,
      *   maxParts: int,
-     *   materials: list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, finishes: list<string>, colors: list<string>}>
+     *   materials: list<array{id: string, label: string, aliases: list<string>, show_in_dropdown: bool, group: string, type: string, guidance: string, material_cost: int|null, machining_cost: int|null, finishes: list<string>, colors: list<string>}>
      * }
      */
     public static function get_form_config(): array {

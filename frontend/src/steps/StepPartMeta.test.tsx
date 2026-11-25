@@ -217,7 +217,7 @@ describe("StepPartMeta", () => {
     );
 
     const continueButton = screen.getByRole("button", { name: "Continue to RFQ details" });
-    await user.click(screen.getByRole("button", { name: "Other / custom" }));
+    await user.click(screen.getByRole("button", { name: "Other" }));
     await user.type(screen.getByLabelText("Specify material"), "Customer-supplied brass");
 
     // No tier dropdown for custom materials; a typed amount with a unit choice instead.
