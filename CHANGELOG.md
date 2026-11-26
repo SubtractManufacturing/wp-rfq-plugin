@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.5.0...0.5.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* refresh the material catalog and show cost ratings ([#88](https://github.com/SubtractManufacturing/wp-rfq-plugin/issues/88)) ([6a7fb19](https://github.com/SubtractManufacturing/wp-rfq-plugin/commit/6a7fb19809cb49018ddebbfeed38f9905b488a3f))
+
 ## [0.5.0](https://github.com/SubtractManufacturing/wp-rfq-plugin/compare/0.4.3...0.5.0) (2026-11-20)
 
 
